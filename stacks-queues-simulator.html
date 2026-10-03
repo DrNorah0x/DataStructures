@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stacks &amp; Queues Simulator – Lecture 6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A; --live:#E6EEFF;
+  --head:#2D4FD8; --head-bg:#E3E9FF; --ptr:#0F6F6D; --ptr-bg:#DDF3F1;
+  --danger:#C8323A; --danger-bg:#FBE3E4; --node:#FFFFFF;
+  --codebg:#FBFCFE; --kw:#7B3FC4; --str:#0B7A47; --com:#8A94A6; --num:#B4561B;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+    --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+    --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+    --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+  --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+  --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+  --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45;background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;padding-bottom:128px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--head);outline-offset:2px}
+[hidden]{display:none!important}
+
+.top{max-width:1320px;margin:0 auto;padding:18px 16px 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.25rem,3.6vw,1.8rem);margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.mark{display:inline-flex;flex-direction:column-reverse;gap:2px;border:2px solid var(--ink);border-top:0;padding:2px 2px 2px;border-radius:0 0 3px 3px}
+.mark i{display:block;width:22px;height:5px;background:var(--ink);border-radius:1px}
+.mark i.on{background:var(--hl);outline:1.5px solid var(--hl-line)}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:min(100%,380px);flex:1 1 320px;max-width:540px}
+.pick span{font-size:.85rem;color:var(--muted)}
+.pick select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);font-family:var(--mono);font-size:.88rem;cursor:pointer}
+
+.layout{max-width:1320px;margin:0 auto;padding:8px 16px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"info" "viz" "change" "code" "vars" "out"}
+.info{grid-area:info}.viz{grid-area:viz}.change{grid-area:change}.code{grid-area:code}.vars{grid-area:vars}.out{grid-area:out}
+@media (min-width:980px){
+  .layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);grid-template-areas:"info info" "code viz" "code change" "code vars" "code out";align-items:start}
+  .code{position:sticky;top:12px}
+  .codewrap{max-height:max(320px,calc(100vh - 380px))!important}
+}
+.panel{background:var(--panel);border:1.5px solid var(--rule);border-radius:4px;padding:12px 14px;min-width:0}
+.panel h3{margin:0;font-size:1rem;font-weight:700}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.82rem}
+
+.info{border-left:6px solid var(--ink)}
+.info h2{margin:0;font-size:1.2rem;line-height:1.3}
+.slides{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:2px 7px;border:1.5px solid var(--ink);border-radius:3px;margin-bottom:6px}
+.info p{margin:6px 0 0;max-width:78ch}
+.info details{margin-top:8px}
+.info summary{cursor:pointer;font-weight:700;color:var(--head);font-size:.92rem}
+.info ul{margin:6px 0 0;padding-left:1.2em;max-width:78ch}
+.info li{margin:4px 0}
+.inwrap{margin-top:12px;padding-top:10px;border-top:1.5px dashed var(--rule)}
+.inwrap label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.inrow{display:flex;gap:8px}
+.inrow input{flex:1;min-width:0;padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem}
+.inrow button{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{border:1.5px solid var(--rule);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:.8rem;cursor:pointer}
+.presets button.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.inerr{color:var(--danger);font-weight:700;font-size:.88rem;margin:6px 0 0;min-height:0}
+
+.structs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sc{border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;background:var(--paper);min-width:0;max-width:100%}
+.sc.wide{flex:1 1 100%}
+.sc h4{margin:0 0 6px;font-size:.82rem;font-weight:700;color:var(--muted)}
+svg.fit{display:block;max-width:100%;height:auto}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:12px;border:1.5px solid var(--ink);display:inline-block;border-radius:2px}
+.sw.hl{background:var(--hl);border-color:var(--hl-line)}.sw.lv{background:var(--live)}
+.sw.rd{background:var(--ptr-bg);border-color:var(--ptr)}.sw.dl{background:var(--danger-bg);border-color:var(--danger);border-style:dashed}
+
+/* svg parts */
+.ac{fill:var(--node);stroke:var(--ink);stroke-width:1.4}
+.ac.live{fill:var(--live)}
+.hl-push{fill:var(--hl)!important;stroke:var(--hl-line)!important;stroke-width:2.2!important}
+.hl-read{fill:var(--ptr-bg)!important;stroke:var(--ptr)!important;stroke-width:2.2!important}
+.hl-pop{fill:var(--danger-bg)!important;stroke:var(--danger)!important;stroke-dasharray:4 3}
+.av{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+.av.stale{fill:var(--muted);font-weight:400;opacity:.65}
+.idx{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tp{stroke:var(--head);stroke-width:2;fill:none}
+.tp2{stroke:var(--ptr);stroke-width:2;fill:none}
+.tpl{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--head)}
+.tpl2{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--ptr)}
+.tplbg{fill:var(--hl);stroke:var(--hl-line)}
+.bk{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linejoin:round}
+.it{fill:var(--live);stroke:var(--ink);stroke-width:1.4}
+.gh{fill:var(--danger-bg);stroke:var(--danger);stroke-dasharray:4 3;stroke-width:1.5}
+.ght{font-family:var(--ui);font-size:11px;fill:var(--danger);font-style:italic}
+.lbl{font-family:var(--ui);font-size:12px;fill:var(--muted)}
+.lblb{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--head)}
+.empty{font-family:var(--ui);font-size:13px;fill:var(--muted);font-style:italic}
+.pipe{stroke:var(--ink);stroke-width:2.4}
+.cell{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.cell.chg{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.2}
+.nd.freed{opacity:.5}
+.nd.freed .cell{stroke-dasharray:4 3;fill:var(--danger-bg);stroke:var(--danger)}
+.dt{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.garbq{font-family:var(--mono);font-weight:700;font-size:15px;fill:var(--danger);text-anchor:middle}
+.adr{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.nullslash{stroke:var(--muted);stroke-width:1.5}
+.dot{fill:var(--ink)}
+.xmark{stroke:var(--danger);stroke-width:3;stroke-linecap:round}
+.ar{fill:none;stroke-width:1.8}
+.ar-ink{stroke:var(--ink)}.ar-acc{stroke:var(--hl-line);stroke-width:3}.ar-red{stroke:var(--danger);stroke-dasharray:5 4}.ar-mut{stroke:var(--muted)}.ar-head{stroke:var(--head);stroke-width:3}
+.mk-ink{fill:var(--ink)}.mk-acc{fill:var(--hl-line)}.mk-red{fill:var(--danger)}.mk-mut{fill:var(--muted)}.mk-head{fill:var(--head)}.mk-ptr{fill:var(--ptr)}
+.tag rect{stroke-width:1.5}
+.tag text{font-family:var(--mono);font-weight:600;font-size:12px;text-anchor:middle}
+.tag-ptr rect{fill:var(--ptr-bg);stroke:var(--ptr)}.tag-ptr text{fill:var(--ptr)}
+.tag-head rect{fill:var(--head-bg);stroke:var(--head)}.tag-head text{fill:var(--head)}
+.tag-acc rect{fill:var(--hl);stroke:var(--hl-line)}.tag-acc text{fill:var(--hl-ink)}
+.tag-red rect{fill:var(--danger-bg);stroke:var(--danger)}.tag-red text{fill:var(--danger)}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.gn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.gn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.6}
+.gn.dead circle{fill:var(--paper);stroke:var(--muted);stroke-dasharray:3 3}
+.gn.cur circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.gn text{font-family:var(--mono);font-weight:700;font-size:14px;text-anchor:middle;fill:var(--ink)}
+.gn.dead text{fill:var(--muted)}
+.gring{fill:none;stroke:var(--danger);stroke-width:1.6;stroke-dasharray:3 2}
+.gtag{font-family:var(--ui);font-size:10px;fill:var(--muted);text-anchor:middle}
+.ge{fill:none;stroke:var(--muted);stroke-width:1.5}
+.ge.path{stroke:var(--head);stroke-width:3}.ge.try{stroke:var(--hl-line);stroke-width:3.6}
+.peg{fill:var(--muted)}
+.disk{stroke:var(--ink);stroke-width:1.2}
+.disk.mv{stroke:var(--hl-line);stroke-width:3.5}
+.dkt{font-family:var(--mono);font-weight:700;font-size:11px;fill:#1B2A4A;text-anchor:middle}
+.pegl{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+
+.tape{display:flex;flex-wrap:wrap;gap:4px}
+.tk{font-family:var(--mono);font-size:.88rem;padding:3px 8px;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel);white-space:pre}
+.tk.done{opacity:.45}
+.tk.ok{border-color:var(--ptr)}
+.tk.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);font-weight:700;opacity:1}
+.tk.err{background:var(--danger-bg);border-color:var(--danger);color:var(--danger);font-weight:700;opacity:1}
+.tbl{max-height:250px;overflow:auto;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel)}
+.tbl table{border-collapse:collapse;font-family:var(--mono);font-size:.78rem;width:100%}
+.tbl th,.tbl td{border-bottom:1px solid var(--grid);padding:4px 8px;text-align:left;vertical-align:top}
+.tbl th{position:sticky;top:0;background:var(--paper);font-family:var(--ui);font-size:.78rem;border-bottom:1.5px solid var(--rule);white-space:nowrap}
+.tbl td{white-space:nowrap}
+.tbl td:last-child{white-space:normal;min-width:12em}
+.tbl tr.hl td{background:var(--hl);color:var(--hl-ink)}
+.tbl .none{color:var(--muted);font-family:var(--ui);font-style:italic}
+.tv{font-family:var(--mono);font-weight:700;font-size:1.02rem;padding:6px 10px;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);word-break:break-word;min-width:8em}
+.tv.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.tv.good{border-color:var(--ptr);color:var(--ptr)}
+.tv.good.chg{color:var(--hl-ink)}
+.tv.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.chip{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:5px;border:1.5px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr)}
+.chip.head{border-color:var(--head);background:var(--head-bg);color:var(--head)}
+.chip.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+
+.change{border-top:5px solid var(--hl-line)}
+.note{margin:0 0 8px;font-size:1rem;max-width:78ch}
+.note.crash{color:var(--danger);font-weight:700;background:var(--danger-bg);padding:8px 10px;border-radius:4px}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diff li{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:.8rem;line-height:1.35;word-break:break-word}
+.badge{flex:0 0 auto;font-family:var(--ui);font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:3px;border:1.5px solid var(--ink);min-width:58px;text-align:center}
+.b-push,.b-enq,.b-set,.b-add,.b-move,.b-new,.b-node{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-pop,.b-deq,.b-del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.b-err{background:var(--danger);border-color:var(--danger);color:#fff}
+.b-read,.b-var{background:var(--ptr-bg);border-color:var(--ptr);color:var(--ptr)}
+.b-call,.b-ret{background:var(--head-bg);border-color:var(--head);color:var(--head)}
+.b-out{background:var(--panel)}
+.nodiff{color:var(--muted);font-family:var(--ui)!important;font-size:.85rem!important}
+
+.codewrap{position:relative;max-height:46vh;overflow:auto;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:6px 0}
+#code{font-family:var(--mono);font-size:12.5px;line-height:1.6;min-width:max-content}
+.cl{display:flex;padding:0 12px 0 0;border-left:4px solid transparent;white-space:pre}
+.cl .ln{width:3.2em;flex:0 0 auto;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.cl.cur{background:var(--hl);border-left-color:var(--hl-line);color:var(--hl-ink)}
+.cl.cur .ln{color:var(--hl-ink);font-weight:700;opacity:1}
+.c-kw{color:var(--kw);font-weight:600}.c-str{color:var(--str)}.c-com{color:var(--com);font-style:italic}.c-num{color:var(--num)}
+.cl.cur .c-kw,.cl.cur .c-str,.cl.cur .c-num,.cl.cur .c-com{color:var(--hl-ink)}
+
+.frame{border:1.5px solid var(--rule);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.fh{font-family:var(--mono);font-size:.8rem;font-weight:700;padding:4px 8px;background:var(--paper);border-bottom:1.5px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.fh .act{font-family:var(--ui);font-weight:400;color:var(--head)}
+.vr{display:flex;gap:10px;padding:4px 8px;font-family:var(--mono);font-size:.82rem;border-top:1px solid var(--grid);align-items:baseline}
+.vr:first-of-type{border-top:0}
+.vr.chg{background:var(--hl);color:var(--hl-ink)}
+.vn{min-width:7.5em;font-weight:600}
+.vv{word-break:break-word}
+.nul{color:var(--muted)}.garb{color:var(--danger);font-weight:700}.dang{color:var(--danger);font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+#out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;min-height:2.4em;white-space:pre-wrap;word-break:break-word}
+#out .new{background:var(--hl);color:var(--hl-ink)}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.controls .in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:10px}
+.r1 input{flex:1;accent-color:var(--head);min-width:0;height:28px}
+#count{font-family:var(--mono);font-size:.85rem;white-space:nowrap;min-width:7.5em;text-align:right}
+.r2{display:flex;gap:6px;justify-content:center}
+.r2 button{border:2px solid var(--ink);background:var(--panel);border-radius:6px;padding:8px 10px;cursor:pointer;min-height:42px;font-weight:700;font-size:.92rem;white-space:nowrap}
+.r2 button:disabled{opacity:.35;cursor:default}
+.r2 button.primary{background:var(--ink);color:var(--panel);min-width:92px}
+.r2 .grow{flex:1 1 0;max-width:150px}
+@media (max-width:420px){#bFirst,#bLast{display:none}.r2 button.primary{min-width:84px}}
+@media (min-width:980px){.controls .in{flex-direction:row-reverse;align-items:center;gap:18px}.r1{flex:1}.r2{flex:0 0 auto}body{padding-bottom:84px}}
+@media (hover:hover){.r2 button:not(:disabled):hover,.presets button:not(.on):hover{background:var(--hl);color:var(--hl-ink);border-color:var(--hl-line)}}
+.back{display:inline-block;margin-bottom:6px;font-size:.88rem;color:var(--head);text-decoration:none;font-weight:700}.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <marker id="m-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-ink"/></marker>
+  <marker id="m-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-acc"/></marker>
+  <marker id="m-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-red"/></marker>
+  <marker id="m-mut" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-mut"/></marker>
+  <marker id="m-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-head"/></marker>
+  <marker id="m-ptr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-ptr"/></marker>
+</defs></svg>
+
+<header class="top">
+  <div>
+    <a class="back" href="index.html">← All lectures</a>
+    <h1><span class="mark" aria-hidden="true"><i></i><i></i><i class="on"></i></span>Stacks &amp; queues simulator</h1>
+    <p>Every program and diagram from Lecture 6 (Data Structures 501324-3), run one step at a time.</p>
+  </div>
+  <label class="pick"><span>Choose a program or topic from the slides</span><select id="prog"></select></label>
+</header>
+
+<main class="layout">
+  <section class="panel info">
+    <span class="slides" id="slides"></span>
+    <h2 id="ptitle"></h2>
+    <p id="pdesc"></p>
+    <details id="notesWrap"><summary id="notesSum"></summary><ul id="notes"></ul></details>
+    <div class="inwrap" id="inWrap" hidden>
+      <label for="inField" id="inLabel"></label>
+      <div class="inrow"><input id="inField" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="inRun">Run it</button></div>
+      <div class="presets" id="inPresets"></div>
+      <p class="inerr" id="inErr" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="panel viz">
+    <div class="ph"><h3>The data structures right now</h3><span class="hint">yellow = changed by this step</span></div>
+    <div class="structs" id="structs"></div>
+    <div class="legend">
+      <span><i class="sw hl"></i>added or changed</span>
+      <span><i class="sw dl"></i>removed (popped / dequeued)</span>
+      <span><i class="sw rd"></i>read, not changed</span>
+      <span><i class="sw lv"></i>inside the stack / queue</span>
+    </div>
+  </section>
+
+  <section class="panel change">
+    <div class="ph"><h3>What this step did</h3><span class="hint" id="stepNo"></span></div>
+    <p id="note" class="note"></p>
+    <ul id="diff" class="diff"></ul>
+  </section>
+
+  <section class="panel code">
+    <div class="ph"><h3 id="codeH">Code</h3><span class="hint">yellow line = the one that just ran</span></div>
+    <div class="codewrap" id="codeWrap"><div id="code"></div></div>
+  </section>
+
+  <section class="panel vars" id="varsCard">
+    <div class="ph"><h3>Variables</h3><span class="hint">one box per function that is running</span></div>
+    <div id="vars"></div>
+  </section>
+
+  <section class="panel out" id="outCard">
+    <div class="ph"><h3>Console output</h3></div>
+    <pre id="out"></pre>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Step controls">
+  <div class="in">
+    <div class="r1"><input type="range" id="range" min="0" max="0" value="0" aria-label="Step"><span id="count"></span></div>
+    <div class="r2">
+      <button id="bFirst" aria-label="Go to first step">⏮</button>
+      <button id="bPrev" class="grow">◀ Back</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <button id="bNext" class="grow">Next ▶</button>
+      <button id="bLast" aria-label="Go to last step">⏭</button>
+      <button id="bSpeed" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+/*ENGINE-START*/
+const GARB = '?';
+class Crash extends Error {}
+class InputError extends Error {}
+const addr = id => '0x' + (0x1A0 + id * 0x20).toString(16).toUpperCase();
+const fd = v => v === GARB ? '?' : (v === '' ? '""' : String(v));
+const fmtNum = x => typeof x === 'number' ? (Number.isInteger(x) ? String(x) : String(+x.toFixed(4))) : String(x);
+const fv = v => v === null || v === undefined ? '' : (typeof v === 'number' ? fmtNum(v) : String(v));
+const TRANSIENT = ['hl', 'ghost', 'topChg', 'frontChg', 'rearChg', 'hlRow', 'moved', 'tried', 'chg'];
+const sstr = items => items.length ? items.map(fv).join(' ') : '(empty)';
+
+class Sim {
+  constructor(o = {}) {
+    this.zero = o.zeroData !== undefined ? o.zeroData : 0;
+    this.nodes = []; this.frames = [{ name: 'global', label: 'Global variables', vars: {} }];
+    this.out = ''; this.snaps = []; this.st = {}; this.order = []; this.ops = []; this.code = null;
+  }
+  alloc(zero = true) { const id = this.nodes.length; this.nodes.push({ id, data: zero ? this.zero : GARB, next: zero ? null : GARB, freed: false }); return id; }
+  fn(name, label) { this.frames.push({ name, label: label || name + '()', vars: {} }); }
+  ret() { this.frames.pop(); }
+  var(n, v, t = 'ptr') { this.frames[this.frames.length - 1].vars[n] = { t, v }; }
+  gvar(n, v, t = 'ptr') { this.frames[0].vars[n] = { t, v }; }
+  drop(n) { delete this.frames[this.frames.length - 1].vars[n]; }
+  find(n) { for (let i = this.frames.length - 1; i >= 0; i--) if (n in this.frames[i].vars) return this.frames[i].vars[n]; throw new Error('unknown variable ' + n); }
+  get(n) { return this.find(n).v; }
+  set(n, v) { this.find(n).v = v; }
+  N(p) { if (typeof p !== 'number') throw new Error('bad dereference ' + p); return this.nodes[p]; }
+  d(p) { return fd(this.N(p).data); }
+  free(p) { this.N(p).freed = true; }
+  print(x) { this.out += x; }
+  mk(name, o) { this.st[name] = o; if (!this.order.includes(name)) this.order.push(name); return o; }
+  op(k, t) { this.ops.push([k, t]); }
+  step(label, note, extra) {
+    this.snaps.push(Object.assign({ label, note, ops: this.ops, state: JSON.parse(JSON.stringify({ nodes: this.nodes, frames: this.frames, out: this.out, st: this.st, order: this.order })) }, extra || {}));
+    this.ops = [];
+    for (const k in this.st) { const t = this.st[k]; TRANSIENT.forEach(f => delete t[f]); }
+  }
+  // abstract stack / queue
+  spush(n, v) { const t = this.st[n]; t.items.push(v); t.hl = { i: t.items.length - 1, k: 'push' }; this.op('push', `${fv(v)} pushed onto ${t.short}`); }
+  spop(n) { const t = this.st[n]; if (!t.items.length) return undefined; const v = t.items.pop(); t.ghost = { v }; this.op('pop', `${fv(v)} popped from ${t.short}`); return v; }
+  speek(n) { const t = this.st[n]; if (!t.items.length) return undefined; t.hl = { i: t.items.length - 1, k: 'read' }; return t.items[t.items.length - 1]; }
+  qenq(n, v) { const t = this.st[n]; t.items.push(v); t.hl = { i: t.items.length - 1, k: 'push' }; this.op('enq', `${fv(v)} enters ${t.short} at the rear`); }
+  qdeq(n) { const t = this.st[n]; if (!t.items.length) return undefined; const v = t.items.shift(); t.ghost = { v }; this.op('deq', `${fv(v)} leaves ${t.short} from the front`); return v; }
+  qpeek(n) { const t = this.st[n]; if (!t.items.length) return undefined; t.hl = { i: 0, k: 'read' }; return t.items[0]; }
+  // arrays
+  aset(n, i, v) { const t = this.st[n]; const old = t.arr[i]; t.arr[i] = v; t.hl = { i, k: 'push' }; this.op('set', `${t.short}[${i}]: ${old === null || old === undefined ? 'empty' : fv(old)} → ${fv(v)}`); }
+  aread(n, i) { const t = this.st[n]; t.hl = { i, k: 'read' }; return t.arr[i]; }
+  row(n, cells) { const t = this.st[n]; t.rows.push(cells.map(c => fv(c))); t.hlRow = t.rows.length - 1; }
+  text(n, v, cls) { const t = this.st[n]; if (t.value !== v) t.chg = 1; t.value = v; if (cls !== undefined) t.cls = cls; }
+}
+const mkStack = (s, n, title, o = {}) => s.mk(n, Object.assign({ type: 'stack', title, items: [], short: n }, o));
+const mkQueue = (s, n, title, o = {}) => s.mk(n, Object.assign({ type: 'queue', title, items: [], short: n }, o));
+const mkTable = (s, n, title, cols) => s.mk(n, { type: 'table', title, cols, rows: [] });
+const mkText = (s, n, title, value = '', cls = '') => s.mk(n, { type: 'text', title, value, cls });
+const mkTape = (s, n, title, tokens) => s.mk(n, { type: 'tape', title, tokens, pos: -1, marks: {} });
+const forLoop = (s, lab, a, b, body, nm = 'k') => {
+  for (let i = a; i < b; i++) {
+    if (i === a) { s.var(nm, i, 'val'); s.step(lab, `The loop starts: ${nm} = ${a}, and ${nm} < ${b} is true.`); }
+    else { s.set(nm, i); s.step(lab, `${nm}++ makes ${nm} = ${i}; ${nm} < ${b} is still true.`); }
+    body(i);
+  }
+  s.set(nm, b); s.step(lab, `${nm}++ makes ${nm} = ${b}; ${nm} < ${b} is false, so the loop ends.`); s.drop(nm);
+};
+
+/* ======================= input parsing ======================= */
+function parseOps(text, kind) {
+  const alias = kind === 'stack'
+    ? { push: 'push', pop: 'pop', top: 'top', peek: 'top', size: 'size', isempty: 'isEmpty', isfull: 'isFull' }
+    : kind === 'naive' ? { enqueue: 'enqueue', enq: 'enqueue', dequeue: 'dequeue', deq: 'dequeue' }
+    : { enqueue: 'enqueue', enq: 'enqueue', dequeue: 'dequeue', deq: 'dequeue', front: 'front', peek: 'front', size: 'size', isempty: 'isEmpty', isfull: 'isFull' };
+  const parts = String(text).split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+  if (!parts.length) throw new InputError('Type at least one operation, for example: push 5, pop');
+  if (parts.length > 40) throw new InputError('Use 40 operations or fewer.');
+  return parts.map(p => {
+    const m = p.match(/^([A-Za-z]+)\s*\(?\s*([^()]*?)\s*\)?$/);
+    const key = m && alias[m[1].toLowerCase()];
+    if (!key) throw new InputError(`"${p}" is not an operation here. Use: ${[...new Set(Object.values(alias))].join(', ')}.`);
+    let arg = m[2].replace(/^['"]|['"]$/g, '').trim();
+    const needs = key === 'push' || key === 'enqueue';
+    if (needs && !arg) throw new InputError(`"${p}" needs a value, like ${key} 7`);
+    if (!needs && arg) throw new InputError(`"${p}" does not take a value.`);
+    if (arg.length > 6) throw new InputError(`Keep values short (6 characters max): "${arg}"`);
+    if (arg !== '' && !isNaN(+arg)) arg = +arg;
+    return { op: key, arg };
+  });
+}
+const opLine = o => o.arg !== '' ? `${o.op}(${typeof o.arg === 'number' ? o.arg : o.arg})` : `${o.op}()`;
+
+/* ======================= C++ code text ======================= */
+const STACK_FUNCS = MAX => `#include <iostream>
+using namespace std;
+
+#define MAX ${MAX} //max stack size
+int stack[MAX];  // Stack array                 @@g1
+int top = -1;    // Initialize empty stack      @@g2
+
+// Add an element to the stack
+void push(int item) {                           @@p_sig
+    if (top == (MAX - 1)) {                     @@p_if
+        cout << "\\nThe stack is full.\\n";      @@p_full
+    }
+    else {
+        top++;                                  @@p_inc
+        stack[top] = item;                      @@p_set
+        cout << "pushed successfully.\\n";      @@p_out
+    }
+}                                               @@p_end
+
+// Function to display all the elements in the stack
+void display() {                                @@d_sig
+    if (top < 0) {                              @@d_if
+        cout << "\\nThe stack is empty.\\n";     @@d_empty
+    }
+    else {
+        cout << "\\nStack elements: ";          @@d_head
+        for (int i = top; i >= 0; i--) {        @@d_for
+            cout << stack[i] << " ";            @@d_out
+        }
+        cout << "\\n";                          @@d_nl
+    }
+}                                               @@d_end
+
+// remove an element from the stack
+void pop() {                                    @@o_sig
+    if (top==-1) {                              @@o_if
+        cout << "\\nThe stack is empty.\\n";     @@o_empty
+    }
+    else {
+        int item = stack[top];                  @@o_item
+        top--;                                  @@o_dec
+        cout << item << " popped from stack.\\n";   @@o_out
+    }
+}                                               @@o_end
+
+// Function to view the top element of the stack
+void peek() {                                   @@k_sig
+    if (top < 0) {                              @@k_if
+        cout << "\\nThe stack is empty\\n";      @@k_empty
+    }
+    else {
+        cout << "\\nThe top is: " << stack[top];   @@k_out
+    }
+}                                               @@k_end`;
+
+function pushA(s, item, MAX) {
+  s.fn('push', `push(item = ${item})`); s.var('item', item, 'val');
+  s.step('p_sig', `push(${item}) is called.`);
+  const top = s.get('top');
+  if (top === MAX - 1) {
+    s.step('p_if', `top == MAX - 1 is true (${top} == ${MAX - 1}): every slot is used.`);
+    s.print('\nThe stack is full.\n'); s.op('err', `Overflow: ${item} was not stored`);
+    s.step('p_full', `Stack overflow. ${item} is not stored and top stays ${top}.`);
+  } else {
+    s.step('p_if', `top == MAX - 1 is false (${top} != ${MAX - 1}): there is room.`);
+    s.set('top', top + 1); s.step('p_inc', `top++ moves top from ${top} to ${top + 1}, the next free slot.`);
+    s.aset('stk', top + 1, item); s.step('p_set', `stack[${top + 1}] = ${item}: the item is stored at the new top.`);
+    s.print('pushed successfully.\n'); s.step('p_out', 'Print a confirmation.');
+  }
+  s.ret(); s.step('p_end', 'push returns.');
+}
+function popA(s) {
+  s.fn('pop'); s.step('o_sig', 'pop() is called.');
+  const top = s.get('top');
+  if (top === -1) {
+    s.step('o_if', 'top == -1 is true: the stack is empty.');
+    s.print('\nThe stack is empty.\n'); s.op('err', 'Underflow: nothing to pop');
+    s.step('o_empty', 'Stack underflow: there is nothing to remove.');
+  } else {
+    s.step('o_if', `top == -1 is false (top = ${top}).`);
+    const v = s.aread('stk', top); s.var('item', v, 'val'); s.step('o_item', `Read the top element: item = stack[${top}] = ${v}.`);
+    s.set('top', top - 1); s.st.stk.hl = { i: top, k: 'pop' };
+    s.step('o_dec', `top-- makes top = ${top - 1}. ${v} is still written in stack[${top}], but it is outside the stack now (faded); the next push will overwrite it.`);
+    s.print(`${v} popped from stack.\n`); s.step('o_out', `Print that ${v} was popped.`);
+  }
+  s.ret(); s.step('o_end', 'pop returns.');
+}
+function displayA(s) {
+  s.fn('display'); s.step('d_sig', 'display() is called.');
+  const top = s.get('top');
+  if (top < 0) {
+    s.step('d_if', 'top < 0 is true: nothing to show.'); s.print('\nThe stack is empty.\n'); s.step('d_empty', 'Print "The stack is empty."');
+  } else {
+    s.step('d_if', `top < 0 is false (top = ${top}).`);
+    s.print('\nStack elements: '); s.step('d_head', 'Print the heading.');
+    for (let i = top; i >= -1; i--) {
+      if (i === top) { s.var('i', i, 'val'); s.step('d_for', `i starts at top (${top}): we print from the top down to index 0.`); }
+      else { s.set('i', i); s.step('d_for', i >= 0 ? `i-- makes i = ${i}; i >= 0 is true.` : 'i-- makes i = -1; i >= 0 is false, so the loop ends.'); }
+      if (i < 0) break;
+      s.print(fv(s.aread('stk', i)) + ' '); s.step('d_out', `Print stack[${i}] = ${fv(s.st.stk.arr[i])}.`);
+    }
+    s.drop('i'); s.print('\n'); s.step('d_nl', 'End the line.');
+  }
+  s.ret(); s.step('d_end', 'display returns. It only read the array; nothing changed.');
+}
+function peekA(s) {
+  s.fn('peek'); s.step('k_sig', 'peek() is called: look at the top without removing it.');
+  const top = s.get('top');
+  if (top < 0) { s.step('k_if', 'top < 0 is true: empty.'); s.print('\nThe stack is empty\n'); s.step('k_empty', 'Print "The stack is empty".'); }
+  else {
+    s.step('k_if', `top < 0 is false (top = ${top}).`);
+    const v = s.aread('stk', top); s.print(`\nThe top is: ${v}`); s.step('k_out', `Print stack[top] = ${v}. top does not change.`);
+  }
+  s.ret(); s.step('k_end', 'peek returns.');
+}
+function stackProgram(MAX, calls) {
+  const main = calls.map((c, i) => `    ${c};${' '.repeat(Math.max(1, 26 - c.length))}@@c${i}`).join('\n');
+  return `${STACK_FUNCS(MAX)}
+
+// Main function to demonstrate stack operations
+int main() {                                    @@main
+${main}
+    return 0;                                   @@ret
+}`;
+}
+function runStackCalls(s, MAX, calls) {
+  s.mk('stk', { type: 'astack', title: `stack[${MAX}]: the global array`, short: 'stack', arr: Array(MAX).fill(0), topVar: 'top' });
+  s.gvar('top', -1, 'val');
+  s.step('g2', `Globals are ready: stack has ${MAX} slots (all 0, faded because they are not part of the stack) and top = -1, meaning "empty".`);
+  s.fn('main'); s.step('main', 'main() starts.');
+  calls.forEach((c, i) => {
+    s.step('c' + i, `main calls ${c}.`);
+    const m = c.match(/^(\w+)\((\d*)\)$/);
+    if (m[1] === 'push') pushA(s, +m[2], MAX); else if (m[1] === 'pop') popA(s); else if (m[1] === 'display') displayA(s); else peekA(s);
+  });
+  s.step('ret', 'main returns.');
+}
+
+const QUEUE_FUNCS = MAX => `#include<iostream>
+using namespace std;
+
+const int MAX = ${MAX};
+int q[MAX];                                 @@g1
+int rear = 0, front = 0;                    @@g2
+
+void dequeue(){                             @@d_sig
+  if(front==rear)                           @@d_if
+    cout<<"\\nQueue is empty";               @@d_empty
+  else{
+    int ele=q[front];                       @@d_ele
+    front++;                                @@d_inc
+    cout<<ele<<" deleted";                  @@d_out
+  }
+}                                           @@d_end
+
+void display(){                             @@s_sig
+  if(front==rear)                           @@s_if
+    cout<<"\\nQueue is empty";               @@s_empty
+  else{
+    cout<<"\\nThe elements are"<<endl;       @@s_head
+    for(int i=front; i<rear; i++)           @@s_for
+        cout<<q[i]<<" ";                    @@s_out
+  }
+}                                           @@s_end
+
+void enqueue(){                             @@e_sig
+  if(rear==MAX)                             @@e_if
+    cout<<"\\nQueue is full";                @@e_full
+  else{
+    cout<<"\\nEnter an element:";            @@e_prompt
+    int ele;                                @@e_decl
+    cin>>ele;                               @@e_cin
+    q[rear]=ele;                            @@e_set
+    rear++;                                 @@e_inc
+    cout<<"\\nInserted successfully\\n";      @@e_out
+  }
+}                                           @@e_end`;
+function enqC(s, MAX, inputs) {
+  s.fn('enqueue'); s.step('e_sig', 'enqueue() is called.');
+  const rear = s.get('rear');
+  if (rear === MAX) {
+    s.step('e_if', `rear == MAX is true (${rear} == ${MAX}): rear has reached the end of the array.`);
+    s.print('\nQueue is full'); s.op('err', 'Refused: rear is at the end of the array');
+    const front = s.get('front');
+    s.step('e_full', front > 0 ? `"Queue is full" — but ${front} slot${front > 1 ? 's' : ''} at the start (index 0${front > 1 ? '–' + (front - 1) : ''}) are free! front only moves right, so space before it is never reused. A circular queue fixes this.` : 'The queue really is full.');
+  } else {
+    s.step('e_if', `rear == MAX is false (${rear} != ${MAX}).`);
+    s.print('\nEnter an element:'); s.step('e_prompt', 'Ask the user for a value.');
+    s.var('ele', GARB, 'val'); s.step('e_decl', 'ele is declared (garbage until cin fills it).');
+    const v = inputs.shift(); s.set('ele', v); s.print(`${v}\n`); s.step('e_cin', `The user types ${v}.`);
+    s.aset('q', rear, v); s.step('e_set', `q[rear] = q[${rear}] = ${v}: the new item goes into the slot rear points to.`);
+    s.set('rear', rear + 1); s.step('e_inc', `rear++ makes rear = ${rear + 1}, the next free slot. (Here rear marks the slot AFTER the last item.)`);
+    s.print('\nInserted successfully\n'); s.step('e_out', 'Print a confirmation.');
+  }
+  s.ret(); s.step('e_end', 'enqueue returns.');
+}
+function deqC(s) {
+  s.fn('dequeue'); s.step('d_sig', 'dequeue() is called.');
+  const front = s.get('front'), rear = s.get('rear');
+  if (front === rear) {
+    s.step('d_if', `front == rear is true (${front} == ${rear}): no items between them.`);
+    s.print('\nQueue is empty'); s.step('d_empty', 'Print "Queue is empty".');
+  } else {
+    s.step('d_if', `front == rear is false (front = ${front}, rear = ${rear}).`);
+    const v = s.aread('q', front); s.var('ele', v, 'val'); s.step('d_ele', `ele = q[front] = q[${front}] = ${v}: the oldest item.`);
+    s.set('front', front + 1); s.st.q.hl = { i: front, k: 'pop' };
+    s.step('d_inc', `front++ makes front = ${front + 1}. Nothing is shifted; ${v} stays in q[${front}] but is no longer in the queue.`);
+    s.print(`${v} deleted`); s.step('d_out', `Print "${v} deleted".`);
+  }
+  s.ret(); s.step('d_end', 'dequeue returns.');
+}
+function dispC(s) {
+  s.fn('display'); s.step('s_sig', 'display() is called.');
+  const front = s.get('front'), rear = s.get('rear');
+  if (front === rear) { s.step('s_if', 'front == rear: empty.'); s.print('\nQueue is empty'); s.step('s_empty', 'Print "Queue is empty".'); }
+  else {
+    s.step('s_if', `front == rear is false: items are in q[${front}] … q[${rear - 1}].`);
+    s.print('\nThe elements are\n'); s.step('s_head', 'Print the heading.');
+    for (let i = front; i <= rear; i++) {
+      if (i === front) { s.var('i', i, 'val'); s.step('s_for', `i starts at front (${front}).`); }
+      else { s.set('i', i); s.step('s_for', i < rear ? `i++ makes i = ${i}; i < rear is true.` : `i++ makes i = ${i}; i < rear (${rear}) is false, so the loop ends.`); }
+      if (i === rear) break;
+      s.print(fv(s.aread('q', i)) + ' '); s.step('s_out', `Print q[${i}] = ${fv(s.st.q.arr[i])}.`);
+    }
+    s.drop('i');
+  }
+  s.ret(); s.step('s_end', 'display returns.');
+}
+
+/* ======================= programs ======================= */
+const PROGRAMS = [];
+const P = o => PROGRAMS.push(o);
+
+/* ---------- warm-up: slide 2 ---------- */
+P({ id: 'todo', group: 'Warm-up', slides: 'Slide 2 · Practice', title: 'To-do list: insert a task at the beginning',
+  desc: 'A linked list where each node is a task (id + description). Two tasks are created, then "Morning workout" is inserted at the front.',
+  notes: ['The slide\'s code builds the list but never prints it. A small display() function is added so you can see the "Initial" and "Updated" lists from the slide\'s example.', 'Inserting at the beginning only needs two pointer changes: newNode->next = head, then head = newNode.'],
+  heap: { anchor: 'head', dataW: 196, dataName: 'task' }, zeroData: '0: ""',
+  code: `#include <iostream>
+#include <string>
+using namespace std;
+struct Node {
+  int id;
+  string description;
+  Node* next;
+};
+void display(Node* head) {   // added: print the list   @@dsig
+  for (Node* p = head; p != NULL; p = p->next)            @@dfor
+    cout << p->id << ": " << p->description << endl;     @@dout
+}                                                        @@dend
+int main() {                                             @@main
+  Node* head = new Node();                               @@a1
+  Node* second = new Node();                             @@a2
+  head -> id = 1;                                        @@i1
+  head -> description = "Complete assignment";           @@s1
+  head -> next = second;                                 @@n1
+  second -> id = 2;                                      @@i2
+  second -> description = "Call the bank";               @@s2
+  second -> next = NULL;                                 @@n2
+  cout << "Initial To-Do List:" << endl;   // added      @@c1
+  display(head);                           // added      @@d1
+  // inserting at the begining
+  Node* newNode = new Node();                            @@a3
+  newNode->id = 0;                                       @@i3
+  newNode->description = "Morning workout";              @@s3
+  newNode->next = head;                                  @@n3
+  head = newNode;                                        @@h
+  cout << "Updated To-Do List:" << endl;   // added      @@c2
+  display(head);                           // added      @@d2
+  return 0;                                              @@ret
+}`,
+  run(s) {
+    const task = (p, id, desc) => { const n = s.N(p); n.tid = id; n.tdesc = desc; n.data = `${id}: ${desc === '' ? '""' : desc}`; };
+    const disp = lab => {
+      s.step(lab, 'main calls display(head). The address in head is copied into the parameter, also named head.');
+      s.fn('display', 'display(Node* head)'); s.var('head', s.find('head').v); s.step('dsig', 'display starts with its own copy of head.');
+      s.var('p', s.get('head')); s.step('dfor', 'p starts at the first task.');
+      for (;;) {
+        const p = s.get('p');
+        if (p === null) { s.step('dfor', 'p is NULL: every task was printed.'); break; }
+        s.step('dfor', `p is not NULL, so print this task.`);
+        const n = s.N(p); s.print(`${n.tid}: ${n.tdesc}\n`); s.step('dout', `Print "${n.tid}: ${n.tdesc}".`);
+        s.set('p', n.next); s.step('dfor', 'p = p->next moves to the next task.');
+      }
+      s.ret(); s.step('dend', 'display returns.');
+    };
+    s.fn('main'); s.step('main', 'main() starts.');
+    const a = s.alloc(); task(a, 0, ''); s.var('head', a); s.step('a1', `A task node is created at ${addr(a)}. new Node() sets id = 0 and an empty description.`);
+    const b = s.alloc(); task(b, 0, ''); s.var('second', b); s.step('a2', 'A second task node is created.');
+    task(a, 1, ''); s.step('i1', 'The first task gets id 1.');
+    task(a, 1, 'Complete assignment'); s.step('s1', 'Its description is set.');
+    s.N(a).next = b; s.step('n1', 'Task 1 links to the second node.');
+    task(b, 2, ''); s.step('i2', 'The second task gets id 2.');
+    task(b, 2, 'Call the bank'); s.step('s2', 'Its description is set.');
+    s.N(b).next = null; s.step('n2', 'Task 2 is the last one.');
+    s.print('Initial To-Do List:\n'); s.step('c1', 'Print the heading.');
+    disp('d1');
+    const c = s.alloc(); task(c, 0, ''); s.var('newNode', c); s.step('a3', 'A new task node is created. It is not in the list yet.');
+    task(c, 0, ''); s.step('i3', 'newNode->id = 0 (it was already 0, so nothing visible changes).');
+    task(c, 0, 'Morning workout'); s.step('s3', 'Its description is set to "Morning workout".');
+    s.N(c).next = a; s.step('n3', 'newNode->next = head: the new task points to task 1. The old list is now attached behind it.');
+    s.set('head', c); s.step('h', 'head = newNode: the list now starts with "Morning workout".');
+    s.print('Updated To-Do List:\n'); s.step('c2', 'Print the heading.');
+    disp('d2');
+    s.step('ret', 'main returns.');
+  } });
+
+/* ---------- stack basics ---------- */
+function stackOpsRun(s, input) {
+  const ops = parseOps(input, 'stack'), MAX = 10;
+  s.code = ops.map((o, i) => `${opLine(o)};${' '.repeat(Math.max(2, 16 - opLine(o).length))}@@L${i}`).join('\n');
+  mkStack(s, 'S', 'The stack (what the user sees)', { short: 'the stack' });
+  s.mk('A', { type: 'astack', title: 'Array version: stk[10] + top', short: 'stk', arr: Array(MAX).fill(null), top: -1 });
+  s.mk('L', { type: 'chain', title: 'Linked-list version (top = first node)', of: 'S', mode: 'stack' });
+  s.step(null, 'An empty stack. The array version starts with top = -1; the linked-list version starts with top = NULL.');
+  ops.forEach((o, i) => {
+    const L = 'L' + i, S = s.st.S, A = s.st.A, v = o.arg;
+    if (o.op === 'push') {
+      if (A.top === MAX - 1) { s.print(`${opLine(o)} → stack is full\n`); s.op('err', 'Overflow: top is already MAX - 1'); s.step(L, `push(${fv(v)}) fails: the array has no free slot (top = ${A.top} = MAX - 1). This is called stack overflow. A linked-list stack would never be full.`); return; }
+      s.spush('S', v); A.top++; A.arr[A.top] = v; A.hl = { i: A.top, k: 'push' }; A.topChg = 1;
+      s.step(L, `push(${fv(v)}) puts ${fv(v)} on the top. Array: top goes up to ${A.top}, then stk[${A.top}] = ${fv(v)}. Linked list: a new node is added in front.`);
+    } else if (o.op === 'pop') {
+      if (!S.items.length) { s.print('pop() → stack is empty\n'); s.op('err', 'Underflow: nothing to pop'); s.step(L, 'pop() on an empty stack: stack underflow. Nothing is removed.'); return; }
+      const x = s.spop('S'); A.hl = { i: A.top, k: 'pop' }; A.top--; A.topChg = 1; s.print(`pop() → ${fv(x)}\n`);
+      s.step(L, `pop() removes ${fv(x)}, the LAST item pushed (LIFO). Array: top goes down to ${A.top}; ${fv(x)} is still written in stk[${A.top + 1}] but it no longer counts. Linked list: the first node is removed.`);
+    } else if (o.op === 'top') {
+      if (!S.items.length) { s.print('top() → stack is empty\n'); s.step(L, 'top() on an empty stack: there is nothing to look at.'); return; }
+      const x = s.speek('S'); A.hl = { i: A.top, k: 'read' }; s.print(`top() → ${fv(x)}\n`); s.op('read', `top() reads ${fv(x)}`);
+      s.step(L, `top() returns ${fv(x)} without removing it. Nothing changes.`);
+    } else if (o.op === 'size') { s.print(`size() → ${S.items.length}\n`); s.step(L, `size() = ${S.items.length}. In the array version that is top + 1 = ${A.top} + 1.`); }
+    else if (o.op === 'isEmpty') { s.print(`isEmpty() → ${S.items.length === 0}\n`); s.step(L, `isEmpty() checks top == -1 → ${S.items.length === 0}.`); }
+    else { s.print(`isFull() → ${A.top === MAX - 1}\n`); s.step(L, `isFull() checks top == MAX - 1 (9) → ${A.top === MAX - 1}.`); }
+  });
+  s.step(null, `Done. The stack holds (bottom → top): ${sstr(s.st.S.items)}.`);
+}
+P({ id: 'stack-play', group: 'Stack basics', slides: 'Slides 7, 9, 11–15', title: 'Push and pop: one stack, three views',
+  desc: 'The same operations shown three ways: the abstract stack, the array implementation (stk[] + top), and the linked-list implementation. Type your own operations below.',
+  notes: ['In the array version, pop only moves top down. The old value stays in the array (shown faded) until a later push overwrites it.', 'The array version can overflow (MAX = 10). The linked-list version never becomes full.'],
+  codeTitle: 'Operations', input: { label: 'Operations (comma separated)', def: 'push A, push B, push C, push D, pop, pop',
+    presets: [['Slide 7', 'push A, push B, pop'], ['Slide 9', 'push A, push B, push C, push D, pop, pop'], ['top, size, isEmpty', 'push 4, push 7, top, size, pop, pop, isEmpty'], ['Overflow', 'push 1, push 2, push 3, push 4, push 5, push 6, push 7, push 8, push 9, push 10, push 11'], ['Underflow', 'push 5, pop, pop']] },
+  run: stackOpsRun });
+P({ id: 'stack-ex23', group: 'Stack basics', slides: 'Slide 23 · Exercise', title: 'Exercise: describe the output of these stack operations',
+  desc: 'Push(8) Push(3) Pop() Push(2) Push(5) Pop() Pop() Push(9) Push(1). Try predicting each pop before you press Next.',
+  notes: ['Answer: the pops return 3, then 5, then 2. The stack ends as 8 9 1 (bottom → top), with 1 on top.'],
+  codeTitle: 'Operations', input: { label: 'Operations (comma separated)', def: 'push 8, push 3, pop, push 2, push 5, pop, pop, push 9, push 1', presets: [['Slide 23', 'push 8, push 3, pop, push 2, push 5, pop, pop, push 9, push 1']] },
+  run: stackOpsRun });
+
+/* ---------- stack code ---------- */
+P({ id: 'stack-code', group: 'Stack code (array)', slides: 'Slides 17–18', title: 'Full stack code: push 10, 20, 30, display, pop, display, peek',
+  desc: 'The complete array stack program. Watch top and the array change line by line.',
+  notes: ['The array is global, so it starts filled with 0s. Slots above top hold leftovers and are shown faded.', 'Using the name stack for the array works here, but it would clash with std::stack if <stack> were included.'],
+  code: stackProgram(10, ['push(10)', 'push(20)', 'push(30)', 'display()', 'pop()', 'display()', 'peek()']),
+  run(s) { runStackCalls(s, 10, ['push(10)', 'push(20)', 'push(30)', 'display()', 'pop()', 'display()', 'peek()']); } });
+P({ id: 'stack-edge', group: 'Stack code (array)', slides: 'Slides 19–22', title: 'Overflow and underflow: a tiny stack (MAX = 3)',
+  desc: 'Same functions with MAX set to 3, so you can watch push hit "full" and pop hit "empty".',
+  notes: ['MAX is changed from 10 to 3 only so the edge cases happen quickly.', 'The pseudocode on slides 19–22 checks TOP == MAXSIZE and TOP == 0 because it counts from 1. The C++ code counts from 0, so it checks top == MAX - 1 and top == -1.'],
+  code: stackProgram(3, ['push(10)', 'push(20)', 'push(30)', 'push(40)', 'pop()', 'pop()', 'pop()', 'pop()', 'peek()', 'display()']),
+  run(s) { runStackCalls(s, 3, ['push(10)', 'push(20)', 'push(30)', 'push(40)', 'pop()', 'pop()', 'pop()', 'pop()', 'peek()', 'display()']); } });
+P({ id: 'reverse', group: 'Stack code (array)', slides: 'Slide 24 · Exercise', title: 'Reverse a string with a stack',
+  desc: 'Every character is pushed, then popped. Because a stack is LIFO, the characters come out in reverse order.',
+  notes: ['cin >> input stops at the first space, so only the first word is read.', 'char input[20] holds at most 19 characters plus the hidden \'\\0\' terminator.', 'strlen(input) is called again on every loop check. It works, but storing it in a variable once is faster.'],
+  input: { label: 'Word typed by the user', def: 'hello', presets: [['hello', 'hello'], ['STACK', 'STACK'], ['racecar', 'racecar']] },
+  code: `#include <iostream>
+#include <string>
+#include <cstring>
+using namespace std;
+
+const int MAX = 20;
+int top =-1;                                @@g1
+char stack[20];                             @@g2
+
+void push(char item){                       @@p_sig
+  if(top==(MAX-1))                          @@p_if
+    cout<<"\\nThe stack is full";
+  else{
+    top++;                                  @@p_inc
+    stack[top]=item;                        @@p_set
+    cout<<"Pushed successfully\\n";          @@p_out
+  }
+}                                           @@p_end
+void pop(){                                 @@o_sig
+  if(top==-1)                               @@o_if
+    cout<<"\\nThe stack is empty";
+  else{
+    cout<< stack[top];                      @@o_out
+    top--;                                  @@o_dec
+  }
+}                                           @@o_end
+
+int main() {                                @@main
+    char input[20];                         @@decl
+    // Read input from the user
+    cout << "Enter a string: ";             @@prompt
+    cin >> input;                           @@cin
+    for (int i=0; i< strlen(input); i++)    @@for1
+        push(input[i]);
+    // Output the reversed string
+    cout << "Reversed string: "<<endl;      @@rev
+    for (int i=0; i<strlen(input); i++)     @@for2
+        pop();
+    return 0;                               @@ret
+}`,
+  run(s, input) {
+    let w = String(input).trim().split(/\s+/)[0] || '';
+    if (!w) throw new InputError('Type a word to reverse.');
+    if (w.length > 19) throw new InputError('Use 19 characters or fewer (input holds 20 chars including \\0).');
+    const chars = [...w];
+    s.mk('in', { type: 'tape', title: 'input[] (characters)', tokens: chars, pos: -1, marks: {} });
+    s.mk('stk', { type: 'astack', title: 'stack[20] (global char array)', short: 'stack', arr: Array(20).fill(null), topVar: 'top', view: Math.min(20, chars.length + 2) });
+    s.gvar('top', -1, 'val'); s.step('g2', 'Globals: top = -1 (empty) and a 20-slot char array.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    s.var('input', '?', 'val'); s.step('decl', 'char input[20] is reserved (contents unknown yet).');
+    s.print('Enter a string: '); s.step('prompt', 'Ask the user to type a string.');
+    s.set('input', `"${w}"`); s.print(w + '\n'); s.step('cin', `The user types ${w}. cin stores it in input with a '\\0' at the end.`);
+    const len = chars.length;
+    for (let i = 0; i <= len; i++) {
+      if (i === 0) { s.var('i', 0, 'val'); } else s.set('i', i);
+      s.st.in.pos = i < len ? i : -1;
+      s.step('for1', i < len ? `${i === 0 ? 'i = 0' : 'i++ makes i = ' + i}; i < strlen(input) = ${len} is true → push input[${i}] = '${chars[i]}'.` : `i++ makes i = ${len}; i < ${len} is false. All characters are on the stack.`);
+      if (i === len) break;
+      const c = chars[i];
+      s.fn('push', `push(item = '${c}')`); s.var('item', `'${c}'`, 'val'); s.step('p_sig', `push('${c}') is called.`);
+      const top = s.get('top'); s.step('p_if', `top == MAX - 1 is false (top = ${top}).`);
+      s.set('top', top + 1); s.step('p_inc', `top++ makes top = ${top + 1}.`);
+      s.aset('stk', top + 1, c); s.step('p_set', `stack[${top + 1}] = '${c}'.`);
+      s.print('Pushed successfully\n'); s.step('p_out', 'Print a confirmation.');
+      s.ret(); s.step('p_end', 'push returns.');
+    }
+    s.drop('i'); s.st.in.pos = s.st.in.tokens.length;
+    s.print('Reversed string: \n'); s.step('rev', 'Now pop everything. The last character pushed comes out first.');
+    for (let i = 0; i <= len; i++) {
+      if (i === 0) s.var('i', 0, 'val'); else s.set('i', i);
+      s.step('for2', i < len ? `${i === 0 ? 'i = 0' : 'i++ makes i = ' + i}; i < ${len} is true → pop().` : `i = ${len}; i < ${len} is false. Done.`);
+      if (i === len) break;
+      s.fn('pop'); s.step('o_sig', 'pop() is called.');
+      const top = s.get('top'); s.step('o_if', `top == -1 is false (top = ${top}).`);
+      const c = s.aread('stk', top); s.print(c); s.step('o_out', `Print stack[${top}] = '${c}'.`);
+      s.set('top', top - 1); s.st.stk.hl = { i: top, k: 'pop' }; s.step('o_dec', `top-- makes top = ${top - 1}.`);
+      s.ret(); s.step('o_end', 'pop returns.');
+    }
+    s.drop('i');
+    s.step('ret', `main returns. "${w}" was printed reversed as "${chars.slice().reverse().join('')}".`);
+  } });
+P({ id: 'linked-stack', group: 'Stack code (array)', slides: 'Slide 13 (idea)', title: 'Stack built on a linked list: push = add at front, pop = remove front',
+  desc: 'Slide 13 says the top of the stack is the front of the linked list. This small program makes that idea concrete using the Lecture 5 node code.',
+  notes: ['This program is not on the slides; it was written to show the slide 13 idea in code.', 'Both push and pop work at the front, so neither needs to walk the list: each is O(1).'],
+  heap: { anchor: 'top' },
+  code: `struct Node {
+    int data;
+    Node* next;
+};
+Node* top = NULL;   // top of stack = front of the list   @@g
+
+void push(int x) {                    @@p_sig
+    Node* n = new Node();             @@p_new
+    n->data = x;                      @@p_data
+    n->next = top;                    @@p_next
+    top = n;                          @@p_top
+}                                     @@p_end
+
+void pop() {                          @@o_sig
+    if (top == NULL) {                @@o_if
+        cout << "Stack is empty\\n";
+        return;
+    }
+    Node* t = top;                    @@o_t
+    cout << t->data << " popped\\n";   @@o_out
+    top = top->next;                  @@o_top
+    delete t;                         @@o_del
+}                                     @@o_end
+
+int main() {                          @@main
+    push(10);                         @@c1
+    push(20);                         @@c2
+    push(30);                         @@c3
+    pop();                            @@c4
+    pop();                            @@c5
+    return 0;                         @@ret
+}`,
+  run(s) {
+    s.gvar('top', null); s.step('g', 'top = NULL: the stack is empty.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    [10, 20, 30].forEach((x, k) => {
+      s.step('c' + (k + 1), `main calls push(${x}).`);
+      s.fn('push', `push(x = ${x})`); s.var('x', x, 'val'); s.step('p_sig', `push(${x}) starts.`);
+      const n = s.alloc(); s.var('n', n); s.step('p_new', `A new node is made at ${addr(n)}.`);
+      s.N(n).data = x; s.step('p_data', `Store ${x}.`);
+      s.N(n).next = s.get('top'); s.step('p_next', s.get('top') === null ? 'n->next = top, which is NULL: this will be the only node.' : `n->next = top: the new node points to the old top (${s.d(s.get('top'))}).`);
+      s.set('top', n); s.step('p_top', `top = n: ${x} is now the top of the stack (front of the list).`);
+      s.ret(); s.step('p_end', 'push returns.');
+    });
+    [4, 5].forEach(k => {
+      s.step('c' + k, 'main calls pop().');
+      s.fn('pop'); s.step('o_sig', 'pop() starts.');
+      s.step('o_if', 'top == NULL is false: there is something to pop.');
+      const t = s.get('top'); s.var('t', t); s.step('o_t', `t remembers the top node (${s.d(t)}) so we can delete it after moving top.`);
+      s.print(`${s.d(t)} popped\n`); s.step('o_out', `Print ${s.d(t)}.`);
+      s.set('top', s.N(t).next); s.step('o_top', `top = top->next: the stack now starts at ${s.d(s.get('top'))}. The old node is only reachable through t.`);
+      s.free(t); s.step('o_del', 'delete t frees the old top node.');
+      s.ret(); s.step('o_end', 'pop returns.');
+    });
+    s.step('ret', 'main returns. 10 is the only item left.');
+  } });
+
+/* ---------- stack applications ---------- */
+const PAIRS = { ')': '(', ']': '[', '}': '{' };
+P({ id: 'braces', group: 'Stack applications', slides: 'Slides 26–28', title: 'Checking for balanced braces',
+  desc: 'Open brackets are pushed. Each close bracket must match the most recent open one, which is exactly the top of the stack. Type your own string to test it.',
+  notes: ['Characters that are not brackets are skipped. Here runs of them are skipped in one step to keep the trace short.', 'Three things can go wrong: a close bracket arrives when the stack is empty, it does not match the top, or open brackets are left over at the end.'],
+  codeTitle: 'Algorithm (slide 27)', input: { label: 'String to check', def: '{a,(b+f[4])*3,d+f[5]}',
+    presets: [['Slide 27', '{a,(b+f[4])*3,d+f[5]}'], ['Balanced (26)', 'abc{defg{ijk}{l{mn}}op}qr'], ['Unbalanced (26)', 'abc{def}}{gh{ij{kl}m'], ['{a{b}c}', '{a{b}c}'], ['{a{bc}', '{a{bc}'], ['{ab}c}', '{ab}c}'], ['Wrong pair', '{[(])}']] },
+  code: `initialize the stack to empty                         @@init
+for every character read:
+    if it is an open bracket  ( [ {                   @@open
+        push it onto the stack                        @@open
+    else if it is a close bracket  ) ] }              @@close
+        if the stack is empty: flag error             @@cerr
+        pop the most recent open bracket              @@close
+        if it doesn't match: flag error               @@mismatch
+    else
+        skip the character                            @@skip
+at the end of the string:                             @@end
+    balanced only if the stack is empty               @@end`,
+  run(s, input) {
+    const str = String(input);
+    if (!str.trim()) throw new InputError('Type a string with some brackets.');
+    if (str.length > 60) throw new InputError('Use 60 characters or fewer.');
+    const toks = []; let buf = '';
+    for (const c of str) { if ('([{}])'.includes(c)) { if (buf) { toks.push(buf); buf = ''; } toks.push(c); } else buf += c; }
+    if (buf) toks.push(buf);
+    s.mk('in', { type: 'tape', title: 'Input string', tokens: toks, pos: -1, marks: {} });
+    mkStack(s, 'S', 'Stack of open brackets', { short: 'the stack', w: 70 });
+    mkTable(s, 'T', 'Trace', ['Char', 'Action', 'Stack (bottom → top)']);
+    mkText(s, 'R', 'Result', 'checking…');
+    s.step('init', 'Start with an empty stack.');
+    for (let k = 0; k < toks.length; k++) {
+      const c = toks[k], S = s.st.S; s.st.in.pos = k;
+      if (c.length > 1 || !'([{}])'.includes(c)) { s.row('T', [c, 'skip', sstr(S.items)]); s.step('skip', `"${c}" contains no brackets: skip it.`); continue; }
+      if ('([{'.includes(c)) { s.spush('S', c); s.row('T', [c, `push ${c}`, sstr(S.items)]); s.step('open', `${c} is an open bracket: push it. It must be closed before anything below it.`); continue; }
+      if (!S.items.length) {
+        s.st.in.marks[k] = 'err'; s.row('T', [c, 'stack empty → no match!', '(empty)']); s.text('R', `Not balanced: "${c}" has no open bracket to match.`, 'bad');
+        s.step('cerr', `${c} is a close bracket but the stack is empty. Nothing was opened for it, so the string is NOT balanced.`, { crash: true }); return;
+      }
+      const top = s.spop('S');
+      if (PAIRS[c] !== top) {
+        s.st.in.marks[k] = 'err'; s.row('T', [c, `pop ${top} ✗ does not match`, sstr(S.items)]); s.text('R', `Not balanced: ${top} was closed by ${c}.`, 'bad');
+        s.step('mismatch', `${c} closes a ${PAIRS[c]}, but the most recent open bracket is ${top}. They don't match: NOT balanced.`, { crash: true }); return;
+      }
+      s.st.in.marks[k] = 'ok'; s.row('T', [c, `pop ${top} ✓ match`, sstr(S.items)]);
+      s.step('close', `${c} matches the top of the stack (${top}). Pop it.`);
+    }
+    s.st.in.pos = s.st.in.tokens.length;
+    if (s.st.S.items.length) { s.text('R', `Not balanced: ${s.st.S.items.join(' ')} never closed.`, 'bad'); s.step('end', `End of the string, but the stack still holds ${s.st.S.items.join(' ')}. Those brackets were never closed: NOT balanced.`, { crash: true }); }
+    else { s.text('R', 'Balanced ✓', 'good'); s.step('end', 'End of the string and the stack is empty: every bracket was matched. BALANCED.'); }
+  } });
+
+const PREC = { '^': 3, '*': 2, '/': 2, '%': 2, '+': 1, '-': 1 };
+function tokInfix(str) {
+  const src = String(str).replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/');
+  const re = /\s*(\d+(?:\.\d+)?|[A-Za-z]\w*|[-+*/%^()])/y; const out = []; let m; re.lastIndex = 0;
+  while (re.lastIndex < src.length) {
+    const start = re.lastIndex; m = re.exec(src);
+    if (!m) { if (/^\s*$/.test(src.slice(start))) break; throw new InputError(`I can't read "${src.slice(start).trim()[0]}". Use numbers, letters, + - * / % ^ and parentheses.`); }
+    out.push(m[1]);
+  }
+  if (!out.length) throw new InputError('Type an expression, for example 3 + 2 * 4');
+  if (out.length > 40) throw new InputError('Use 40 tokens or fewer.');
+  return out;
+}
+P({ id: 'infix', group: 'Stack applications', slides: 'Slides 29–38', title: 'Infix to postfix conversion',
+  desc: 'Operands go straight to the output. Operators wait on a stack until an operator of lower precedence (or the end) pushes them out. The table is built exactly like the slides\' tables.',
+  notes: ['Precedence from slide 33: ^ highest, then * / %, then + -.', '^ is right-associative: 2^3^3 means 2^(3^3). That is the "special case" on slide 38: an incoming ^ does not pop another ^.', 'Slide 31 shows a second answer for 2 ^ 3 ^ 3 + 5 * 1 (2 3 3 5 1 ^ ^ * +). The correct one is 2 3 3 ^ ^ 5 1 * +.'],
+  codeTitle: 'Algorithm (slide 32)', input: { label: 'Infix expression', def: '3 + 2 * 4',
+    presets: [['Slides 34–35', '3 + 2 * 4'], ['Slide 36', 'A * B - (C + D) + E'], ['Slides 37–38', '1 - 2 ^ 3 ^ 3 - ( 4 + 5 * 6 ) * 7'], ['Slide 31 a', '2 ^ 3 ^ 3 + 5 * 1'], ['Slide 31 b', '1 + 2 - 1 * 3 / 3 + 2 ^ 2 / 3'], ['Slide 41', '6+(((5+4)*(3*2))+1)']] },
+  code: `for each token in the infix expression:
+    if it is an operand:                              @@operand
+        add it to the postfix expression              @@operand
+    else if it is '(':                                @@lpar
+        push it on the stack                          @@lpar
+    else if it is ')':                                @@rpar
+        pop operators to postfix until '(' is on top  @@rpar
+        pop the '(' and throw it away                 @@rpar2
+    else (it is an operator):
+        while the top has higher or equal precedence  @@opop
+              (^ on ^ does not pop: right-to-left)    @@opop
+            pop it and add it to postfix              @@opop
+        push the operator                             @@opush
+at the end of input:                                  @@end
+    pop all remaining operators to postfix            @@end`,
+  run(s, input) {
+    const toks = tokInfix(input), post = [];
+    s.mk('in', { type: 'tape', title: 'Infix tokens', tokens: toks, pos: -1, marks: {} });
+    mkStack(s, 'S', 'Operator stack', { short: 'the stack', w: 60 });
+    mkText(s, 'P', 'Postfix expression so far', '(empty)');
+    mkTable(s, 'T', 'Conversion table', ['#', 'Scan', 'Postfix expression', 'Stack', 'Description']);
+    const S = () => s.st.S.items, ps = () => post.join(' ') || '(empty)', stk = () => S().join(' ');
+    const add = t => { post.push(t); s.text('P', ps()); s.op('add', `${t} added to postfix`); };
+    s.step(null, `Convert ${toks.join(' ')} to postfix. Postfix starts empty and the stack starts empty.`);
+    toks.forEach((t, k) => {
+      s.st.in.pos = k; const n = k + 1;
+      if (/^[\w.]+$/.test(t)) { add(t); s.row('T', [n, t, ps(), stk(), 'Operand → add to expression']); s.step('operand', `${t} is an operand: add it straight to the postfix expression.`); return; }
+      if (t === '(') { s.spush('S', t); s.row('T', [n, t, ps(), stk(), 'Left parenthesis → push']); s.step('lpar', '( is pushed. It acts like a floor: operators inside cannot pop anything below it.'); return; }
+      if (t === ')') {
+        while (S().length && S()[S().length - 1] !== '(') { const o = s.spop('S'); add(o); s.step('rpar', `Pop ${o} and add it to postfix (we are still looking for the matching '(').`); }
+        if (!S().length) { s.st.in.marks[k] = 'err'; s.step('rpar', 'Error: ) has no matching ( on the stack. Check the parentheses.', { crash: true }); throw new Crash(); }
+        s.spop('S'); s.row('T', [n, t, ps(), stk(), 'Right parenthesis → pop until ( is found']); s.step('rpar2', 'Found the (. Pop it and throw both parentheses away: postfix never needs them.'); return;
+      }
+      while (S().length) {
+        const top = S()[S().length - 1];
+        if (top === '(') break;
+        const higher = PREC[top] > PREC[t], equal = PREC[top] === PREC[t];
+        if (!(higher || (equal && t !== '^'))) break;
+        const o = s.spop('S'); add(o);
+        s.step('opop', `${top} on the stack has ${higher ? 'higher' : 'equal'} precedence than ${t}, so ${top} must be done first: pop it to postfix.`);
+      }
+      const top = S()[S().length - 1];
+      const why = !top ? 'the stack is empty' : top === '(' ? '( is on top' : (t === '^' && top === '^') ? '^ on ^ is the special case: ^ goes right-to-left, so push' : `${t} has higher precedence than ${top}`;
+      s.spush('S', t); s.row('T', [n, t, ps(), stk(), `Operator → push (${why})`]);
+      s.step('opush', `Push ${t} (${why}). It waits until we know what comes after it.`);
+    });
+    s.st.in.pos = s.st.in.tokens.length;
+    while (S().length) {
+      const o = s.spop('S');
+      if (o === '(') { s.step('end', 'Error: an ( was never closed. Check the parentheses.', { crash: true }); throw new Crash(); }
+      add(o); s.step('end', `End of input: pop ${o} and add it to postfix.`);
+    }
+    s.row('T', ['END', 'END', ps(), 'Empty', 'Pop remaining operators']);
+    s.st.P.cls = 'good'; s.step('end', `Done. Postfix: ${ps()}`);
+  } });
+
+const APPLY = { '+': (a, b) => a + b, '-': (a, b) => a - b, '*': (a, b) => a * b, '/': (a, b) => a / b, '%': (a, b) => a % b, '^': (a, b) => Math.pow(a, b) };
+P({ id: 'postfix', group: 'Stack applications', slides: 'Slides 39–42', title: 'Evaluating a postfix expression',
+  desc: 'Numbers are pushed. Each operator pops two numbers, computes, and pushes the result. The table matches the calculator trace on slide 40.',
+  notes: ['The first number popped is operand2 (the right side). This matters for - and /: in 8 2 -, the answer is 8 - 2, not 2 - 8.', 'Slide 30\'s last row writes "2 5 ^ − 1" as the postfix for (2^5)−1. The valid postfix is 2 5 ^ 1 −; the slide\'s version runs out of operands at the minus sign.'],
+  codeTitle: 'Algorithm (slide 42)', input: { label: 'Postfix expression (space separated)', def: '2 3 4 + *',
+    presets: [['Slide 40', '2 3 4 + *'], ['3 2 * 1 +', '3 2 * 1 +'], ['Slide 30 a', '2 3 * 2 4 * +'], ['Slide 30 b', '1 2 - 3 2 ^ 3 * 6 / +'], ['Slide 30 c', '1 2 3 4 ^ * +'], ['Slide 30 d', '2 5 ^ 1 -'], ['Slide 41', '6 5 4 + 3 2 * * 1 + +'], ['Broken', '2 5 ^ - 1']] },
+  code: `for each token ch in the postfix string:
+    if ch is an operand:                          @@operand
+        push its value onto the stack             @@operand
+    else:   // ch is an operator op
+        operand2 = top of stack; pop the stack    @@pop2
+        operand1 = top of stack; pop the stack    @@pop1
+        result = operand1 op operand2             @@push
+        push result onto the stack                @@push
+at the end, the answer is the only item left      @@end`,
+  run(s, input) {
+    let src = String(input).replace(/−/g, '-').replace(/×/g, '*').replace(/÷/g, '/').trim();
+    if (!src) throw new InputError('Type a postfix expression, for example 2 3 4 + *');
+    let toks = src.split(/\s+/);
+    if (toks.length === 1 && toks[0].length > 1) toks = [...toks[0]];
+    toks.forEach(t => { if (!/^\d+(\.\d+)?$/.test(t) && !(t in APPLY)) throw new InputError(`"${t}" is not a number or an operator (+ - * / % ^).`); });
+    if (toks.length > 40) throw new InputError('Use 40 tokens or fewer.');
+    s.mk('in', { type: 'tape', title: 'Postfix tokens', tokens: toks, pos: -1, marks: {} });
+    mkStack(s, 'S', 'Operand stack', { short: 'the stack', w: 70 });
+    mkTable(s, 'T', 'Calculator trace', ['Key', 'Calculator action', 'Stack (bottom → top)']);
+    mkText(s, 'R', 'Result', '…');
+    s.step(null, `Evaluate ${toks.join(' ')}. Read left to right.`);
+    const S = () => s.st.S.items;
+    for (let k = 0; k < toks.length; k++) {
+      const t = toks[k]; s.st.in.pos = k;
+      if (!(t in APPLY)) { s.spush('S', +t); s.row('T', [t, `push ${t}`, sstr(S())]); s.step('operand', `${t} is a number: push it.`); continue; }
+      if (S().length < 2) {
+        s.st.in.marks[k] = 'err'; s.text('R', `Error at ${t}: not enough operands`, 'bad');
+        s.step(S().length ? 'pop1' : 'pop2', `${t} needs two numbers but the stack has ${S().length}. This is not valid postfix.`, { crash: true }); return;
+      }
+      const b = s.spop('S'); s.row('T', [t, `operand2 = pop stack (${fmtNum(b)})`, sstr(S())]); s.step('pop2', `${t} is an operator. The first pop gives operand2 = ${fmtNum(b)} (the right-hand side).`);
+      const a = s.spop('S'); s.row('T', ['', `operand1 = pop stack (${fmtNum(a)})`, sstr(S())]); s.step('pop1', `The second pop gives operand1 = ${fmtNum(a)} (the left-hand side).`);
+      if (t === '/' && b === 0) { s.text('R', 'Error: division by zero', 'bad'); s.step('push', 'Division by zero.', { crash: true }); return; }
+      const r = APPLY[t](a, b); s.spush('S', r);
+      s.row('T', ['', `result = ${fmtNum(a)} ${t} ${fmtNum(b)} = ${fmtNum(r)}; push result`, sstr(S())]);
+      s.step('push', `Compute ${fmtNum(a)} ${t} ${fmtNum(b)} = ${fmtNum(r)} and push the result.`);
+    }
+    s.st.in.pos = s.st.in.tokens.length;
+    if (S().length !== 1) { s.text('R', `Error: ${S().length} numbers left (${sstr(S())})`, 'bad'); s.step('end', `The stack should hold exactly one number, but it holds ${S().length}. Some operator is missing.`, { crash: true }); return; }
+    s.text('R', fmtNum(S()[0]), 'good'); s.step('end', `Finished. The answer is ${fmtNum(S()[0])}.`);
+  } });
+
+const CITIES = { Z: [1, 0], Y: [1, 1], W: [1, 2], S: [2, 2], R: [0, 3], P: [1, 3], T: [2, 3], X: [0, 4], Q: [1, 4] };
+const FLIGHTS = [['Y', 'Z'], ['W', 'Y'], ['Y', 'R'], ['W', 'S'], ['S', 'T'], ['T', 'W'], ['P', 'W'], ['P', 'R'], ['R', 'X'], ['Q', 'X']];
+const adjOf = c => FLIGHTS.filter(e => e[0] === c).map(e => e[1]).sort();
+P({ id: 'flight', group: 'Stack applications', slides: 'Slides 43–46', title: 'Flight search with a stack (backtracking)',
+  desc: 'From the origin, keep flying to the next unvisited city (alphabetically). At a dead end, pop to backtrack. The stack always holds the current route.',
+  notes: ['Cities are marked visited when pushed, so the search never loops (W → S → T → W is a cycle in this map).', 'The exercise on slide 46 asks for S to R. The answer: push S, T, W, Y, R. The route is S → T → W → Y → R.'],
+  codeTitle: 'Algorithm (slide 45)', input: { label: 'Origin and destination', def: 'P Z',
+    presets: [['P → Z (slide 46)', 'P Z'], ['S → R (exercise)', 'S R'], ['W → X', 'W X'], ['Q → Z (no route)', 'Q Z']] },
+  code: `push the origin city; mark it visited           @@init
+while the stack is not empty and
+      the top is not the destination:            @@check
+    if the top city has an unvisited neighbour:  @@push
+        push the next one (alphabetically)       @@push
+        and mark it visited                      @@push
+    else:                                        @@pop
+        pop the stack   // dead end: backtrack   @@pop
+if the stack is empty: no route exists           @@fail
+else the stack holds the route (bottom → top)    @@found`,
+  run(s, input) {
+    const m = String(input).toUpperCase().match(/([A-Z])\W*(?:TO\W*)?([A-Z])/);
+    if (!m || !CITIES[m[1]] || !CITIES[m[2]]) throw new InputError('Type two cities from the map, for example: P Z. Cities: ' + Object.keys(CITIES).sort().join(' '));
+    const [o, d] = [m[1], m[2]];
+    if (o === d) throw new InputError('Pick two different cities.');
+    s.mk('G', { type: 'graph', title: 'SAAir flight map', origin: o, dest: d, visited: [], path: [] });
+    mkStack(s, 'S', 'Stack (current route)', { short: 'the stack', w: 60 });
+    mkTable(s, 'T', 'Trace (like slide 46)', ['Action', 'Reason', 'Stack (bottom → top)']);
+    mkText(s, 'R', 'Result', 'searching…');
+    const G = () => s.st.G, S = () => s.st.S.items;
+    s.step(null, `Is there a sequence of flights from ${o} to ${d}?`);
+    s.spush('S', o); G().visited.push(o); G().path = [...S()]; s.row('T', [`Push ${o}`, 'Initialize', S().join(' ')]); s.step('init', `Push the origin ${o} and mark it visited.`);
+    let guard = 0;
+    while (S().length && S()[S().length - 1] !== d && guard++ < 50) {
+      const top = S()[S().length - 1];
+      const next = adjOf(top).find(c => !G().visited.includes(c));
+      if (next) {
+        s.spush('S', next); G().visited.push(next); G().path = [...S()]; G().tried = [top, next];
+        s.row('T', [`Push ${next}`, 'Next unvisited adjacent city', S().join(' ')]);
+        s.step('push', `From ${top} the flights go to ${adjOf(top).join(', ')}. The first unvisited one is ${next}: push it.`);
+      } else {
+        s.spop('S'); G().path = [...S()];
+        s.row('T', [`Pop ${top}`, 'No unvisited adjacent city', S().join(' ') || '(empty)']);
+        const fl = adjOf(top);
+        s.step('pop', `${top} is a dead end (${fl.length ? 'flights to ' + fl.join(', ') + ', all visited' : 'no flights out'}). Pop ${top} and go back${S().length ? ' to ' + S()[S().length - 1] : ''}.`);
+      }
+    }
+    if (!S().length) { s.text('R', `No route from ${o} to ${d}`, 'bad'); s.step('fail', `The stack is empty: every possibility was tried. There is no sequence of flights from ${o} to ${d}.`); }
+    else { s.text('R', `Route: ${S().join(' → ')}`, 'good'); s.step('found', `${d} is on top. The stack, bottom to top, is the route: ${S().join(' → ')}.`); }
+  } });
+
+P({ id: 'hanoi', group: 'Stack applications', slides: 'Slides 47–53', title: 'Towers of Hanoi (with the recursion call stack)',
+  desc: 'Each peg is a stack: you can only take the top disk. The recursive solution also uses a stack behind the scenes — the call stack — shown on the right.',
+  notes: ['n disks need 2ⁿ − 1 moves: 3 disks → 7 (slide 53), 4 disks → 15.', 'This is the "strong relationship between recursion and stacks" from the stack summary (slide 54).'],
+  codeTitle: 'Recursive algorithm', input: { label: 'Number of disks (1–5)', def: '3', presets: [['3 disks (slides 49–53)', '3'], ['4 disks (slide 48)', '4'], ['2 disks', '2']] },
+  code: `// move n disks from 'from' to 'to', using 'via' as a helper
+hanoi(n, from, to, via) {                          @@call
+    if (n == 1) {                                  @@base
+        move disk 1: from -> to;                   @@base
+        return;
+    }
+    hanoi(n-1, from, via, to);  // clear the way   @@rec1
+    move disk n: from -> to;                       @@mid
+    hanoi(n-1, via, to, from);  // stack them back @@rec2
+}                                                  @@ret
+
+hanoi(N, A, C, B);   // the first call             @@start`,
+  run(s, input) {
+    const n = parseInt(input, 10);
+    if (!(n >= 1 && n <= 5)) throw new InputError('Choose between 1 and 5 disks.');
+    const total = 2 ** n - 1; let moves = 0;
+    s.mk('H', { type: 'hanoi', title: 'Pegs (each one is a stack)', n, pegs: { A: Array.from({ length: n }, (_, i) => n - i), B: [], C: [] } });
+    mkStack(s, 'C', 'Call stack (recursion)', { short: 'the call stack', w: 150 });
+    mkText(s, 'M', 'Moves', `0 of ${total}`);
+    s.step(null, `Move ${n} disk${n > 1 ? 's' : ''} from A to C. Only the top disk of a peg can move, and a bigger disk can never go on a smaller one.`);
+    const move = (disk, from, to, lab) => {
+      const H = s.st.H; H.pegs[from].pop(); H.pegs[to].push(disk); H.moved = { disk, to }; moves++;
+      s.text('M', `${moves} of ${total}`); s.op('move', `disk ${disk}: pop from ${from}, push onto ${to}`);
+      s.step(lab, `Move ${moves}: disk ${disk} from ${from} to ${to}. That is a pop from peg ${from} and a push onto peg ${to}.`);
+    };
+    const h = (k, from, to, via, callLab) => {
+      s.spush('C', `hanoi(${k}, ${from}→${to})`);
+      s.step(callLab, `Call hanoi(${k}, ${from}, ${to}, ${via}): move ${k} disk${k > 1 ? 's' : ''} from ${from} to ${to}. A new frame is pushed on the call stack.`);
+      if (k === 1) move(1, from, to, 'base');
+      else { h(k - 1, from, via, to, 'rec1'); move(k, from, to, 'mid'); h(k - 1, via, to, from, 'rec2'); }
+      s.spop('C'); s.step('ret', `hanoi(${k}, ${from}→${to}) is finished, so its frame is popped. Control returns to the frame below.`);
+    };
+    h(n, 'A', 'C', 'B', 'start');
+    s.st.M.cls = 'good'; s.step(null, `Solved in ${moves} moves (2^${n} − 1 = ${total}).`);
+  } });
+
+/* ---------- queues ---------- */
+function queueOpsRun(s, input) {
+  const ops = parseOps(input, 'queue'), MAX = 6;
+  s.code = ops.map((o, i) => `${opLine(o)};${' '.repeat(Math.max(2, 16 - opLine(o).length))}@@L${i}`).join('\n');
+  mkQueue(s, 'Q', 'The queue (what the user sees)', { short: 'the queue' });
+  s.mk('A', { type: 'aqueue', title: 'Array version (slides 72–75): front and rear indexes', short: 'q', arr: Array(MAX).fill(null), front: 0, rear: -1, mode: 'last' });
+  s.mk('L', { type: 'chain', title: 'Linked-list version (front = head, rear = tail)', of: 'Q', mode: 'queue' });
+  s.step(null, 'An empty queue. In the array, front = 0 and rear = -1 (rear points at the last item, and there is none yet).');
+  ops.forEach((o, i) => {
+    const L = 'L' + i, Q = s.st.Q, A = s.st.A, v = o.arg;
+    if (o.op === 'enqueue') {
+      if (A.rear === MAX - 1) {
+        s.print(`${opLine(o)} → queue is full\n`); s.op('err', 'rear is at the last index');
+        s.step(L, A.front > 0 ? `enqueue(${fv(v)}) fails: rear is at the last index. But ${A.front} slot${A.front > 1 ? 's are' : ' is'} empty at the start! In this simple array queue, front only moves right, so that space is wasted.` : `enqueue(${fv(v)}) fails: all ${MAX} slots are used.`); return;
+      }
+      s.qenq('Q', v); A.rear++; A.arr[A.rear] = v; A.hl = { i: A.rear, k: 'push' }; A.rearChg = 1;
+      s.step(L, `enqueue(${fv(v)}): it joins at the REAR. Array: rear moves to ${A.rear} and q[${A.rear}] = ${fv(v)}. Linked list: a node is added after the tail.`);
+    } else if (o.op === 'dequeue') {
+      if (!Q.items.length) { s.print('dequeue() → queue is empty\n'); s.op('err', 'nothing to dequeue'); s.step(L, 'dequeue() on an empty queue: nothing to remove.'); return; }
+      const x = s.qdeq('Q'); A.hl = { i: A.front, k: 'pop' }; A.front++; A.frontChg = 1; s.print(`dequeue() → ${fv(x)}\n`);
+      s.step(L, `dequeue() removes ${fv(x)}, the FIRST item that came in (FIFO). Array: front moves to ${A.front}; nothing is shifted. Linked list: head moves to the next node.`);
+    } else if (o.op === 'front') {
+      if (!Q.items.length) { s.print('front() → queue is empty\n'); s.step(L, 'front() on an empty queue: nothing to look at.'); return; }
+      const x = s.qpeek('Q'); A.hl = { i: A.front, k: 'read' }; s.print(`front() → ${fv(x)}\n`); s.op('read', `front() reads ${fv(x)}`); s.step(L, `front() returns ${fv(x)} without removing it.`);
+    } else if (o.op === 'size') { s.print(`size() → ${Q.items.length}\n`); s.step(L, `size() = rear - front + 1 = ${A.rear} - ${A.front} + 1 = ${Q.items.length}.`); }
+    else if (o.op === 'isEmpty') { s.print(`isEmpty() → ${Q.items.length === 0}\n`); s.step(L, `isEmpty() → ${Q.items.length === 0}.`); }
+    else { s.print(`isFull() → ${A.rear === MAX - 1}\n`); s.step(L, `isFull() checks rear == MAX - 1 → ${A.rear === MAX - 1}.`); }
+  });
+  s.step(null, `Done. The queue holds (front → rear): ${sstr(s.st.Q.items)}.`);
+}
+P({ id: 'queue-play', group: 'Queues', slides: 'Slides 57–59, 62, 72–75', title: 'Enqueue and dequeue: one queue, three views',
+  desc: 'Items join at the rear and leave from the front (FIFO). The default operations are the ones drawn on slides 72–75. Type your own below.',
+  notes: ['This array version follows slides 72–75: rear points at the last item. The C++ code on slide 68 instead keeps rear one slot after the last item. Both work; just be consistent.', 'Notice front only moves right. After enough operations the array "fills up" even when items have left — see the drift program below.'],
+  codeTitle: 'Operations', input: { label: 'Operations (comma separated)', def: 'enqueue 70, enqueue 80, enqueue 50, dequeue, dequeue, enqueue 90, enqueue 60',
+    presets: [['Slides 72–75', 'enqueue 70, enqueue 80, enqueue 50, dequeue, dequeue, enqueue 90, enqueue 60'], ['front, size', 'enqueue 1, enqueue 2, front, size, dequeue, front'], ['Wasted space', 'enqueue 1, enqueue 2, enqueue 3, dequeue, dequeue, enqueue 4, enqueue 5, enqueue 6, enqueue 7']] },
+  run: queueOpsRun });
+P({ id: 'queue-naive', group: 'Queues', slides: 'Slides 63–64', title: 'The naïve array queue: shifting on every dequeue',
+  desc: 'front is fixed at index 0. Each dequeue removes q[0] and moves every other item one slot left. Watch the move counter grow.',
+  notes: ['With n items, every dequeue costs n - 1 moves (O(n)). That is why the slide marks this way "Inefficient!!!".', 'Here rear is the index of the last item, so an empty queue has rear = -1, as on slide 64.'],
+  codeTitle: 'Operations', input: { label: 'Operations (comma separated)', def: 'enqueue 3, enqueue 6, enqueue 9, dequeue, dequeue, dequeue',
+    presets: [['Slides 63–64', 'enqueue 3, enqueue 6, enqueue 9, dequeue, dequeue, dequeue'], ['Bigger queue', 'enqueue 1, enqueue 2, enqueue 3, enqueue 4, enqueue 5, dequeue, dequeue']] },
+  run(s, input) {
+    const ops = parseOps(input, 'naive'), MAX = 5; let moved = 0;
+    s.code = ops.map((o, i) => `${opLine(o)};${' '.repeat(Math.max(2, 16 - opLine(o).length))}@@L${i}`).join('\n');
+    s.mk('A', { type: 'aqueue', title: 'q[5] — front is always 0', short: 'q', arr: Array(MAX).fill(null), front: 0, rear: -1, mode: 'last' });
+    mkText(s, 'M', 'Elements moved by shifting', '0');
+    s.step(null, 'Empty queue: front = 0 (fixed forever), rear = -1.');
+    ops.forEach((o, i) => {
+      const L = 'L' + i, A = s.st.A;
+      if (o.op === 'enqueue') {
+        if (A.rear === MAX - 1) { s.op('err', 'array is full'); s.step(L, `enqueue(${fv(o.arg)}) fails: the array is full.`); return; }
+        A.rear++; A.arr[A.rear] = o.arg; A.hl = { i: A.rear, k: 'push' }; A.rearChg = 1; s.op('enq', `${fv(o.arg)} stored in q[${A.rear}]`);
+        s.step(L, `enqueue(${fv(o.arg)}): rear moves to ${A.rear} and the item is stored there. front stays at 0.`);
+      } else {
+        if (A.rear < 0) { s.op('err', 'queue is empty'); s.step(L, 'dequeue() on an empty queue.'); return; }
+        const x = A.arr[0]; A.hl = { i: 0, k: 'pop' }; s.op('deq', `${fv(x)} removed from q[0]`); s.print(`dequeue() → ${fv(x)}\n`);
+        s.step(L, `dequeue(): take ${fv(x)} from q[0]. Now there is a hole at the front that must be filled.`);
+        for (let j = 0; j < A.rear; j++) {
+          A.arr[j] = A.arr[j + 1]; A.hl = { i: j, k: 'push' }; moved++; s.text('M', String(moved));
+          s.op('set', `q[${j}] = q[${j + 1}] (${fv(A.arr[j])} moves left)`);
+          s.step(L, `Shift: copy q[${j + 1}] (${fv(A.arr[j])}) into q[${j}]. Move number ${moved}.`);
+        }
+        A.arr[A.rear] = null; A.rear--; A.rearChg = 1; A.hl = { i: A.rear + 1, k: 'pop' };
+        s.step(L, `rear-- makes rear = ${A.rear}.${A.rear === -1 ? ' The queue is empty again.' : ''}`);
+      }
+    });
+    s.step(null, `Done. Shifting cost ${moved} element move${moved === 1 ? '' : 's'}. The front/rear version (next programs) needs 0.`);
+  } });
+const queueMain = lines => lines.map((l, i) => `    ${l}${' '.repeat(Math.max(1, 34 - l.length))}@@c${i}`).join('\n');
+P({ id: 'queue-code', group: 'Queues', slides: 'Slides 66–71', title: 'Full queue code: enqueue, dequeue, display',
+  desc: 'The C++ array queue from slide 68. enqueue reads each value with cin; you can choose what the user types.',
+  notes: ['In this code rear is the index AFTER the last item, so the queue is empty when front == rear.', 'The slide\'s code uses curly quotes (” deleted") which do not compile; they are straight quotes here.'],
+  input: { label: 'Values typed for the 4 enqueue() calls', def: '10 20 30 40', presets: [['10 20 30 40', '10 20 30 40'], ['5 6 7 8', '5 6 7 8']] },
+  code: `${QUEUE_FUNCS(10)}
+
+int main(){                                 @@main
+${queueMain(['enqueue();', 'enqueue();', 'dequeue();', 'enqueue();', 'enqueue();', 'dequeue();', 'dequeue();', 'display();'])}
+}                                           @@ret`,
+  run(s, input) {
+    const vals = String(input).trim().split(/[\s,]+/).filter(Boolean).map(Number);
+    if (vals.length < 4 || vals.some(isNaN)) throw new InputError('Type 4 whole numbers (one per enqueue call), for example: 10 20 30 40');
+    s.mk('q', { type: 'aqueue', title: 'q[10] (global array)', short: 'q', arr: Array(10).fill(0), frontVar: 'front', rearVar: 'rear', mode: 'next' });
+    s.gvar('rear', 0, 'val'); s.gvar('front', 0, 'val');
+    s.step('g2', 'Globals: q has 10 slots (zeros), and front = rear = 0 means the queue is empty.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    const ins = vals.slice(0, 4);
+    ['enqueue', 'enqueue', 'dequeue', 'enqueue', 'enqueue', 'dequeue', 'dequeue', 'display'].forEach((f, i) => {
+      s.step('c' + i, `main calls ${f}().`);
+      if (f === 'enqueue') enqC(s, 10, ins); else if (f === 'dequeue') deqC(s); else dispC(s);
+    });
+    s.step('ret', 'main returns.');
+  } });
+P({ id: 'queue-drift', group: 'Queues', slides: 'Slides 66, 68', title: 'Why the array queue says "full" when it is empty',
+  desc: 'Same code with MAX = 5. Five items go in, five come out — the queue is empty. Then one more enqueue… is refused.',
+  notes: ['This answers slide 66\'s question "How to prevent a queue to become full?". The usual fix is a circular queue: rear = (rear + 1) % MAX, so indexes wrap around to reuse the free slots at the start.', 'MAX is changed to 5 only to make the problem appear quickly.'],
+  code: `${QUEUE_FUNCS(5)}
+
+int main(){                                       @@main
+    for (int k = 0; k < 5; k++) enqueue();        @@f1
+    for (int k = 0; k < 5; k++) dequeue();        @@f2
+    enqueue();   // the queue is empty... is it?  @@last
+}`,
+  run(s) {
+    const ins = [1, 2, 3, 4, 5, 6];
+    s.mk('q', { type: 'aqueue', title: 'q[5] (global array)', short: 'q', arr: Array(5).fill(0), frontVar: 'front', rearVar: 'rear', mode: 'next' });
+    s.gvar('rear', 0, 'val'); s.gvar('front', 0, 'val');
+    s.step('g2', 'front = rear = 0: empty. The user will type 1, 2, 3, 4, 5, 6.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    forLoop(s, 'f1', 0, 5, () => enqC(s, 5, ins));
+    forLoop(s, 'f2', 0, 5, () => deqC(s));
+    s.step('last', 'front == rear == 5, so the queue is empty. Let\'s try one more enqueue.');
+    enqC(s, 5, ins);
+  } });
+
+/* ---------- exercises ---------- */
+function exSetup(s, names) {
+  names.forEach(([n, kind]) => kind === 'S' ? mkStack(s, n, `Stack ${n} (top at the top)`, { short: n, w: 60 }) : mkQueue(s, n, `Queue ${n} (front on the left)`, { short: n }));
+}
+P({ id: 'ex1', group: 'Exercises', slides: 'Slide 77 · Exercise', title: 'Exercise 1: stack S and queue Q',
+  desc: 'Nested calls like S.push(S.pop() + S.pop()) are split into their parts so you can see the order.',
+  notes: ['Final state: S = [30] and Q = [30].'], codeTitle: 'Exercise code',
+  code: `Stack S;                              @@d1
+Queue Q;                              @@d2
+int x, y;                             @@d3
+S.push(10);                           @@l1
+S.push(20);                           @@l2
+S.push(S.pop() + S.pop());            @@l3
+Q.enqueue(10);                        @@l4
+Q.enqueue(20);                        @@l5
+Q.enqueue(S.pop());                   @@l6
+S.push(Q.dequeue() + Q.dequeue());    @@l7`,
+  run(s) {
+    s.fn('main', 'variables');
+    exSetup(s, [['S', 'S']]); s.step('d1', 'An empty stack S.');
+    exSetup(s, [['Q', 'Q']]); s.step('d2', 'An empty queue Q.');
+    s.var('x', GARB, 'val'); s.var('y', GARB, 'val'); s.step('d3', 'x and y are declared (not used later).');
+    s.spush('S', 10); s.step('l1', 'Push 10.');
+    s.spush('S', 20); s.step('l2', 'Push 20. It is on top.');
+    const a = s.spop('S'); s.step('l3', `First S.pop() returns ${a} (the top).`);
+    const b = s.spop('S'); s.step('l3', `Second S.pop() returns ${b}.`);
+    s.spush('S', a + b); s.step('l3', `Push ${a} + ${b} = ${a + b}.`);
+    s.qenq('Q', 10); s.step('l4', '10 enters Q.');
+    s.qenq('Q', 20); s.step('l5', '20 enters Q behind 10.');
+    const c = s.spop('S'); s.step('l6', `S.pop() returns ${c}; S is now empty.`);
+    s.qenq('Q', c); s.step('l6', `${c} enters Q at the rear.`);
+    const d = s.qdeq('Q'); s.step('l7', `First Q.dequeue() returns ${d} (it came in first).`);
+    const e = s.qdeq('Q'); s.step('l7', `Second Q.dequeue() returns ${e}.`);
+    s.spush('S', d + e); s.step('l7', `Push ${d} + ${e} = ${d + e} onto S. Final: S = [${s.st.S.items}], Q = [${s.st.Q.items}].`);
+  } });
+P({ id: 'ex2', group: 'Exercises', slides: 'Slide 78 · Exercise 2', title: 'Exercise 2: stack S and queue Q with peek',
+  desc: 'Watch which end each operation touches: S works at the top, Q adds at the rear and removes from the front.',
+  notes: ['Final state: S = [3, 2, 1] with 1 on top, and Q = [1, 1, 2] with the first 1 at the front.'], codeTitle: 'Exercise code',
+  code: `Stack S;                      @@d1
+Queue Q;                      @@d2
+S.push(3);                    @@l1
+S.push(2);                    @@l2
+S.push(1);                    @@l3
+Q.enqueue(3);                 @@l4
+Q.enqueue(2);                 @@l5
+Q.enqueue(1);                 @@l6
+int x = S.pop();              @@l7
+Q.enqueue(x);                 @@l8
+x = Q.dequeue();              @@l9
+Q.enqueue(Q.dequeue());       @@l10
+S.push(Q.peek());             @@l11
+// peek() reads the front of a queue without deleting it`,
+  run(s) {
+    s.fn('main', 'variables');
+    exSetup(s, [['S', 'S']]); s.step('d1', 'An empty stack S.');
+    exSetup(s, [['Q', 'Q']]); s.step('d2', 'An empty queue Q.');
+    [3, 2, 1].forEach((v, k) => { s.spush('S', v); s.step('l' + (k + 1), `Push ${v}.`); });
+    [3, 2, 1].forEach((v, k) => { s.qenq('Q', v); s.step('l' + (k + 4), `Enqueue ${v}.`); });
+    const x = s.spop('S'); s.var('x', x, 'val'); s.step('l7', `S.pop() returns ${x} (the top). x = ${x}.`);
+    s.qenq('Q', x); s.step('l8', `Enqueue x (${x}).`);
+    const y = s.qdeq('Q'); s.set('x', y); s.step('l9', `Q.dequeue() returns ${y} (the front). x = ${y}.`);
+    const z = s.qdeq('Q'); s.step('l10', `The inner Q.dequeue() returns ${z}…`);
+    s.qenq('Q', z); s.step('l10', `…and it is enqueued again at the rear.`);
+    const p = s.qpeek('Q'); s.step('l11', `Q.peek() reads the front: ${p}. Q is unchanged.`);
+    s.spush('S', p); s.step('l11', `Push ${p} onto S. Final: S = [${s.st.S.items}] (top ${p}), Q = [${s.st.Q.items}].`);
+  } });
+P({ id: 'ex3', group: 'Exercises', slides: 'Slide 79 · Exercise 3', title: 'Exercise 3: Q1, Q2 and S with loops',
+  desc: 'Every number except 1 is pushed on S. Each 1 empties S, adds up what was there, and enqueues the sum on Q2.',
+  notes: ['Final state: Q1 is empty, S = [2, 8], Q2 = [24, 12].', 'The slide\'s text is jumbled by the slide layout; this is the same code in order.'], codeTitle: 'Exercise code',
+  code: `Stack S;                     @@d1
+Queue Q1, Q2;                @@d2
+int x, y, z;                 @@d3
+Q1.Enqueue(9);               @@e0
+Q1.Enqueue(6);               @@e1
+Q1.Enqueue(9);               @@e2
+Q1.Enqueue(1);               @@e3
+Q1.Enqueue(7);               @@e4
+Q1.Enqueue(5);               @@e5
+Q1.Enqueue(1);               @@e6
+Q1.Enqueue(2);               @@e7
+Q1.Enqueue(8);               @@e8
+while (!Q1.isEmpty())        @@w
+{
+    x = Q1.Dequeue();        @@x
+    if (x == 1)              @@if
+    {
+        z = 0;               @@z0
+        while (!S.isEmpty()) @@w2
+        {
+            y = S.pop();     @@y
+            z = z + y;       @@zz
+        }
+        Q2.Enqueue(z);       @@q2
+    }
+    else
+        S.push(x);           @@push
+}`,
+  run(s) {
+    s.fn('main', 'variables');
+    exSetup(s, [['S', 'S']]); s.step('d1', 'An empty stack S.');
+    exSetup(s, [['Q1', 'Q'], ['Q2', 'Q']]); s.step('d2', 'Two empty queues.');
+    s.var('x', GARB, 'val'); s.var('y', GARB, 'val'); s.var('z', GARB, 'val'); s.step('d3', 'x, y, z are declared (garbage for now).');
+    [9, 6, 9, 1, 7, 5, 1, 2, 8].forEach((v, k) => { s.qenq('Q1', v); s.step('e' + k, `Enqueue ${v} into Q1.`); });
+    for (;;) {
+      if (!s.st.Q1.items.length) { s.step('w', 'Q1 is empty: the outer loop ends.'); break; }
+      s.step('w', `Q1 is not empty (${s.st.Q1.items.length} item${s.st.Q1.items.length > 1 ? 's' : ''}): run the loop body.`);
+      const x = s.qdeq('Q1'); s.set('x', x); s.step('x', `x = Q1.Dequeue() = ${x}.`);
+      if (x === 1) {
+        s.step('if', 'x == 1 is true: add up everything on S.');
+        s.set('z', 0); s.step('z0', 'z = 0.');
+        for (;;) {
+          if (!s.st.S.items.length) { s.step('w2', 'S is empty: stop adding.'); break; }
+          s.step('w2', 'S is not empty.');
+          const y = s.spop('S'); s.set('y', y); s.step('y', `y = S.pop() = ${y}.`);
+          s.set('z', s.get('z') + y); s.step('zz', `z = z + y = ${s.get('z')}.`);
+        }
+        s.qenq('Q2', s.get('z')); s.step('q2', `Enqueue z = ${s.get('z')} into Q2.`);
+      } else { s.step('if', `x == 1 is false (x = ${x}).`); s.spush('S', x); s.step('push', `Push ${x} onto S.`); }
+    }
+    s.step(null, `Final: Q1 is empty, S = [${s.st.S.items}] (bottom → top), Q2 = [${s.st.Q2.items}] (front → rear).`);
+  } });
+P({ id: 'ex4', group: 'Exercises', slides: 'Slide 80 · Exercise', title: 'Exercise 4: what gets printed?',
+  desc: 'Letters move between a stack and a queue. Follow them carefully and read the printed letters at the end.',
+  notes: ['enqueue(Q, T) on the slide has no quotes; it is treated as the letter \'T\'.', 'The printed letters spell I G O T I T — "I got it".'], codeTitle: 'Exercise code',
+  code: `push(S, 'T');              @@l0
+enqueue(Q, 'I');           @@l1
+push(S, dequeue(Q));       @@l2
+enqueue(Q, 'I');           @@l3
+enqueue(Q, 'G');           @@l4
+print(dequeue(Q));         @@l5
+enqueue(Q, 'T');           @@l6
+push(S, 'I');              @@l7
+push(S, dequeue(Q));       @@l8
+print(pop(S));             @@l9
+enqueue(Q, pop(S));        @@l10
+push(S, 'O');              @@l11
+print(pop(S));             @@l12
+enqueue(Q, 'O');           @@l13
+print(dequeue(Q));         @@l14
+enqueue(Q, pop(S));        @@l15
+push(S, dequeue(Q));       @@l16
+print(pop(S));             @@l17
+print(pop(S));             @@l18`,
+  run(s) {
+    exSetup(s, [['S', 'S'], ['Q', 'Q']]);
+    s.step(null, 'S and Q start empty.');
+    const pr = (v, l) => { s.print(v + ' '); s.step(l, `print → ${v}`); };
+    s.spush('S', 'T'); s.step('l0', "Push 'T'.");
+    s.qenq('Q', 'I'); s.step('l1', "Enqueue 'I'.");
+    let v = s.qdeq('Q'); s.step('l2', `dequeue(Q) returns ${v}…`); s.spush('S', v); s.step('l2', `…and it is pushed on S.`);
+    s.qenq('Q', 'I'); s.step('l3', "Enqueue 'I'.");
+    s.qenq('Q', 'G'); s.step('l4', "Enqueue 'G'.");
+    v = s.qdeq('Q'); pr(v, 'l5');
+    s.qenq('Q', 'T'); s.step('l6', "Enqueue 'T'.");
+    s.spush('S', 'I'); s.step('l7', "Push 'I'.");
+    v = s.qdeq('Q'); s.step('l8', `dequeue(Q) returns ${v}…`); s.spush('S', v); s.step('l8', '…pushed on S.');
+    v = s.spop('S'); pr(v, 'l9');
+    v = s.spop('S'); s.step('l10', `pop(S) returns ${v}…`); s.qenq('Q', v); s.step('l10', '…enqueued on Q.');
+    s.spush('S', 'O'); s.step('l11', "Push 'O'.");
+    v = s.spop('S'); pr(v, 'l12');
+    s.qenq('Q', 'O'); s.step('l13', "Enqueue 'O'.");
+    v = s.qdeq('Q'); pr(v, 'l14');
+    v = s.spop('S'); s.step('l15', `pop(S) returns ${v}…`); s.qenq('Q', v); s.step('l15', '…enqueued on Q.');
+    v = s.qdeq('Q'); s.step('l16', `dequeue(Q) returns ${v}…`); s.spush('S', v); s.step('l16', '…pushed on S.');
+    v = s.spop('S'); pr(v, 'l17');
+    v = s.spop('S'); pr(v, 'l18');
+    s.step(null, `Printed: ${s.out.trim()}. S is empty and Q = [${s.st.Q.items}].`);
+  } });
+
+function parseCode(src) {
+  const raw = String(src).replace(/\s+$/, '').split('\n'), lines = [], map = {};
+  raw.forEach((ln, i) => {
+    const m = ln.match(/^(.*?)\s*@@(\w+)\s*$/);
+    let text = ln;
+    if (m) { text = m[1]; (map[m[2]] = map[m[2]] || []).push(i); }
+    lines.push(text.replace(/\s+$/, ''));
+  });
+  return { lines, map };
+}
+function runProgram(p, input) {
+  const s = new Sim({ zeroData: p.zeroData });
+  try { p.run(s, input); } catch (e) { if (!(e instanceof Crash)) throw e; }
+  // stable sizes for stacks/queues
+  const maxLen = {};
+  s.snaps.forEach(sn => { for (const k in sn.state.st) { const t = sn.state.st[k]; if (t.type === 'stack' || t.type === 'queue') maxLen[k] = Math.max(maxLen[k] || 0, t.items.length); if (t.type === 'chain') { const src = sn.state.st[t.of]; maxLen[k] = Math.max(maxLen[k] || 0, src.items.length); } } });
+  s.snaps.forEach(sn => { for (const k in sn.state.st) if (maxLen[k] !== undefined) sn.state.st[k].rows = Math.max(3, maxLen[k]); });
+  return { snaps: s.snaps, code: s.code || p.code };
+}
+/*ENGINE-END*/
+
+
+/* ======================= UI ======================= */
+const $ = q => document.querySelector(q);
+const el = { sel: $('#prog'), slides: $('#slides'), title: $('#ptitle'), desc: $('#pdesc'), notesWrap: $('#notesWrap'), notesSum: $('#notesSum'), notes: $('#notes'),
+  inWrap: $('#inWrap'), inLabel: $('#inLabel'), inField: $('#inField'), inRun: $('#inRun'), inPresets: $('#inPresets'), inErr: $('#inErr'),
+  structs: $('#structs'), stepNo: $('#stepNo'), note: $('#note'), diff: $('#diff'), codeH: $('#codeH'), code: $('#code'), codeWrap: $('#codeWrap'),
+  varsCard: $('#varsCard'), vars: $('#vars'), outCard: $('#outCard'), out: $('#out'), range: $('#range'), count: $('#count'),
+  bFirst: $('#bFirst'), bPrev: $('#bPrev'), bPlay: $('#bPlay'), bNext: $('#bNext'), bLast: $('#bLast'), bSpeed: $('#bSpeed') };
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let cur = { prog: null, parsed: null, snaps: [], i: 0, input: undefined };
+let timer = null, speed = 1;
+
+const KW = 'int|float|double|char|void|struct|class|public|return|new|delete|while|if|else|for|do|NULL|using|namespace|string|include|endl|cout|cin|std|const|define|bool|Stack|Queue';
+const TOK = new RegExp(`(\\/\\/.*$)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b(${KW})\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'g');
+function hl(line) {
+  let out = '', last = 0;
+  line.replace(TOK, (m, com, str, kw, num, off) => {
+    out += esc(line.slice(last, off));
+    out += `<span class="${com ? 'c-com' : str ? 'c-str' : kw ? 'c-kw' : 'c-num'}">${esc(m)}</span>`; last = off + m.length; return m;
+  });
+  return out + esc(line.slice(last));
+}
+function buildSelect() {
+  const groups = [];
+  PROGRAMS.forEach(p => { let g = groups.find(x => x.name === p.group); if (!g) { g = { name: p.group, items: [] }; groups.push(g); } g.items.push(p); });
+  el.sel.innerHTML = groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`).join('');
+}
+const getVar = (st, n) => { for (let i = st.frames.length - 1; i >= 0; i--) if (n in st.frames[i].vars) return st.frames[i].vars[n].v; return undefined; };
+const chgVar = (ch, n) => [...ch.vars].some(k => k.endsWith(':' + n));
+
+function load(id, input) {
+  stop();
+  const p = PROGRAMS.find(x => x.id === id) || PROGRAMS[0];
+  el.sel.value = p.id;
+  if (input === undefined) input = p.input ? p.input.def : undefined;
+  let r;
+  try { r = runProgram(p, input); }
+  catch (e) {
+    if (e instanceof InputError && cur.prog === p) { el.inErr.textContent = e.message; return; }
+    if (e instanceof InputError) { input = p.input.def; r = runProgram(p, input); } else throw e;
+  }
+  el.inErr.textContent = '';
+  const parsed = parseCode(r.code);
+  cur = { prog: p, parsed, snaps: r.snaps, i: 0, input };
+  el.slides.textContent = p.slides; el.title.textContent = p.title; el.desc.textContent = p.desc;
+  if (p.notes && p.notes.length) { el.notesWrap.hidden = false; el.notes.innerHTML = p.notes.map(n => `<li>${esc(n)}</li>`).join(''); el.notesSum.textContent = p.notes.length === 1 ? '1 note about this' : `${p.notes.length} notes about this`; }
+  else el.notesWrap.hidden = true;
+  if (p.input) {
+    el.inWrap.hidden = false; el.inLabel.textContent = p.input.label; el.inField.value = input;
+    el.inPresets.innerHTML = p.input.presets.map(([l, v]) => `<button type="button" data-v="${esc(v)}" class="${v === input ? 'on' : ''}">${esc(l)}</button>`).join('');
+  } else el.inWrap.hidden = true;
+  el.codeH.textContent = p.codeTitle || 'Code';
+  el.code.innerHTML = parsed.lines.map((t, i) => `<div class="cl"><span class="ln">${i + 1}</span><span>${hl(t) || ' '}</span></div>`).join('');
+  el.codeWrap.scrollTop = 0;
+  el.varsCard.hidden = !cur.snaps.some(sn => sn.state.frames.some(f => Object.keys(f.vars).length));
+  el.outCard.hidden = !cur.snaps.some(sn => sn.state.out);
+  el.range.max = cur.snaps.length - 1;
+  try { localStorage.setItem('sq-sim-prog', p.id); } catch (e) {}
+  go(0);
+}
+function go(i) { cur.i = Math.max(0, Math.min(cur.snaps.length - 1, i)); render(); }
+
+function fp(v, nodes) { return v === null ? 'NULL' : v === GARB ? '?' : `${addr(v)} [${fd(nodes[v].data)}]`; }
+function fvv(o, nodes) { return o.t === 'ptr' ? fp(o.v, nodes) : fd(o.v); }
+function computeDiff(ps, st, sn, P) {
+  const fItems = [], nItems = [], oItems = [], nodes = {}, vars = new Set();
+  if (!ps) return { items: [], nodes, vars };
+  const L = Math.max(st.frames.length, ps.frames.length);
+  for (let fi = 0; fi < L; fi++) {
+    const a = ps.frames[fi], b = st.frames[fi], same = a && b && a.label === b.label;
+    if (a && !same) fItems.push(['ret', `${a.label} finished; its local variables are gone`]);
+    if (b && !same) { fItems.push(['call', `Entered ${b.label}`]); Object.entries(b.vars).forEach(([k, o]) => { vars.add(fi + ':' + k); fItems.push(['var', `${k} = ${fvv(o, st.nodes)}`]); }); continue; }
+    if (same) {
+      Object.entries(b.vars).forEach(([k, o]) => {
+        const ov = a.vars[k];
+        if (!ov) { vars.add(fi + ':' + k); fItems.push(['var', `${k} created = ${fvv(o, st.nodes)}`]); }
+        else if (ov.v !== o.v) { vars.add(fi + ':' + k); fItems.push(['var', `${k}: ${fvv(ov, ps.nodes)} → ${fvv(o, st.nodes)}`]); }
+      });
+      Object.keys(a.vars).forEach(k => { if (!(k in b.vars)) fItems.push(['var', `${k} goes out of scope`]); });
+    }
+  }
+  const dn = (P.heap && P.heap.dataName) || 'data';
+  st.nodes.forEach(n => {
+    const o = ps.nodes[n.id];
+    if (!o) { nItems.push(['new', `Node allocated at ${addr(n.id)}`]); nodes[n.id] = { all: 1 }; return; }
+    const c = {};
+    ['data', 'next'].forEach(f => {
+      if (o[f] === n[f]) return; c[f] = 1;
+      nItems.push(['node', f === 'data' ? `${addr(n.id)} ${dn}: ${fd(o.data)} → ${fd(n.data)}` : `${addr(n.id)}->next: ${fp(o.next, ps.nodes)} → ${fp(n.next, st.nodes)}`]);
+    });
+    if (n.freed && !o.freed) { c.freed = 1; nItems.push(['del', `Node ${addr(n.id)} deleted; its memory is returned`]); }
+    if (Object.keys(c).length) nodes[n.id] = c;
+  });
+  if (st.out.length > ps.out.length) oItems.push(['out', `Printed ${JSON.stringify(st.out.slice(ps.out.length))}`]);
+  return { items: fItems.concat(sn.ops || [], nItems, oItems), nodes, vars };
+}
+const BADGE = { new: 'new node', node: 'node', del: 'delete', var: 'variable', call: 'call', ret: 'return', out: 'output', push: 'push', pop: 'pop', enq: 'enqueue', deq: 'dequeue', read: 'read', set: 'array', err: 'error', add: 'postfix', move: 'move' };
+
+function render() {
+  const snap = cur.snaps[cur.i], prev = cur.i > 0 ? cur.snaps[cur.i - 1] : null, st = snap.state;
+  const ch = computeDiff(prev && prev.state, st, snap, cur.prog);
+  const n = cur.snaps.length;
+  el.count.textContent = `Step ${cur.i + 1} of ${n}`;
+  el.stepNo.textContent = snap.label && cur.parsed.map[snap.label] ? `line ${cur.parsed.map[snap.label][0] + 1}` : (cur.i === 0 ? 'starting point' : '');
+  el.range.value = cur.i;
+  el.note.textContent = snap.note; el.note.className = 'note' + (snap.crash ? ' crash' : '');
+  el.diff.innerHTML = ch.items.length ? ch.items.map(([k, t]) => `<li><span class="badge b-${k}">${BADGE[k] || k}</span><span>${esc(t)}</span></li>`).join('')
+    : `<li class="nodiff">${cur.i === 0 ? 'This is the starting point. Press Next to run the first step.' : 'Nothing was stored or removed: this step only checked a condition or moved control.'}</li>`;
+  el.code.querySelectorAll('.cl.cur').forEach(x => x.classList.remove('cur'));
+  const lines = snap.label ? (cur.parsed.map[snap.label] || []) : [];
+  lines.forEach(li => { const d = el.code.children[li]; if (d) d.classList.add('cur'); });
+  if (lines.length) {
+    const f = el.code.children[lines[0]], lastEl = el.code.children[lines[lines.length - 1]], w = el.codeWrap;
+    const top = f.offsetTop, bot = lastEl.offsetTop + lastEl.offsetHeight;
+    if (top < w.scrollTop + 20 || bot > w.scrollTop + w.clientHeight - 20) w.scrollTo({ top: Math.max(0, (top + bot) / 2 - w.clientHeight / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  renderStructs(st, ch);
+  if (!el.varsCard.hidden) renderVars(st, ch);
+  const prevOut = prev ? prev.state.out : '';
+  if (!st.out) el.out.innerHTML = '<span class="muted">Nothing printed yet.</span>';
+  else if (st.out.length > prevOut.length && st.out.startsWith(prevOut)) el.out.innerHTML = esc(prevOut) + `<span class="new">${esc(st.out.slice(prevOut.length))}</span>`;
+  else el.out.textContent = st.out;
+  el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
+  el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  if (cur.i === n - 1) stop();
+}
+function renderVars(st, ch) {
+  let h = '';
+  st.frames.forEach((f, fi) => {
+    const ents = Object.entries(f.vars); if (!ents.length) return;
+    const active = fi === st.frames.length - 1 && fi > 0;
+    h += `<div class="frame"><div class="fh"><span>${esc(f.label)}</span>${active ? '<span class="act">running now</span>' : ''}</div>`;
+    ents.forEach(([k, o]) => {
+      let v;
+      if (o.t === 'ptr') {
+        if (o.v === null) v = '<span class="nul">NULL</span>';
+        else if (o.v === GARB) v = '<span class="garb">? (garbage)</span>';
+        else { const nd = st.nodes[o.v]; v = `${addr(o.v)} → node [${esc(fd(nd.data))}]` + (nd.freed ? ' <span class="dang">dangling: deleted</span>' : ''); }
+      } else v = o.v === GARB ? '<span class="garb">? (garbage)</span>' : esc(fd(o.v));
+      h += `<div class="vr${ch.vars.has(fi + ':' + k) ? ' chg' : ''}"><span class="vn">${esc(k)}</span><span class="vv">${v}</span></div>`;
+    });
+    h += '</div>';
+  });
+  el.vars.innerHTML = h || '<div class="muted">No variables yet.</div>';
+}
+
+/* ---------- structure renderers ---------- */
+const svgWrap = (w, h, body, cls = 'fit') => `<svg class="${cls}" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+const hk = (t, i) => t.hl && t.hl.i === i ? ' hl-' + t.hl.k : '';
+const R = {};
+R.astack = (t, st, ch) => {
+  const top = t.topVar ? getVar(st, t.topVar) : t.top, tChg = t.topVar ? chgVar(ch, t.topVar) : !!t.topChg;
+  const n = t.arr.length, view = t.view || n, cH = 26, cw = 62, iw = 38, px = 4, more = view < n, y0 = more ? 20 : 6;
+  const W = px + iw + cw + 104, H = y0 + view * cH + 30;
+  let g = more ? `<text x="${px + iw + cw / 2}" y="13" class="idx" text-anchor="middle">⋮ up to [${n - 1}]</text>` : '';
+  for (let i = view - 1; i >= 0; i--) {
+    const y = y0 + (view - 1 - i) * cH, v = t.arr[i], live = i <= top;
+    g += `<text x="${px + iw - 6}" y="${y + cH / 2 + 4}" class="idx" text-anchor="end">[${i}]</text>`;
+    g += `<rect x="${px + iw}" y="${y}" width="${cw}" height="${cH}" class="ac${live ? ' live' : ''}${hk(t, i)}"/>`;
+    if (v !== null && v !== undefined) g += `<text x="${px + iw + cw / 2}" y="${y + cH / 2 + 5}" class="av${live ? '' : ' stale'}">${esc(fv(v))}</text>`;
+  }
+  const ty = top >= 0 ? y0 + (view - 1 - top) * cH + cH / 2 : y0 + view * cH + 14, ax = px + iw + cw, lab = `top = ${top}`;
+  if (tChg) g += `<rect x="${ax + 44}" y="${ty - 11}" width="${lab.length * 7.4 + 8}" height="20" rx="4" class="tplbg"/>`;
+  g += `<path d="M${ax + 42},${ty} L${ax + 4},${ty}" class="tp" marker-end="url(#m-head)"/><text x="${ax + 48}" y="${ty + 4}" class="tpl">${lab}</text>`;
+  return svgWrap(W, H, g);
+};
+R.aqueue = (t, st, ch) => {
+  const front = t.frontVar ? getVar(st, t.frontVar) : t.front, rear = t.rearVar ? getVar(st, t.rearVar) : t.rear;
+  const fChg = t.frontVar ? chgVar(ch, t.frontVar) : !!t.frontChg, rChg = t.rearVar ? chgVar(ch, t.rearVar) : !!t.rearChg;
+  const n = t.arr.length, cw = 44, cH = 34, px = 40, yc = 40, W = px * 2 + (n + 1) * cw, H = yc + cH + 54;
+  let g = '';
+  for (let i = 0; i < n; i++) {
+    const x = px + i * cw, v = t.arr[i], live = t.mode === 'next' ? (i >= front && i < rear) : (i >= front && i <= rear);
+    g += `<text x="${x + cw / 2}" y="${yc - 4}" class="idx" text-anchor="middle">${i}</text>`;
+    g += `<rect x="${x}" y="${yc}" width="${cw}" height="${cH}" class="ac${live ? ' live' : ''}${hk(t, i)}"/>`;
+    if (v !== null && v !== undefined) g += `<text x="${x + cw / 2}" y="${yc + cH / 2 + 5}" class="av${live ? '' : ' stale'}">${esc(fv(v))}</text>`;
+  }
+  const fx = px + front * cw + cw / 2 - (front === rear ? 0 : 0), rx = px + rear * cw + cw / 2;
+  const fl = `front = ${front}`, rl = `rear = ${rear}`;
+  if (fChg) g += `<rect x="${fx - fl.length * 3.7 - 4}" y="1" width="${fl.length * 7.4 + 8}" height="18" rx="4" class="tplbg"/>`;
+  g += `<text x="${fx}" y="14" class="tpl" text-anchor="middle">${fl}</text><path d="M${fx},18 L${fx},${yc - 15}" class="tp" marker-end="url(#m-head)"/>`;
+  if (rChg) g += `<rect x="${rx - rl.length * 3.7 - 4}" y="${yc + cH + 32}" width="${rl.length * 7.4 + 8}" height="18" rx="4" class="tplbg"/>`;
+  g += `<path d="M${rx},${yc + cH + 30} L${rx},${yc + cH + 3}" class="tp2" marker-end="url(#m-ptr)"/><text x="${rx}" y="${yc + cH + 45}" class="tpl2" text-anchor="middle">${rl}</text>`;
+  return svgWrap(W, H, g);
+};
+R.stack = t => {
+  const rows = t.rows || 3, ih = 26, w = t.w || 70, px = 8, gh = 32, W = px + w + 56, H = gh + rows * ih + 10, by = gh + rows * ih + 4;
+  let g = `<path d="M${px},${gh - 6} V${by} H${px + w} V${gh - 6}" class="bk"/>`;
+  t.items.forEach((v, i) => {
+    const y = by - 2 - (i + 1) * ih;
+    g += `<rect x="${px + 4}" y="${y + 1}" width="${w - 8}" height="${ih - 3}" rx="2" class="it${hk(t, i)}"/><text x="${px + w / 2}" y="${y + ih / 2 + 4}" class="av" style="font-size:${String(fv(v)).length > 9 ? 11 : 13}px">${esc(fv(v))}</text>`;
+  });
+  if (t.items.length) { const y = by - 2 - t.items.length * ih + ih / 2; g += `<text x="${px + w + 6}" y="${y + 4}" class="lblb">← top</text>`; }
+  else g += `<text x="${px + w / 2}" y="${by - 10}" class="empty" text-anchor="middle">empty</text>`;
+  if (t.ghost) g += `<rect x="${px + 4}" y="2" width="${w - 8}" height="${ih - 4}" rx="2" class="gh"/><text x="${px + w / 2}" y="${ih / 2 + 3}" class="av" style="fill:var(--danger);font-size:${String(fv(t.ghost.v)).length > 9 ? 11 : 13}px">${esc(fv(t.ghost.v))}</text><text x="${px + w + 6}" y="${ih / 2 + 3}" class="ght">↑ out</text>`;
+  return svgWrap(W, H, g);
+};
+R.queue = t => {
+  const rows = t.rows || 3, iw = 46, px = 60, W = px + rows * iw + 46, H = 80;
+  let g = `<line x1="${px - 6}" y1="10" x2="${px + rows * iw + 6}" y2="10" class="pipe"/><line x1="${px - 6}" y1="48" x2="${px + rows * iw + 6}" y2="48" class="pipe"/>`;
+  g += `<text x="${px + rows * iw + 10}" y="33" class="lbl">← in</text>`;
+  t.items.forEach((v, i) => { const x = px + i * iw; g += `<rect x="${x + 3}" y="14" width="${iw - 6}" height="30" rx="2" class="it${hk(t, i)}"/><text x="${x + iw / 2}" y="34" class="av">${esc(fv(v))}</text>`; });
+  if (t.items.length) {
+    const last = t.items.length - 1;
+    if (last === 0) g += `<text x="${px + iw / 2}" y="64" class="lblb" text-anchor="middle">front</text><text x="${px + iw / 2}" y="76" class="lblb" text-anchor="middle" style="fill:var(--ptr)">rear</text>`;
+    else g += `<text x="${px + iw / 2}" y="64" class="lblb" text-anchor="middle">front</text><text x="${px + last * iw + iw / 2}" y="64" class="lblb" text-anchor="middle" style="fill:var(--ptr)">rear</text>`;
+  } else g += `<text x="${px + 8}" y="34" class="empty">empty</text>`;
+  if (t.ghost) g += `<rect x="6" y="14" width="40" height="30" rx="2" class="gh"/><text x="26" y="34" class="av" style="fill:var(--danger)">${esc(fv(t.ghost.v))}</text><text x="26" y="64" class="ght" text-anchor="middle">← out</text>`;
+  else g += `<text x="10" y="33" class="lbl">out ←</text>`;
+  return svgWrap(W, H, g);
+};
+R.chain = (t, st) => {
+  const src = st.st[t.of], isS = t.mode === 'stack';
+  const items = isS ? [...src.items].reverse() : [...src.items];
+  const vw = 40, pw = 18, bw = vw + pw, gap = 30, px = 14, gs = src.ghost ? bw + gap : 0;
+  const n = items.length, W = px + gs + Math.max(1, n) * (bw + gap) + 50, H = 72, y = 32;
+  let g = '';
+  if (src.ghost) g += `<rect x="${px}" y="${y}" width="${bw}" height="30" class="gh"/><text x="${px + vw / 2}" y="${y + 20}" class="av" style="fill:var(--danger)">${esc(fv(src.ghost.v))}</text><text x="${px + bw / 2}" y="${y - 8}" class="ght" text-anchor="middle">removed</text>`;
+  if (!n) { g += `<text x="${px + gs}" y="${y + 20}" class="empty">${isS ? 'top' : 'front'} = NULL (empty)</text>`; return svgWrap(W, H, g, 'fit'); }
+  items.forEach((v, i) => {
+    const x = px + gs + i * (bw + gap), origIdx = isS ? src.items.length - 1 - i : i;
+    const c = src.hl && src.hl.i === origIdx ? ' hl-' + src.hl.k : '';
+    g += `<rect x="${x}" y="${y}" width="${vw}" height="30" class="ac live${c}"/><rect x="${x + vw}" y="${y}" width="${pw}" height="30" class="ac"/>`;
+    g += `<text x="${x + vw / 2}" y="${y + 20}" class="av">${esc(fv(v))}</text>`;
+    if (i < n - 1) g += `<circle cx="${x + vw + pw / 2}" cy="${y + 15}" r="3" class="dot"/><path d="M${x + vw + pw / 2},${y + 15} L${x + bw + gap - 1},${y + 15}" class="ar ar-ink" marker-end="url(#m-ink)"/>`;
+    else g += `<line x1="${x + vw + 3}" y1="${y + 27}" x2="${x + bw - 3}" y2="${y + 3}" class="nullslash"/>`;
+  });
+  const fx = px + gs + vw / 2, lx = px + gs + (n - 1) * (bw + gap) + vw / 2;
+  g += `<text x="${fx}" y="11" class="lblb" text-anchor="middle">${isS ? 'top' : 'front'}</text><path d="M${fx},15 L${fx},${y - 1}" class="tp" marker-end="url(#m-head)"/>`;
+  if (!isS) g += n > 1 ? `<text x="${lx}" y="11" class="lblb" text-anchor="middle" style="fill:var(--ptr)">rear</text><path d="M${lx},15 L${lx},${y - 1}" class="tp2" marker-end="url(#m-ptr)"/>` : `<text x="${fx + 30}" y="11" class="lblb" style="fill:var(--ptr)">= rear</text>`;
+  g += `<text x="${px + gs + n * (bw + gap) - gap + 8}" y="${y + 20}" class="lbl">NULL</text>`;
+  return `<div class="scroll">${svgWrap(W, H, g, '')}</div>`;
+};
+R.tape = t => `<div class="tape">${t.tokens.map((x, i) => {
+  const m = t.marks[i]; const c = i === t.pos ? (m === 'err' ? 'err' : 'cur') : m === 'err' ? 'err' : (i < t.pos ? 'done' + (m === 'ok' ? ' ok' : '') : '');
+  return `<span class="tk ${c}">${esc(x)}</span>`; }).join('')}</div>`;
+R.table = t => `<div class="tbl"><table><thead><tr>${t.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+  t.rows.length ? t.rows.map((r, i) => `<tr class="${i === t.hlRow ? 'hl' : ''}">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${t.cols.length}" class="none">No rows yet.</td></tr>`
+}</tbody></table></div>`;
+R.text = t => `<div class="tv ${t.cls || ''}${t.chg ? ' chg' : ''}">${esc(t.value)}</div>`;
+R.graph = t => {
+  const X = c => 40 + c * 110, Y = r => 24 + r * 78, W = 300, H = Y(4) + 34;
+  const onPath = (a, b) => { for (let i = 0; i + 1 < t.path.length; i++) if (t.path[i] === a && t.path[i + 1] === b) return true; return false; };
+  let g = '';
+  FLIGHTS.forEach(([a, b]) => {
+    const [ax, ay] = [X(CITIES[a][0]), Y(CITIES[a][1])], [bx, by] = [X(CITIES[b][0]), Y(CITIES[b][1])];
+    const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy), r = 17;
+    const cls = t.tried && t.tried[0] === a && t.tried[1] === b ? 'try' : onPath(a, b) ? 'path' : '';
+    const mk = cls === 'try' ? 'acc' : cls === 'path' ? 'head' : 'mut';
+    g += `<path d="M${ax + dx / L * r},${ay + dy / L * r} L${bx - dx / L * (r + 2)},${by - dy / L * (r + 2)}" class="ge ${cls}" marker-end="url(#m-${mk})"/>`;
+  });
+  const top = t.path[t.path.length - 1];
+  Object.entries(CITIES).forEach(([c, [cx, cy]]) => {
+    const x = X(cx), y = Y(cy), cls = c === top ? 'cur' : t.path.includes(c) ? 'path' : t.visited.includes(c) ? 'dead' : '';
+    if (c === t.dest) g += `<circle cx="${x}" cy="${y}" r="21" class="gring"/>`;
+    g += `<g class="gn ${cls}"><circle cx="${x}" cy="${y}" r="16"/><text x="${x}" y="${y + 5}">${c}</text></g>`;
+    if (c === t.origin) g += `<text x="${x}" y="${y + 32}" class="gtag">start</text>`;
+    if (c === t.dest) g += `<text x="${x + 24}" y="${y + 4}" class="gtag" style="fill:var(--danger);text-anchor:start">goal</text>`;
+  });
+  return svgWrap(W, H, g) + `<div class="legend" style="margin-top:4px"><span><i class="sw" style="background:var(--head-bg);border-color:var(--head);border-radius:50%"></i>on the stack</span><span><i class="sw" style="background:var(--hl);border-color:var(--hl-line);border-radius:50%"></i>top</span><span><i class="sw" style="border-style:dashed;border-color:var(--muted);border-radius:50%"></i>dead end (popped)</span></div>`;
+};
+R.hanoi = t => {
+  const n = t.n, pw = 132, W = 3 * pw + 16, dh = 18, base = 30 + n * (dh + 2) + 6, H = base + 30;
+  let g = '';
+  ['A', 'B', 'C'].forEach((p, k) => {
+    const cx = 8 + pw / 2 + k * pw;
+    g += `<rect x="${cx - 4}" y="${base - n * (dh + 2) - 18}" width="8" height="${n * (dh + 2) + 18}" rx="3" class="peg"/><rect x="${cx - pw / 2 + 8}" y="${base}" width="${pw - 16}" height="6" rx="2" class="peg"/>`;
+    g += `<text x="${cx}" y="${base + 24}" class="pegl">${p}</text>`;
+    t.pegs[p].forEach((d, j) => {
+      const w = 26 + d * ((pw - 44) / n), y = base - (j + 1) * (dh + 2);
+      const mv = t.moved && t.moved.disk === d && t.moved.to === p;
+      g += `<rect x="${cx - w / 2}" y="${y}" width="${w}" height="${dh}" rx="5" class="disk${mv ? ' mv' : ''}" style="fill:hsl(${200 + d * 32} 70% 72%)"/><text x="${cx}" y="${y + 13}" class="dkt">${d}</text>`;
+    });
+  });
+  return svgWrap(W, H, g);
+};
+
+/* ---------- linked-list heap renderer (from Lecture 5) ---------- */
+function renderHeap(st, ch, P, availW) {
+  const H0 = P.heap, dw = H0.dataW || 54, pw = 28, W = dw + pw, H = 40, narrow = availW < 520, GAP = narrow ? 46 : 60, PX = narrow ? 14 : 22;
+  const nodes = st.nodes, anchor = H0.anchor;
+  const ptrs = [];
+  st.frames.forEach((f, fi) => Object.entries(f.vars).forEach(([k, o]) => { if (o.t === 'ptr') ptrs.push({ n: k, fi, f, v: o.v }); }));
+  const cnt = {}; ptrs.forEach(p => cnt[p.n] = (cnt[p.n] || 0) + 1);
+  ptrs.forEach(p => { p.label = cnt[p.n] > 1 && p.fi > 0 ? `${p.n} (${p.f.name})` : p.n; p.chg = ch.vars.has(p.fi + ':' + p.n); });
+  let av = null; for (const p of ptrs) if (p.n === anchor) { av = p.v; break; }
+  const chips = ptrs.filter(p => typeof p.v !== 'number').map(p => `<span class="chip${p.n === anchor ? ' head' : ''}${p.chg ? ' chg' : ''}">${esc(p.label)} = ${p.v === null ? 'NULL' : '? (garbage)'}</span>`).join('');
+  if (!nodes.length) return { html: `<div class="chips">${chips}</div><div class="muted">The heap is empty: no nodes exist yet.</div>` };
+  const pos = {}, chain = [], seen = new Set();
+  let p = av;
+  while (typeof p === 'number' && !seen.has(p) && !nodes[p].freed) { chain.push(p); seen.add(p); p = nodes[p].next; }
+  chain.forEach((id, k) => pos[id] = { r: 0, c: k });
+  const rest = nodes.filter(n => !seen.has(n.id)).sort((a, b) => (a.freed - b.freed) || (a.id - b.id)).map(n => n.id);
+  const restSet = new Set(rest), pointed = new Set(rest.map(id => nodes[id].next).filter(x => typeof x === 'number' && restSet.has(x)));
+  let nextCol = chain.length; const placed = new Set();
+  for (const s0 of rest.filter(id => !pointed.has(id)).concat(rest)) {
+    if (placed.has(s0)) continue;
+    const seq = []; let q = s0;
+    while (typeof q === 'number' && restSet.has(q) && !placed.has(q)) { seq.push(q); placed.add(q); q = nodes[q].next; }
+    let c0; if (typeof q === 'number' && pos[q] && pos[q].r === 0) c0 = pos[q].c - 0.5 - (seq.length - 1); else { c0 = nextCol; nextCol += seq.length; }
+    seq.forEach((id, j) => pos[id] = { r: 1, c: c0 + j });
+  }
+  const noChain = !chain.length; if (noChain) Object.values(pos).forEach(o => { o.r = 0; });
+  const cols = Object.values(pos).map(o => o.c), minC = Math.min(...cols), maxC = Math.max(...cols);
+  const X = c => PX + (c - minC) * (W + GAP);
+  const tags = {};
+  ptrs.forEach(pp => { if (typeof pp.v === 'number' && pos[pp.v]) (tags[pp.v] = tags[pp.v] || []).push(pp); });
+  Object.values(tags).forEach(a => a.sort((x, y) => (y.n === anchor) - (x.n === anchor)));
+  let ms0 = 0, ms1 = 0;
+  for (const id in tags) { if (pos[id].r === 0) ms0 = Math.max(ms0, tags[id].length); else ms1 = Math.max(ms1, tags[id].length); }
+  const TH = 20, TS = TH + 5, hasR1 = Object.values(pos).some(o => o.r === 1);
+  const Y0 = 12 + ms0 * TS + 16 + (noChain ? 18 : 0), Y1 = Y0 + H + 100;
+  const h = hasR1 ? Y1 + H + 22 + ms1 * TS + 6 : Y0 + H + 34;
+  const w = Math.max(300, PX * 2 + (maxC - minC + 1) * (W + GAP) - GAP + 40);
+  const NP = id => ({ x: X(pos[id].c), y: pos[id].r === 0 ? Y0 : Y1 }), cxData = x => x + dw / 2;
+  const g = [];
+  if (hasR1) g.push(`<text x="${PX}" y="${Y1 - 18}" class="rowlbl">below: not reachable from ${esc(anchor)}</text>`);
+  if (noChain) g.push(`<text x="${PX}" y="16" class="rowlbl">${esc(anchor)} does not point to a node yet, so none of these are in the list</text>`);
+  nodes.forEach(n => {
+    if (!pos[n.id]) return;
+    const { x, y } = NP(n.id), c = ch.nodes[n.id] || {}, txt = fd(n.data), fs = Math.min(14, (dw - 8) / (Math.max(1, txt.length) * 0.62));
+    let s = `<g class="nd${n.freed ? ' freed' : ''}" transform="translate(${x},${y})">`;
+    s += `<rect x="0" y="0" width="${dw}" height="${H}" class="cell${c.data || c.all ? ' chg' : ''}"/><text x="${dw / 2}" y="${H / 2 + fs / 3}" class="dt" style="font-size:${fs.toFixed(1)}px">${esc(txt)}</text>`;
+    s += `<rect x="${dw}" y="0" width="${pw}" height="${H}" class="cell${c.next || c.all ? ' chg' : ''}"/>`;
+    s += n.next === null ? `<line x1="${dw + 4}" y1="${H - 4}" x2="${dw + pw - 4}" y2="4" class="nullslash"/>` : n.next === GARB ? `<text x="${dw + pw / 2}" y="${H / 2 + 5}" class="garbq">?</text>` : `<circle cx="${dw + pw / 2}" cy="${H / 2}" r="3.6" class="dot"/>`;
+    s += `<text x="${W}" y="${H + 12}" class="adr" text-anchor="end">${addr(n.id)}</text>`;
+    if (n.freed) s += `<line x1="6" y1="6" x2="${W - 6}" y2="${H - 6}" class="xmark"/><line x1="${W - 6}" y1="6" x2="6" y2="${H - 6}" class="xmark"/>`;
+    g.push(s + '</g>');
+  });
+  nodes.forEach(n => {
+    if (!pos[n.id] || n.freed) return;
+    const t = n.next; if (typeof t !== 'number' || !pos[t]) return;
+    const S = NP(n.id), sp = pos[n.id], tp = pos[t], T = NP(t), c = ch.nodes[n.id] || {};
+    const sx = S.x + W - pw / 2, sy = S.y + H / 2, k = nodes[t].freed ? 'red' : (c.next || c.all) ? 'acc' : 'ink';
+    let d;
+    if (tp.r === sp.r) {
+      const dc = tp.c - sp.c;
+      if (dc > 0.9 && dc < 1.1) d = `M${sx},${sy} L${T.x - 1},${sy}`;
+      else { const depth = 34 + Math.min(30, Math.abs(dc) * 6), by = S.y + H, ex = cxData(T.x) - 8; d = `M${sx},${sy} L${sx},${by} C${sx},${by + depth} ${ex},${by + depth} ${ex},${T.y + H + 2}`; }
+    } else { const ex = Math.max(T.x + 10, Math.min(T.x + W - 10, sx)), ey = tp.r > sp.r ? T.y - 2 : T.y + H + 2; d = `M${sx},${sy} L${ex},${ey}`; }
+    g.push(`<path d="${d}" class="ar ar-${k}" marker-end="url(#m-${k})"/>`);
+  });
+  for (const id in tags) {
+    const T = NP(+id), r = pos[id].r, cx = cxData(T.x), freed = nodes[id].freed;
+    tags[id].forEach((pp, j) => {
+      const tw = pp.label.length * 7.4 + 14, k = freed ? 'red' : pp.chg ? 'acc' : pp.n === anchor ? 'head' : 'ptr';
+      const ty = r === 0 ? T.y - 14 - TH - j * TS : T.y + H + 22 + j * TS;
+      g.push(`<g class="tag tag-${k}"><rect x="${cx - tw / 2}" y="${ty}" width="${tw}" height="${TH}" rx="5"/><text x="${cx}" y="${ty + 14}">${esc(pp.label)}</text></g>`);
+    });
+    const k0 = freed ? 'red' : 'mut';
+    g.push(r === 0 ? `<path d="M${cx},${T.y - 14} L${cx},${T.y - 2}" class="ar ar-${k0}" marker-end="url(#m-${k0})"/>` : `<path d="M${cx},${T.y + H + 22} L${cx},${T.y + H + 2}" class="ar ar-${k0}" marker-end="url(#m-${k0})"/>`);
+  }
+  const sc = w > availW ? availW / w : 1, fit = sc >= 0.68;
+  const svg = `<svg width="${fit ? Math.floor(w * sc) : w}" height="${fit ? Math.ceil(h * sc) : h}" viewBox="0 0 ${w} ${h}" style="display:block">${g.join('')}</svg>`;
+  return { html: `<div class="chips">${chips}</div><div class="scroll heapwrap">${svg}</div>${fit ? '' : '<div class="hint">Swipe sideways to see every node.</div>'}` };
+}
+
+const WIDE = { table: 1, tape: 1, chain: 1, aqueue: 1, graph: 0 };
+function renderStructs(st, ch) {
+  const availW = Math.max(260, el.structs.clientWidth - 24);
+  let h = '';
+  if (cur.prog.heap) h += `<div class="sc wide"><h4>Linked list in memory (heap)</h4>${renderHeap(st, ch, cur.prog, availW).html}</div>`;
+  st.order.forEach(n => { const t = st.st[n]; h += `<div class="sc${WIDE[t.type] ? ' wide' : ''}"><h4>${esc(t.title)}</h4>${R[t.type](t, st, ch)}</div>`; });
+  el.structs.innerHTML = h;
+  el.structs.querySelectorAll('.tbl').forEach(d => { const r = d.querySelector('tr.hl'); d.scrollTop = r ? r.offsetTop - d.clientHeight + r.offsetHeight + 4 : d.scrollHeight; });
+}
+
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.bPlay.textContent = '▶ Play'; }
+function play() {
+  if (timer) { stop(); return; }
+  if (cur.i >= cur.snaps.length - 1) go(0);
+  el.bPlay.textContent = '❚❚ Pause';
+  timer = setInterval(() => { if (cur.i >= cur.snaps.length - 1) stop(); else go(cur.i + 1); }, 1100 / speed);
+}
+el.bFirst.onclick = () => { stop(); go(0); };
+el.bPrev.onclick = () => { stop(); go(cur.i - 1); };
+el.bNext.onclick = () => { stop(); go(cur.i + 1); };
+el.bLast.onclick = () => { stop(); go(cur.snaps.length - 1); };
+el.bPlay.onclick = play;
+el.bSpeed.onclick = () => { const sp = [1, 2, 4, 0.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; el.bSpeed.textContent = (speed === 0.5 ? '½' : speed) + '×'; if (timer) { stop(); play(); } };
+el.range.oninput = () => { stop(); go(+el.range.value); };
+el.sel.onchange = () => load(el.sel.value);
+el.inRun.onclick = () => load(cur.prog.id, el.inField.value);
+el.inField.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); load(cur.prog.id, el.inField.value); } });
+el.inPresets.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; el.inField.value = b.dataset.v; load(cur.prog.id, b.dataset.v); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('select, input, textarea, button')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(cur.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(cur.i - 1); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => cur.prog && render(), 150); });
+
+buildSelect();
+let saved = null; try { saved = localStorage.getItem('sq-sim-prog'); } catch (e) {}
+load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'stack-play');
+</script>
+</body>
+</html>

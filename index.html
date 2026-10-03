@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Data Structures Simulators – 501324-3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A; --head:#2D4FD8; --head-bg:#E3E9FF; --live:#E6EEFF;
+  --ui:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --head:#8DA6FF; --head-bg:#1E2A55; --live:#1C2947;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --head:#8DA6FF; --head-bg:#1E2A55; --live:#1C2947;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font-family:var(--ui);font-size:17px;line-height:1.5;background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px}
+:focus-visible{outline:3px solid var(--head);outline-offset:3px}
+.wrap{max-width:920px;margin:0 auto;padding:40px 18px 56px}
+header{margin-bottom:28px}
+.course{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin:0 0 10px}
+h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.7rem,6vw,2.7rem);line-height:1.1;letter-spacing:-.03em;margin:0}
+.lede{max-width:60ch;margin:14px 0 0;color:var(--muted)}
+
+ol.lectures{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px}
+.lec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 18px;background:var(--panel);border:2px solid var(--ink);border-radius:6px;
+  padding:18px 20px;text-decoration:none;color:inherit;position:relative}
+.num{font-family:var(--mono);font-weight:700;font-size:2.6rem;line-height:1;color:var(--ink);grid-row:1 / span 3;padding-top:2px;min-width:1.4em}
+.lec h2{margin:0;font-size:1.3rem;line-height:1.25}
+.lec p{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.topics{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.topics li{font-family:var(--mono);font-size:.76rem;padding:2px 8px;border:1.5px solid var(--rule);border-radius:3px;background:var(--live)}
+.go{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-weight:700;padding:8px 14px;border-radius:6px;background:var(--ink);color:var(--panel);justify-self:start}
+.lec:hover{border-color:var(--hl-line)}
+.lec:hover .go{background:var(--hl);color:var(--hl-ink)}
+.lec:hover .num{color:var(--hl-line)}
+.viz{grid-column:2;margin-top:14px}
+.viz svg{display:block;max-width:100%;height:auto}
+.box{fill:var(--panel);stroke:var(--ink);stroke-width:1.6}
+.box.on{fill:var(--hl);stroke:var(--hl-line)}
+.ln{stroke:var(--ink);stroke-width:1.6;fill:none}
+.tx{font-family:var(--mono);font-weight:700;font-size:13px;fill:var(--ink);text-anchor:middle}
+.mk{fill:var(--ink)}
+
+.how{margin-top:34px;border-top:1.5px dashed var(--rule);padding-top:18px}
+.how h3{margin:0 0 8px;font-size:1rem}
+.how ul{margin:0;padding-left:1.2em;color:var(--muted);max-width:66ch}
+.how li{margin:4px 0}
+kbd{font-family:var(--mono);font-size:.82em;border:1.5px solid var(--rule);border-bottom-width:3px;border-radius:4px;padding:0 5px;background:var(--panel);color:var(--ink)}
+@media (max-width:560px){
+  .lec{grid-template-columns:minmax(0,1fr);padding:16px}
+  .num{grid-row:auto;font-size:1.1rem;margin-bottom:4px}
+  .num::before{content:"Lecture "}
+  .viz{grid-column:1}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="course">Data Structures 501324-3 · Taif University · Fall 2026</p>
+    <h1>Step through the code,<br>watch the memory.</h1>
+    <p class="lede">Pick a lecture. Every program and diagram from its slides runs one step at a time, with the changed line, the data structure, and a plain explanation side by side.</p>
+  </header>
+
+  <ol class="lectures">
+    <li>
+      <a class="lec" href="linked-list-simulator.html">
+        <span class="num" aria-hidden="true">5</span>
+        <div>
+          <h2>Linked lists</h2>
+          <p>Nodes, pointers and the heap: create, traverse, append, insert, delete — then circular and doubly linked lists.</p>
+          <ul class="topics" aria-label="Topics">
+            <li>creating nodes</li><li>traversal</li><li>append</li><li>sorted insert</li><li>delete</li><li>circular</li><li>doubly linked</li>
+          </ul>
+          <span class="go">Open Lecture 5 simulator</span>
+        </div>
+        <div class="viz" aria-hidden="true">
+          <svg width="320" height="44" viewBox="0 0 320 44">
+            <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="mk"/></marker></defs>
+            <rect x="2" y="8" width="44" height="28" class="box"/><rect x="46" y="8" width="20" height="28" class="box"/><text x="24" y="27" class="tx">5</text>
+            <path d="M56,22 L92,22" class="ln" marker-end="url(#a5)"/>
+            <rect x="94" y="8" width="44" height="28" class="box on"/><rect x="138" y="8" width="20" height="28" class="box on"/><text x="116" y="27" class="tx">8</text>
+            <path d="M148,22 L184,22" class="ln" marker-end="url(#a5)"/>
+            <rect x="186" y="8" width="44" height="28" class="box"/><rect x="230" y="8" width="20" height="28" class="box"/><text x="208" y="27" class="tx">3</text>
+            <line x1="233" y1="33" x2="247" y2="11" class="ln"/><text x="285" y="27" class="tx" style="font-weight:400;font-size:11px">NULL</text>
+          </svg>
+        </div>
+      </a>
+    </li>
+    <li>
+      <a class="lec" href="stacks-queues-simulator.html">
+        <span class="num" aria-hidden="true">6</span>
+        <div>
+          <h2>Stacks &amp; queues</h2>
+          <p>LIFO and FIFO in arrays and linked lists, plus the stack applications: braces, infix to postfix, postfix evaluation, flight search and the Towers of Hanoi.</p>
+          <ul class="topics" aria-label="Topics">
+            <li>push / pop</li><li>enqueue / dequeue</li><li>balanced braces</li><li>infix → postfix</li><li>postfix evaluation</li><li>flight search</li><li>Towers of Hanoi</li><li>exercises</li>
+          </ul>
+          <span class="go">Open Lecture 6 simulator</span>
+        </div>
+        <div class="viz" aria-hidden="true">
+          <svg width="320" height="60" viewBox="0 0 320 60">
+            <path d="M8,4 V56 H62 V4" class="ln" style="stroke-width:2.2"/>
+            <rect x="12" y="38" width="46" height="15" class="box"/><rect x="12" y="21" width="46" height="15" class="box"/><rect x="12" y="4" width="46" height="15" class="box on"/>
+            <line x1="100" y1="14" x2="292" y2="14" class="ln" style="stroke-width:2.2"/><line x1="100" y1="46" x2="292" y2="46" class="ln" style="stroke-width:2.2"/>
+            <rect x="108" y="18" width="40" height="24" class="box"/><text x="128" y="35" class="tx">70</text>
+            <rect x="152" y="18" width="40" height="24" class="box"/><text x="172" y="35" class="tx">80</text>
+            <rect x="196" y="18" width="40" height="24" class="box on"/><text x="216" y="35" class="tx">50</text>
+          </svg>
+        </div>
+      </a>
+    </li>
+  </ol>
+
+  <section class="how">
+    <h3>How to use the simulators</h3>
+    <ul>
+      <li>Choose a program from the menu at the top. The slide numbers are shown next to each one.</li>
+      <li>Press <b>Next</b> and <b>Back</b>, drag the slider, or use <kbd>←</kbd> <kbd>→</kbd> and <kbd>Space</kbd> on a computer.</li>
+      <li>Yellow always means "changed by this step" — in the code, the drawing, and the variables.</li>
+      <li>Some programs have a text box: type your own input and press <b>Run it</b>.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

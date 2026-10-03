@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linked List Simulator – Lecture 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A;
+  --head:#2D4FD8; --head-bg:#E3E9FF; --ptr:#0F6F6D; --ptr-bg:#DDF3F1;
+  --danger:#C8323A; --danger-bg:#FBE3E4; --node:#FFFFFF;
+  --codebg:#FBFCFE; --kw:#7B3FC4; --str:#0B7A47; --com:#8A94A6; --num:#B4561B;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B;
+    --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+    --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+    --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B;
+  --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+  --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+  --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; color:var(--ink); font-family:var(--ui); font-size:16px; line-height:1.45;
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  padding-bottom:128px;
+}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--head);outline-offset:2px}
+
+.top{max-width:1320px;margin:0 auto;padding:18px 16px 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.25rem,3.6vw,1.8rem);margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.chainmark{display:inline-flex;align-items:center;gap:3px}
+.chainmark i{display:inline-block;width:18px;height:14px;border:2px solid var(--ink);border-radius:2px;position:relative;background:var(--panel)}
+.chainmark i::after{content:"";position:absolute;right:-7px;top:4px;width:5px;height:2px;background:var(--ink)}
+.chainmark i:last-child::after{display:none}
+.chainmark i.on{background:var(--hl)}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:min(100%,380px);flex:1 1 320px;max-width:520px}
+.pick span{font-size:.85rem;color:var(--muted)}
+.pick select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);font-family:var(--mono);font-size:.9rem;cursor:pointer}
+
+.layout{max-width:1320px;margin:0 auto;padding:8px 16px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"info" "viz" "change" "code" "vars" "out"}
+.info{grid-area:info}.viz{grid-area:viz}.change{grid-area:change}.code{grid-area:code}.vars{grid-area:vars}.out{grid-area:out}
+@media (min-width:980px){
+  .layout{grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);
+    grid-template-areas:"info info" "code viz" "code change" "code vars" "code out"; align-items:start}
+  .code{position:sticky;top:12px}
+  .codewrap{max-height:max(320px,calc(100vh - 380px))!important}
+}
+.panel{background:var(--panel);border:1.5px solid var(--rule);border-radius:4px;padding:12px 14px;min-width:0}
+.panel h3{margin:0;font-size:1rem;font-weight:700}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.82rem}
+
+.info{border-left:6px solid var(--ink)}
+.info h2{margin:0;font-size:1.2rem;line-height:1.3}
+.slides{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:2px 7px;border:1.5px solid var(--ink);border-radius:3px;margin-bottom:6px}
+.info p{margin:6px 0 0;max-width:78ch}
+.info details{margin-top:8px}
+.info summary{cursor:pointer;font-weight:700;color:var(--danger);font-size:.92rem}
+.info summary.plain{color:var(--muted)}
+.info ul{margin:6px 0 0;padding-left:1.2em;max-width:78ch}
+.info li{margin:4px 0}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:0}
+.chip{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:5px;border:1.5px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr)}
+.chip.head{border-color:var(--head);background:var(--head-bg);color:var(--head)}
+.chip.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.vizwrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;border:1.5px dashed var(--rule);border-radius:4px;background:var(--paper)}
+#viz{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:12px;border:1.5px solid var(--ink);display:inline-block;border-radius:2px}
+.sw.hl{background:var(--hl);border-color:var(--hl-line)}
+.sw.hd{background:var(--head-bg);border-color:var(--head)}
+.sw.pt{background:var(--ptr-bg);border-color:var(--ptr)}
+.sw.dl{background:var(--danger-bg);border-color:var(--danger);border-style:dashed}
+
+/* svg */
+.cell{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.cell.chg{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.2}
+.nd.freed{opacity:.5}
+.nd.freed .cell{stroke-dasharray:4 3;fill:var(--danger-bg);stroke:var(--danger)}
+.nd.isnew .cell{animation:pop .45s ease-out}
+@keyframes pop{from{transform:scale(.85);opacity:.2}to{transform:scale(1);opacity:1}}
+.dt{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+.dt.chgt{fill:var(--hl-ink)}
+.garbq{font-family:var(--mono);font-weight:700;font-size:15px;fill:var(--danger);text-anchor:middle}
+.adr{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.fl{font-family:var(--mono);font-size:9px;fill:var(--muted);text-anchor:middle}
+.nullslash{stroke:var(--muted);stroke-width:1.5}
+.dot{fill:var(--ink)}
+.xmark{stroke:var(--danger);stroke-width:3;stroke-linecap:round}
+.ar{fill:none;stroke-width:1.8}
+.ar-ink{stroke:var(--ink)}
+.ar-acc{stroke:var(--hl-line);stroke-width:3}
+.ar-red{stroke:var(--danger);stroke-dasharray:5 4}
+.ar-mut{stroke:var(--muted)}
+.mk-ink{fill:var(--ink)}.mk-acc{fill:var(--hl-line)}.mk-red{fill:var(--danger)}.mk-mut{fill:var(--muted)}
+.tag rect{stroke-width:1.5}
+.tag text{font-family:var(--mono);font-weight:600;font-size:12px;text-anchor:middle}
+.tag-ptr rect{fill:var(--ptr-bg);stroke:var(--ptr)}.tag-ptr text{fill:var(--ptr)}
+.tag-head rect{fill:var(--head-bg);stroke:var(--head)}.tag-head text{fill:var(--head)}
+.tag-acc rect{fill:var(--hl);stroke:var(--hl-line)}.tag-acc text{fill:var(--hl-ink)}
+.tag-red rect{fill:var(--danger-bg);stroke:var(--danger)}.tag-red text{fill:var(--danger)}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.empty{font-family:var(--ui);font-size:14px;fill:var(--muted)}
+
+.change{border-top:5px solid var(--hl-line)}
+.note{margin:0 0 8px;font-size:1rem;max-width:78ch}
+.note.crash{color:var(--danger);font-weight:700;background:var(--danger-bg);padding:8px 10px;border-radius:4px}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diff li{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:.8rem;line-height:1.35;word-break:break-word}
+.badge{flex:0 0 auto;font-family:var(--ui);font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:3px;border:1.5px solid var(--ink);min-width:48px;text-align:center}
+.b-new,.b-set{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.b-var{background:var(--ptr-bg);border-color:var(--ptr);color:var(--ptr)}
+.b-call,.b-ret{background:var(--head-bg);border-color:var(--head);color:var(--head)}
+.b-out{background:var(--panel)}
+.nodiff{color:var(--muted);font-family:var(--ui)!important;font-size:.85rem!important}
+
+.codewrap{position:relative;max-height:46vh;overflow:auto;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:6px 0}
+#code{font-family:var(--mono);font-size:12.5px;line-height:1.6;min-width:max-content}
+.cl{display:flex;padding:0 12px 0 0;border-left:4px solid transparent;white-space:pre}
+.cl .ln{width:3.2em;flex:0 0 auto;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.cl.cur{background:var(--hl);border-left-color:var(--hl-line);color:var(--hl-ink)}
+.cl.cur .ln{color:var(--hl-ink);font-weight:700;opacity:1}
+.cl.cur .c-com{color:#5b5f39}
+.c-kw{color:var(--kw);font-weight:600}.c-str{color:var(--str)}.c-com{color:var(--com);font-style:italic}.c-num{color:var(--num)}
+.cl.cur .c-kw,.cl.cur .c-str,.cl.cur .c-num{color:var(--hl-ink)}
+
+.frame{border:1.5px solid var(--rule);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.fh{font-family:var(--mono);font-size:.8rem;font-weight:700;padding:4px 8px;background:var(--paper);border-bottom:1.5px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.fh .act{font-family:var(--ui);font-weight:400;color:var(--head)}
+.vr{display:flex;gap:10px;padding:4px 8px;font-family:var(--mono);font-size:.82rem;border-top:1px solid var(--grid);align-items:baseline}
+.vr:first-of-type{border-top:0}
+.vr.chg{background:var(--hl);color:var(--hl-ink)}
+.vn{min-width:7.5em;font-weight:600}
+.vv{word-break:break-word}
+.nul{color:var(--muted)}.garb{color:var(--danger);font-weight:700}
+.dang{color:var(--danger);font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+#out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;min-height:2.4em;white-space:pre-wrap;word-break:break-word}
+#out .new{background:var(--hl);color:var(--hl-ink)}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:2px solid var(--ink);
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.controls .in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:10px}
+.r1 input{flex:1;accent-color:var(--head);min-width:0;height:28px}
+#count{font-family:var(--mono);font-size:.85rem;white-space:nowrap;min-width:7.5em;text-align:right}
+.r2{display:flex;gap:6px;justify-content:center}
+.r2 button{border:2px solid var(--ink);background:var(--panel);border-radius:6px;padding:8px 10px;cursor:pointer;min-height:42px;font-weight:700;font-size:.92rem;white-space:nowrap}
+@media (max-width:420px){#bFirst,#bLast{display:none}.r2 button.primary{min-width:84px}}
+@media (min-width:980px){.controls .in{flex-direction:row-reverse;align-items:center;gap:18px}.r1{flex:1}.r2{flex:0 0 auto}body{padding-bottom:84px}}
+.r2 button:disabled{opacity:.35;cursor:default}
+.r2 button.primary{background:var(--ink);color:var(--panel);min-width:92px}
+.r2 .grow{flex:1 1 0;max-width:150px}
+@media (hover:hover){.r2 button:not(:disabled):hover{background:var(--hl);color:var(--hl-ink);border-color:var(--hl-line)}}
+@media (prefers-reduced-motion:reduce){.nd.isnew .cell{animation:none}}
+.back{display:inline-block;margin-bottom:6px;font-size:.88rem;color:var(--head);text-decoration:none;font-weight:700}.back:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="back" href="index.html">← All lectures</a>
+    <h1><span class="chainmark" aria-hidden="true"><i></i><i class="on"></i><i></i></span>Linked list simulator</h1>
+    <p>Every program from Lecture 5 (Data Structures 501324-3), run one line at a time.</p>
+  </div>
+  <label class="pick"><span>Choose a program from the slides</span><select id="prog"></select></label>
+</header>
+
+<main class="layout">
+  <section class="panel info">
+    <span class="slides" id="slides"></span>
+    <h2 id="ptitle"></h2>
+    <p id="pdesc"></p>
+    <details id="notesWrap"><summary id="notesSum"></summary><ul id="notes"></ul></details>
+  </section>
+
+  <section class="panel viz">
+    <div class="ph"><h3>The list in memory</h3><span class="hint" id="vizHint">boxes are nodes on the heap</span></div>
+    <div id="chips" class="chips"></div>
+    <div class="vizwrap" id="vizWrap"><svg id="viz" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="legend">
+      <span><i class="sw hl"></i>changed by this line</span>
+      <span><i class="sw hd"></i>list head pointer</span>
+      <span><i class="sw pt"></i>other pointer variable</span>
+      <span><i class="sw dl"></i>deleted memory</span>
+      <span><b style="color:var(--danger);font-family:var(--mono)">?</b> garbage (never set)</span>
+    </div>
+  </section>
+
+  <section class="panel change">
+    <div class="ph"><h3>What this line did</h3><span class="hint" id="stepNo"></span></div>
+    <p id="note" class="note"></p>
+    <ul id="diff" class="diff"></ul>
+  </section>
+
+  <section class="panel code">
+    <div class="ph"><h3>Code</h3><span class="hint">yellow line = the one that just ran</span></div>
+    <div class="codewrap" id="codeWrap"><div id="code"></div></div>
+  </section>
+
+  <section class="panel vars">
+    <div class="ph"><h3>Variables</h3><span class="hint">one box per function that is running</span></div>
+    <div id="vars"></div>
+  </section>
+
+  <section class="panel out">
+    <div class="ph"><h3>Console output</h3></div>
+    <pre id="out"></pre>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Step controls">
+  <div class="in">
+    <div class="r1"><input type="range" id="range" min="0" max="0" value="0" aria-label="Step"><span id="count"></span></div>
+    <div class="r2">
+      <button id="bFirst" aria-label="Go to first step">⏮</button>
+      <button id="bPrev" class="grow">◀ Back</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <button id="bNext" class="grow">Next ▶</button>
+      <button id="bLast" aria-label="Go to last step">⏭</button>
+      <button id="bSpeed" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+/*ENGINE-START*/
+const GARB = '?';
+class Crash extends Error {}
+const addr = id => '0x' + (0x1A0 + id * 0x20).toString(16).toUpperCase();
+const fd = v => v === GARB ? '?' : (v === '' ? '""' : String(v));
+
+class Sim {
+  constructor(o = {}) {
+    this.dbl = !!o.dbl; this.zero = o.zeroData !== undefined ? o.zeroData : 0;
+    this.nodes = []; this.frames = [{ name: 'global', label: 'Global variables', vars: {} }];
+    this.out = ''; this.snaps = [];
+  }
+  alloc(zero = true) {
+    const id = this.nodes.length;
+    const n = { id, data: zero ? this.zero : GARB, next: zero ? null : GARB, freed: false };
+    if (this.dbl) n.prev = zero ? null : GARB;
+    this.nodes.push(n); return id;
+  }
+  build(anchor, vals) {
+    const ids = vals.map(v => { const id = this.alloc(); this.nodes[id].data = v; return id; });
+    ids.forEach((id, k) => {
+      this.nodes[id].next = k < ids.length - 1 ? ids[k + 1] : null;
+      if (this.dbl) this.nodes[id].prev = k > 0 ? ids[k - 1] : null;
+    });
+    if (anchor) this.gvar(anchor, ids.length ? ids[0] : null);
+    return ids;
+  }
+  fn(name, label) { this.frames.push({ name, label: label || name + '()', vars: {} }); }
+  ret() { this.frames.pop(); }
+  var(n, v, t = 'ptr') { this.frames[this.frames.length - 1].vars[n] = { t, v }; }
+  gvar(n, v, t = 'ptr') { this.frames[0].vars[n] = { t, v }; }
+  drop(n) { delete this.frames[this.frames.length - 1].vars[n]; }
+  find(n) { for (let i = this.frames.length - 1; i >= 0; i--) if (n in this.frames[i].vars) return this.frames[i].vars[n]; throw new Error('unknown variable ' + n); }
+  get(n) { return this.find(n).v; }
+  set(n, v) { this.find(n).v = v; }
+  N(p) { if (typeof p !== 'number') throw new Error('bad dereference ' + p); return this.nodes[p]; }
+  d(p) { return fd(this.N(p).data); }
+  a(p) { return p === null ? 'NULL' : p === GARB ? '?' : addr(p); }
+  free(p) { this.N(p).freed = true; }
+  print(x) { this.out += x; }
+  step(label, note, extra) {
+    this.snaps.push(Object.assign({ label, note, state: JSON.parse(JSON.stringify({ nodes: this.nodes, frames: this.frames, out: this.out })) }, extra || {}));
+  }
+}
+function listStr(s, anchor = 'head') {
+  let p = s.get(anchor); const out = [], seen = new Set();
+  while (typeof p === 'number' && !seen.has(p)) { seen.add(p); out.push(s.d(p)); p = s.N(p).next; }
+  return out.length ? out.join(' → ') + (typeof p === 'number' ? ' → (back to ' + s.d(p) + ')' : ' → NULL') : 'empty (head is NULL)';
+}
+function forLoop(s, lab, a, b, body, nm = 'i') {
+  for (let i = a; i < b; i++) {
+    if (i === a) { s.var(nm, i, 'val'); s.step(lab, `The for loop starts: ${nm} = ${a}, and ${nm} < ${b} is true.`); }
+    else { s.set(nm, i); s.step(lab, `${nm}++ makes ${nm} = ${i}; ${nm} < ${b} is still true.`); }
+    body(i);
+  }
+  s.set(nm, b); s.step(lab, `${nm}++ makes ${nm} = ${b}; ${nm} < ${b} is false, so the loop ends.`); s.drop(nm);
+}
+
+/* ---------- singly linked list functions ---------- */
+function appendS(s, v, o = {}) {
+  const cond = o.cond || 'head == NULL';
+  s.fn('appendNode', `appendNode(value = ${v})`); s.var('value', v, 'val');
+  s.step('ap_sig', `appendNode(${v}) is called. A new frame is created for it, holding the parameter value = ${v}.`);
+  s.var('newNode', GARB); s.var('curr', GARB);
+  s.step('ap_decl', 'Two local pointers are declared. Nothing is assigned yet, so they hold garbage addresses (shown as ?).');
+  const n = s.alloc(!o.garbage); s.set('newNode', n);
+  s.step('ap_new', o.garbage
+    ? `new Node (no parentheses) reserves memory at ${addr(n)}. The fields are NOT initialized, so they contain garbage (?) until we set them.`
+    : `new Node() reserves memory on the heap at ${addr(n)}. The () zero-initializes it (data = 0, next = NULL). newNode now holds that address.`);
+  s.N(n).data = v; s.step('ap_data', `${v} is stored in the new node's data field.`);
+  s.N(n).next = null; s.step('ap_nextnull', 'This node will be the last one, so its next pointer is set to NULL.');
+  if (s.get('head') === null) {
+    s.step('ap_if', `${cond} is true: the list is empty.`);
+    s.set('head', n); s.step('ap_head', 'head now points to the new node. It is the first and only node in the list.');
+  } else {
+    s.step('ap_if', `${cond} is false (head holds ${s.a(s.get('head'))}), so the else part runs.`);
+    s.set('curr', s.get('head')); s.step('ap_curr', `curr starts at the first node (${s.d(s.get('curr'))}).`);
+    for (;;) {
+      const c = s.get('curr'), nx = s.N(c).next;
+      if (nx !== null) {
+        s.step('ap_while', `curr->next is ${s.a(nx)}, not NULL, so the condition is true: ${s.d(c)} is not the last node.`);
+        s.set('curr', nx); s.step('ap_adv', `curr moves forward to the next node (${s.d(nx)}).`);
+      } else { s.step('ap_while', `curr->next is NULL, so the condition is false: curr is on the last node (${s.d(c)}). The loop stops.`); break; }
+    }
+    s.N(s.get('curr')).next = n;
+    s.step('ap_link', `The last node's next now holds ${addr(n)}, so ${v} is linked at the end of the list.`);
+  }
+  s.ret(); s.step('ap_end', 'appendNode returns. Its local variables disappear, but the node stays on the heap because it was made with new.');
+}
+function displayS(s, o = {}) {
+  s.fn('displayList'); s.step('dl_sig', 'displayList() is called. It walks from head to the end and prints every node.');
+  if (o.combined) { s.var('curr', s.get('head')); s.step('dl_decl', `curr is created and starts at head (${s.a(s.get('curr'))}).`); }
+  else {
+    s.var('curr', GARB); s.step('dl_decl', 'A local pointer curr is declared (garbage for now).');
+    s.set('curr', s.get('head')); s.step('dl_curr', `curr = head, so curr points to the first node${s.get('curr') === null ? ' — but head is NULL' : ' (' + s.d(s.get('curr')) + ')'}.`);
+  }
+  for (;;) {
+    const c = s.get('curr');
+    if (c !== null) {
+      s.step('dl_while', `curr is ${addr(c)}, not NULL, so the loop body runs.`);
+      s.print(fd(s.N(c).data) + ' '); s.step('dl_out', `Print ${s.d(c)}.`);
+      const nx = s.N(c).next; s.set('curr', nx);
+      s.step('dl_adv', nx === null ? 'curr = curr->next gives NULL: we just stepped past the last node.' : `curr moves to the next node (${s.d(nx)}).`);
+    } else { s.step('dl_while', 'curr is NULL, so the condition is false. End of the list — stop.'); break; }
+  }
+  if (o.endl) { s.print('\n'); s.step('dl_endl', 'Print a newline.'); }
+  s.ret(); s.step('dl_end', 'displayList returns. head never moved — only the local copy curr did.');
+}
+function insertS(s, v) {
+  s.fn('insertNode', `insertNode(value = ${v})`); s.var('value', v, 'val');
+  s.step('in_sig', `insertNode(${v}) is called. It keeps the list sorted: the new node goes before the first node whose value is ≥ ${v}.`);
+  s.var('newNode', GARB); s.var('curr', GARB); s.var('previous', null);
+  s.step('in_decl', 'Local pointers are declared. previous starts as NULL (the slide forgets this; see the notes).');
+  const n = s.alloc(); s.set('newNode', n); s.step('in_new', `A new node is created at ${addr(n)}.`);
+  s.N(n).data = v; s.step('in_data', `${v} is stored in the new node.`);
+  const h = s.get('head');
+  if (h === null) {
+    s.step('in_if', 'head == NULL is true: the list is empty.');
+    s.set('head', n); s.step('in_h1', 'head points to the new node.');
+    s.N(n).next = null; s.step('in_n1', 'It is also the last node, so its next is NULL.');
+  } else {
+    s.step('in_if', 'head == NULL is false: search for the right position.');
+    s.set('curr', h); s.step('in_curr', `curr starts at the first node (${s.d(h)}).`);
+    for (;;) {
+      const c = s.get('curr');
+      if (c !== null && s.N(c).data < v) {
+        s.step('in_while', `curr->data (${s.d(c)}) < ${v} is true: the new node belongs further right.`);
+        s.set('previous', c); s.step('in_prev', `previous = curr: remember ${s.d(c)}, the node just before the insertion point.`);
+        const nx = s.N(c).next; s.set('curr', nx);
+        s.step('in_adv', nx === null ? 'curr moves to NULL (past the last node).' : `curr moves to the next node (${s.d(nx)}).`);
+      } else {
+        s.step('in_while', c === null ? `curr is NULL: every node is smaller than ${v}, so it goes at the end.` : `curr->data (${s.d(c)}) < ${v} is false, so the loop stops. The new node goes right before ${s.d(c)}.`);
+        break;
+      }
+    }
+    const p = s.get('previous'), c = s.get('curr');
+    if (p === null) {
+      s.step('in_if2', 'previous == NULL is true: the loop never ran, so the new node becomes the new first node.');
+      s.set('head', n); s.step('in_h2', `head now points to the new node. Careful: the old first node (${s.d(c)}) is only reachable through curr right now.`);
+      s.N(n).next = c; s.step('in_n2', 'newNode->next = curr reconnects the rest of the list behind the new node.');
+    } else {
+      s.step('in_if2', `previous == NULL is false: previous is on ${s.d(p)}.`);
+      s.N(p).next = n;
+      s.step('in_p3', c === null ? `previous->next = newNode: the old last node (${s.d(p)}) now points to the new node.` : `previous->next = newNode: ${s.d(p)} now points to the new node. ${s.d(c)} is only reachable through curr for a moment.`);
+      s.N(n).next = c;
+      s.step('in_n3', c === null ? 'newNode->next = curr, which is NULL: the new node is the new last node.' : `newNode->next = curr: the new node points to ${s.d(c)}. The list is whole again and still sorted.`);
+    }
+  }
+  s.ret(); s.step('in_end', `insertNode returns. The list is now ${listStr(s)}.`);
+}
+function deleteS(s, v) {
+  s.fn('deleteNode', `deleteNode(value = ${v})`); s.var('value', v, 'val');
+  s.step('de_sig', `deleteNode(${v}) is called: find the node holding ${v} and remove it.`);
+  s.var('curr', GARB); s.var('previousNode', GARB); s.step('de_decl', 'Two local pointers are declared (garbage for now).');
+  const h = s.get('head');
+  if (h === null) {
+    s.step('de_empty', '!head is true: the list is empty, so there is nothing to delete.');
+    s.ret(); s.step('de_end', 'deleteNode returns without changing anything.'); return;
+  }
+  s.step('de_empty', '!head is false: the list has nodes.');
+  if (s.N(h).data === v) {
+    s.step('de_if', `head->data (${s.d(h)}) == ${v} is true: the node to delete is the first node.`);
+    const nx = s.N(h).next; s.set('curr', nx);
+    s.step('de_c1', `Save the second node's address in curr (${s.a(nx)}). After deleting the first node we could not reach it any more.`);
+    s.free(h); s.step('de_del1', `delete head frees the first node. head still holds the old address ${addr(h)}, so it is a dangling pointer (red) until the next line.`);
+    s.set('head', nx); s.step('de_h1', nx === null ? 'head = curr, which is NULL: the list is now empty.' : `head = curr: the list now starts at ${s.d(nx)}.`);
+  } else {
+    s.step('de_if', `head->data (${s.d(h)}) == ${v} is false: the node to delete is further along.`);
+    s.set('curr', h); s.step('de_curr', 'curr starts at the first node.');
+    for (;;) {
+      const c = s.get('curr');
+      if (c !== null && s.N(c).data !== v) {
+        s.step('de_while', `curr->data (${s.d(c)}) != ${v} is true: not found yet, keep walking.`);
+        s.set('previousNode', c); s.step('de_prev', `previousNode remembers ${s.d(c)}; it is needed to relink the list.`);
+        const nx = s.N(c).next; s.set('curr', nx);
+        s.step('de_adv', nx === null ? 'curr moves to NULL (past the last node).' : `curr moves to the next node (${s.d(nx)}).`);
+      } else {
+        s.step('de_while', c === null ? `curr is NULL: we reached the end without finding ${v}. The loop stops.` : `curr->data (${s.d(c)}) == ${v}, so the loop stops: curr is on the node to delete.`);
+        break;
+      }
+    }
+    const c = s.get('curr'), p = s.get('previousNode');
+    if (c === null) {
+      s.step('de_link', 'CRASH. curr is NULL, so curr->next reads memory at address 0 and the program stops with a segmentation fault. The fix is to add  if (curr == NULL) return;  before this line.', { crash: true });
+      throw new Crash();
+    }
+    const after = s.N(c).next;
+    s.N(p).next = after;
+    s.step('de_link', `previousNode->next = curr->next: ${s.d(p)} now points ${after === null ? 'to NULL' : 'straight to ' + s.d(after)}, skipping ${s.d(c)}. The node is out of the list but still in memory.`);
+    s.free(c); s.step('de_del2', 'delete curr gives the node\'s memory back. curr is now dangling, but it disappears when the function returns.');
+  }
+  s.ret(); s.step('de_end', `deleteNode returns. The list is now ${listStr(s)}.`);
+}
+
+/* ---------- doubly linked list functions ---------- */
+function appendD(s, v) {
+  s.fn('appendNode', `appendNode(value = ${v})`); s.var('value', v, 'val');
+  s.step('ap_sig', `appendNode(${v}) is called.`);
+  s.var('newNode', GARB); s.var('curr', GARB); s.step('ap_decl', 'Two local pointers are declared (garbage for now).');
+  const n = s.alloc(); s.set('newNode', n); s.step('ap_new', `A new node is created at ${addr(n)}. Each node now has two pointers: prev and next.`);
+  s.N(n).data = v; s.step('ap_data', `${v} is stored in the node.`);
+  s.N(n).next = null; s.step('ap_nextnull', 'next = NULL: nothing comes after it yet.');
+  s.N(n).prev = null; s.step('ap_prevnull', 'prev = NULL: not connected to anything before it yet.');
+  if (s.get('head') === null) {
+    s.step('ap_if', 'head == NULL is true: the list is empty.');
+    s.set('head', n); s.step('ap_head', 'head points to the new node.');
+  } else {
+    s.step('ap_if', 'head == NULL is false: walk to the last node.');
+    s.set('curr', s.get('head')); s.step('ap_curr', `curr starts at ${s.d(s.get('curr'))}.`);
+    for (;;) {
+      const c = s.get('curr'), nx = s.N(c).next;
+      if (nx !== null) { s.step('ap_while', `curr->next is ${s.a(nx)}, not NULL: keep going.`); s.set('curr', nx); s.step('ap_adv', `curr moves to ${s.d(nx)}.`); }
+      else { s.step('ap_while', `curr->next is NULL: ${s.d(c)} is the last node.`); break; }
+    }
+    const c = s.get('curr');
+    s.N(c).next = n; s.step('ap_link', `Forward link: ${s.d(c)}->next now points to the new node.`);
+    s.N(n).prev = c; s.step('ap_plink', `Backward link: the new node's prev points back to ${s.d(c)}. Both directions are connected.`);
+  }
+  s.ret(); s.step('ap_end', 'appendNode returns.');
+}
+function insertD(s, v) {
+  s.fn('insertNode', `insertNode(value = ${v})`); s.var('value', v, 'val');
+  s.step('in_sig', `insertNode(${v}) is called. It keeps the list sorted.`);
+  s.var('newNode', GARB); s.var('curr', GARB); s.step('in_decl', 'Two local pointers are declared. The doubly version needs no "previous" pointer: every node already knows its prev.');
+  const n = s.alloc(); s.set('newNode', n); s.step('in_new', `A new node is created at ${addr(n)}.`);
+  s.N(n).data = v; s.step('in_data', `${v} is stored in the node.`);
+  const h = s.get('head');
+  if (h === null) {
+    s.step('in_if', 'head == NULL is true: the list is empty.');
+    s.set('head', n); s.step('in_h1', 'head points to the new node.');
+    s.N(n).next = null; s.step('in_n1', 'next = NULL.'); s.N(n).prev = null; s.step('in_p1', 'prev = NULL.');
+  } else {
+    s.step('in_if', 'head == NULL is false: find the position.');
+    s.set('curr', h); s.step('in_curr', `curr starts at ${s.d(h)}.`);
+    for (;;) {
+      const c = s.get('curr');
+      if (c !== null && s.N(c).data < v) { s.step('in_while', `${s.d(c)} < ${v} is true: keep going.`); const nx = s.N(c).next; s.set('curr', nx); s.step('in_adv', nx === null ? 'curr moves to NULL.' : `curr moves to ${s.d(nx)}.`); }
+      else { s.step('in_while', c === null ? 'curr is NULL: the new value is the largest.' : `${s.d(c)} < ${v} is false: insert before ${s.d(c)}.`); break; }
+    }
+    const c = s.get('curr');
+    if (c === h) {
+      s.step('in_ifh', 'curr == head is true: the new node goes in front.');
+      s.N(n).next = h; s.step('in_h_n', 'The new node\'s next points to the old first node.');
+      s.N(h).prev = n; s.step('in_h_p', 'The old first node\'s prev points back to the new node.');
+      s.set('head', n); s.step('in_h_h', 'head moves to the new node.');
+    } else {
+      s.step('in_ifh', 'curr == head is false.');
+      if (c === null) {
+        s.step('in_ifn', 'curr == NULL is true: the new node goes at the end.');
+        s.step('in_app', 'appendNode(value) is called. It creates ANOTHER node; the newNode made above is never linked (a memory leak).');
+        appendD(s, v);
+      } else {
+        s.step('in_ifn', `curr == NULL is false: insert in the middle, before ${s.d(c)}.`);
+        s.N(n).next = c; s.step('in_m1', `newNode->next = curr: the new node points forward to ${s.d(c)}.`);
+        const pv = s.N(c).prev; s.N(n).prev = pv; s.step('in_m2', `newNode->prev = curr->prev: the new node points back to ${s.d(pv)}.`);
+        s.N(pv).next = n; s.step('in_m3', `curr->prev->next = newNode: ${s.d(pv)} now points forward to the new node.`);
+        s.N(c).prev = n; s.step('in_m4', `curr->prev = newNode: ${s.d(c)} now points back to the new node. All four links are done.`);
+      }
+    }
+  }
+  s.ret(); s.step('in_end', `insertNode returns. The list is now ${listStr(s)}.`);
+}
+function deleteD(s, v) {
+  s.fn('deleteNode', `deleteNode(value = ${v})`); s.var('value', v, 'val');
+  s.step('de_sig', `deleteNode(${v}) is called.`);
+  s.var('curr', s.get('head')); s.step('de_decl', 'curr starts at head.');
+  if (s.get('head') === null) { s.step('de_empty', '!head is true: empty list, return.'); s.ret(); s.step('de_end', 'deleteNode returns.'); return; }
+  s.step('de_empty', '!head is false: the list has nodes.');
+  for (;;) {
+    const c = s.get('curr');
+    if (c !== null && s.N(c).data !== v) { s.step('de_while', `${s.d(c)} != ${v} is true: keep searching.`); const nx = s.N(c).next; s.set('curr', nx); s.step('de_adv', nx === null ? 'curr moves to NULL.' : `curr moves to ${s.d(nx)}.`); }
+    else { s.step('de_while', c === null ? 'curr is NULL: not found.' : `Found ${v}: the loop stops.`); break; }
+  }
+  const c = s.get('curr');
+  if (c === null) { s.step('de_nf', 'curr == NULL is true: the value is not in the list, so return safely.'); s.ret(); s.step('de_end', 'deleteNode returns.'); return; }
+  s.step('de_nf', 'curr == NULL is false: we found the node. (This check is what the singly version is missing.)');
+  if (c === s.get('head')) {
+    s.step('de_ifh', 'curr == head is true: deleting the first node.');
+    const nx = s.N(c).next; s.set('head', nx); s.step('de_h1', `head moves to the second node (${s.a(nx)}).`);
+    s.step('de_h2', nx !== null ? 'head != NULL is true.' : 'head != NULL is false: the list is now empty.');
+    if (nx !== null) { s.N(nx).prev = null; s.step('de_h3', 'The new first node has nothing before it, so its prev = NULL.'); }
+    s.free(c); s.step('de_h4', 'delete curr frees the old first node.');
+  } else {
+    s.step('de_ifh', 'curr == head is false.');
+    const nx = s.N(c).next, pv = s.N(c).prev;
+    s.step('de_c1', nx !== null ? `curr->next != NULL is true (${s.d(nx)} comes after it).` : 'curr->next != NULL is false: it is the last node.');
+    if (nx !== null) { s.N(nx).prev = pv; s.step('de_c2', `${s.d(nx)}->prev now skips back to ${pv === null ? 'NULL' : s.d(pv)}.`); }
+    s.step('de_c3', pv !== null ? `curr->prev != NULL is true (${s.d(pv)} comes before it).` : 'curr->prev != NULL is false.');
+    if (pv !== null) { s.N(pv).next = nx; s.step('de_c4', `${s.d(pv)}->next now skips forward to ${nx === null ? 'NULL' : s.d(nx)}.`); }
+    s.free(c); s.step('de_c5', `delete curr frees the node that held ${v}.`);
+  }
+  s.ret(); s.step('de_end', `deleteNode returns. The list is now ${listStr(s)}.`);
+}
+
+/* ---------- code text ---------- */
+const APPEND_S = `void appendNode(int value){                @@ap_sig
+    Node *newNode, *curr;                  @@ap_decl
+    // Allocate a new node & store data
+    newNode = new Node(); // parenthesis are optional   @@ap_new
+    newNode->data = value;                 @@ap_data
+    newNode->next = NULL;                  @@ap_nextnull
+    // If there are no nodes in the list, make newNode the first node
+    if (head == NULL)                      @@ap_if
+        head = newNode;                    @@ap_head
+    else  // Otherwise, insert newNode at end
+    {   // Initialize current to head of list
+        curr = head;                       @@ap_curr
+        // Find the last node in the list
+        while (curr->next != NULL)         @@ap_while
+            curr = curr->next;             @@ap_adv
+        // Insert newNode as the last node
+        curr->next = newNode;              @@ap_link
+    }
+}                                          @@ap_end`;
+const DISPLAY_S = endl => `void displayList() {
+    Node *curr;                            @@dl_decl
+    curr = head;                           @@dl_curr
+    while (curr != NULL) {                 @@dl_while
+        cout << curr->data << " ";         @@dl_out
+        curr = curr->next; // go to the next node   @@dl_adv
+    }${endl ? `
+    cout << endl;                          @@dl_endl` : ''}
+}                                          @@dl_end`.replace('void displayList() {', 'void displayList() {                       @@dl_sig');
+const INSERT_S = T => `void insertNode(${T} value) {              @@in_sig
+    Node *newNode, *curr, *previous = NULL;   @@in_decl
+    // Allocate a new node & store value
+    newNode = new Node();                     @@in_new
+    newNode->data = value;                    @@in_data
+    // If there are no nodes in the list, make newNode the first node
+    if (head == NULL) {                       @@in_if
+        head = newNode;                       @@in_h1
+        newNode->next = NULL;                 @@in_n1
+    }
+    else {  // Otherwise, insert newNode.
+        curr = head;                          @@in_curr
+        // Skip all nodes whose value is less than value.
+        while (curr != NULL && curr->data < value) {   @@in_while
+            previous = curr;                  @@in_prev
+            curr = curr->next;                @@in_adv
+        }
+        // If the new node is to be the 1st in the list,
+        // insert it before all other nodes.
+        if (previous == NULL) {               @@in_if2
+            head = newNode;                   @@in_h2
+            newNode->next = curr;             @@in_n2
+        }
+        else {
+            previous->next = newNode;         @@in_p3
+            newNode->next = curr;             @@in_n3
+        }
+    }
+}                                             @@in_end`;
+const DELETE_S = T => `void deleteNode(${T} value) {                 @@de_sig
+    Node *curr, *previousNode;                   @@de_decl
+    if (!head)  // If the list is empty, do nothing.   @@de_empty
+        return;
+    // Determine if the first node is the one.
+    if (head->data == value) {                   @@de_if
+        curr = head->next;                       @@de_c1
+        delete head;                             @@de_del1
+        head = curr;                             @@de_h1
+    }
+    else {
+        curr = head;                             @@de_curr
+        // Skip all nodes not equal to value
+        while (curr != NULL && curr->data != value) {   @@de_while
+            previousNode = curr;                 @@de_prev
+            curr = curr->next;                   @@de_adv
+        }
+        // Link the previous node to the node after curr,
+        // then delete curr.
+        previousNode->next = curr->next;         @@de_link
+        delete curr;                             @@de_del2
+    }
+}                                                @@de_end`;
+const APPEND_D = `void appendNode(int value) {               @@ap_sig
+    Node *newNode, *curr;                  @@ap_decl
+    newNode = new Node();                  @@ap_new
+    newNode->data = value;                 @@ap_data
+    newNode->next = NULL;                  @@ap_nextnull
+    newNode->prev = NULL;                  @@ap_prevnull
+    if (head == NULL) {                    @@ap_if
+        head = newNode;                    @@ap_head
+    } else {
+        curr = head;                       @@ap_curr
+        while (curr->next != NULL)         @@ap_while
+            curr = curr->next;             @@ap_adv
+        curr->next = newNode;              @@ap_link
+        newNode->prev = curr;              @@ap_plink
+    }
+}                                          @@ap_end`;
+const INSERT_D = `void insertNode(int value) {                        @@in_sig
+    Node *newNode, *curr;                           @@in_decl
+    newNode = new Node();                           @@in_new
+    newNode->data = value;                          @@in_data
+    if (head == NULL) {                             @@in_if
+        head = newNode;                             @@in_h1
+        newNode->next = NULL;                       @@in_n1
+        newNode->prev = NULL;                       @@in_p1
+    } else {
+        curr = head;                                @@in_curr
+        while (curr != NULL && curr->data < value) {   @@in_while
+            curr = curr->next;                      @@in_adv
+        }
+        if (curr == head) {                         @@in_ifh
+            newNode->next = head;                   @@in_h_n
+            head->prev = newNode;                   @@in_h_p
+            head = newNode;                         @@in_h_h
+        } else if (curr == NULL) {                  @@in_ifn
+            appendNode(value);                      @@in_app
+        } else {
+            newNode->next = curr;                   @@in_m1
+            newNode->prev = curr->prev;             @@in_m2
+            curr->prev->next = newNode;             @@in_m3
+            curr->prev = newNode;                   @@in_m4
+        }
+    }
+}                                                   @@in_end`;
+const DELETE_D = `void deleteNode(int value) {                        @@de_sig
+    Node *curr = head;                              @@de_decl
+    if (!head) return;                              @@de_empty
+    while (curr != NULL && curr->data != value) {   @@de_while
+        curr = curr->next;                          @@de_adv
+    }
+    if (curr == NULL)                               @@de_nf
+        return;
+    if (curr == head) {                             @@de_ifh
+        head = curr->next;                          @@de_h1
+        if (head != NULL) {                         @@de_h2
+            head->prev = NULL;                      @@de_h3
+        }
+        delete curr;                                @@de_h4
+    } else {
+        if (curr->next != NULL) {                   @@de_c1
+            curr->next->prev = curr->prev;          @@de_c2
+        }
+        if (curr->prev != NULL) {                   @@de_c3
+            curr->prev->next = curr->next;          @@de_c4
+        }
+        delete curr;                                @@de_c5
+    }
+}                                                   @@de_end`;
+const DISPLAY_D = `void displayList() {                       @@dl_sig
+    Node *curr = head;                     @@dl_decl
+    while (curr != NULL) {                 @@dl_while
+        cout << curr->data << " ";         @@dl_out
+        curr = curr->next;                 @@dl_adv
+    } cout << endl;                        @@dl_endl
+}                                          @@dl_end`;
+const STRUCT = (T = 'int') => `struct Node {
+    ${T} data;
+    Node* next;
+};`;
+
+/* ---------- programs ---------- */
+const PROGRAMS = [];
+const P = o => PROGRAMS.push(o);
+
+P({ id: 'first-node', group: 'Creating nodes', slides: 'Slide 18', title: 'Create the first node and point head to it',
+  desc: 'The very first step of every linked list: make one node on the heap, fill it, and make head point to it.',
+  notes: ['The slide shows this as pseudocode; it is wrapped in main() here so it can run.', 'On its first line, newNode holds a random address. Never use a pointer before giving it a value.'],
+  code: `struct Node {
+    int data;
+    Node *next;
+};
+Node *head = NULL;              @@g
+
+int main() {                    @@main
+    Node * newNode;             @@decl
+    newNode = new Node();       @@alloc
+    newNode->data = 5;          @@data
+    newNode->next = NULL;       @@next
+    head = newNode;             @@head
+    return 0;                   @@ret
+}`,
+  run(s) {
+    s.gvar('head', null); s.step('g', 'The global pointer head starts as NULL, which means the list is empty.');
+    s.fn('main'); s.step('main', 'main() starts. The heap is empty.');
+    s.var('newNode', GARB); s.step('decl', 'newNode is declared but not given a value, so it holds a garbage address (?).');
+    const n = s.alloc(); s.set('newNode', n); s.step('alloc', `new Node() reserves memory for one node at ${addr(n)} and zero-initializes it. newNode stores that address.`);
+    s.N(n).data = 5; s.step('data', 'Store 5 in the node\'s data field.');
+    s.N(n).next = null; s.step('next', 'next = NULL: there is no node after this one.');
+    s.set('head', n); s.step('head', 'head = newNode copies the address into head. Now head and newNode point to the same node — the list has one node.');
+    s.step('ret', 'main returns. The list is 5 → NULL.');
+  } });
+
+P({ id: 'three-nodes-17', group: 'Creating nodes', slides: 'Slide 17', title: 'Create three nodes and link them (5, 2, 3)',
+  desc: 'Three nodes are created first, then linked one pointer at a time. Watch the nodes move into the list as each next pointer is set.',
+  notes: ['The nodes are never deleted before main returns. That is fine for a tiny demo, but every new should have a matching delete in real programs.'],
+  code: `// Define a structure for the node of a linked list
+struct Node {
+    int data;      // Data to store in the node
+    Node* next;    // Pointer to the next node
+};
+int main() {                                   @@main
+    // Create three nodes and allocate memory for them in the heap
+    Node* head = new Node();                   @@a1
+    Node* second = new Node();                 @@a2
+    Node* third = new Node();                  @@a3
+
+    // Assign data and link the nodes
+    head->data = 5;       // First node's data     @@d1
+    head->next = second;  // Link first node with the second node   @@n1
+
+    second->data = 2;     // Second node's data    @@d2
+    second->next = third; // Link second node with the third node   @@n2
+
+    third->data = 3;      // Third node's data     @@d3
+    third->next = NULL;   // The third node is the last, so next is null   @@n3
+
+    return 0;                                  @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts. Nothing is on the heap yet.');
+    const a = s.alloc(); s.var('head', a); s.step('a1', `new Node() reserves a node at ${addr(a)} (data = 0, next = NULL). head stores its address.`);
+    const b = s.alloc(); s.var('second', b); s.step('a2', `A second node is created at ${addr(b)}. It is not connected to anything yet.`);
+    const c = s.alloc(); s.var('third', c); s.step('a3', `A third node at ${addr(c)}. Three separate nodes — not a list yet.`);
+    s.N(a).data = 5; s.step('d1', 'Write 5 into the first node.');
+    s.N(a).next = b; s.step('n1', `head->next = second copies ${addr(b)} into the first node's next field. The first node now links to the second.`);
+    s.N(b).data = 2; s.step('d2', 'Write 2 into the second node.');
+    s.N(b).next = c; s.step('n2', 'The second node now links to the third. All three are reachable from head.');
+    s.N(c).data = 3; s.step('d3', 'Write 3 into the third node.');
+    s.N(c).next = null; s.step('n3', 'third->next = NULL marks the end of the list. (new Node() already made it NULL, but writing it shows the intent.)');
+    s.step('ret', 'main returns. The list is 5 → 2 → 3 → NULL.');
+  } });
+
+P({ id: 'gfg-19', group: 'Creating nodes', slides: 'Slides 19–21', title: 'Construct a simple list of 3 nodes (1, 2, 3)',
+  desc: 'The GeeksforGeeks example: declare three NULL pointers, allocate three nodes, then assign data and links.',
+  notes: ['The slide\'s comment says the new nodes hold random values (#). That is only true for new Node without parentheses. With new Node(), a class with no constructor is zero-initialized: data = 0 and next = NULL.', 'class Node { public: … } behaves exactly like struct Node here; struct members are public by default.'],
+  code: `// C++ program to implement a linked list
+#include <bits/stdc++.h>
+using namespace std;
+
+class Node {
+public:
+    int data;
+    Node* next;
+};
+
+// Driver's code
+int main()                     @@main
+{
+    Node* head = NULL;         @@h
+    Node* second = NULL;       @@s
+    Node* third = NULL;        @@t
+
+    // allocate 3 nodes in the heap
+    head = new Node();         @@a1
+    second = new Node();       @@a2
+    third = new Node();        @@a3
+
+    head->data = 1;       // assign data in first node   @@d1
+    head->next = second;  // Link first node with the second node   @@n1
+
+    // assign data to second node
+    second->data = 2;          @@d2
+    // Link second node with the third node
+    second->next = third;      @@n2
+
+    // assign data to third node
+    third->data = 3;           @@d3
+    third->next = NULL;        @@n3
+
+    return 0;                  @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts.');
+    s.var('head', null); s.step('h', 'head is declared and set to NULL.');
+    s.var('second', null); s.step('s', 'second is set to NULL.');
+    s.var('third', null); s.step('t', 'third is set to NULL. No nodes exist yet — just three empty pointers.');
+    const a = s.alloc(); s.set('head', a); s.step('a1', `A node is allocated at ${addr(a)}; head points to it. Because of the (), data is 0 and next is NULL (not random).`);
+    const b = s.alloc(); s.set('second', b); s.step('a2', `Second block allocated at ${addr(b)}.`);
+    const c = s.alloc(); s.set('third', c); s.step('a3', `Third block allocated at ${addr(c)}. Three blocks, no links yet.`);
+    s.N(a).data = 1; s.step('d1', 'Data 1 goes into the block pointed to by head.');
+    s.N(a).next = b; s.step('n1', 'The first block\'s next now points to the second block, so they are linked.');
+    s.N(b).data = 2; s.step('d2', 'Data 2 goes into the second block.');
+    s.N(b).next = c; s.step('n2', 'The second block links to the third.');
+    s.N(c).data = 3; s.step('d3', 'Data 3 goes into the third block.');
+    s.N(c).next = null; s.step('n3', 'The third block\'s next is NULL: the list ends here.');
+    s.step('ret', 'The list is ready: 1 → 2 → 3 → NULL. Only head is needed to reach every node by following next pointers.');
+  } });
+
+P({ id: 'practice1', group: 'Creating nodes', slides: 'Slide 22 · Practice 1', title: 'Practice 1: a list of two nodes (20, 30)',
+  desc: 'Create two nodes holding 20 and 30 and link them together.', notes: [],
+  code: `struct Node { // Define the structure for a node in the linked list
+    int data;     // Integer value stored in the node
+    Node* next;   // Pointer to the next node
+};
+
+int main() {                                  @@main
+    // Create two nodes and Allocate memory for the nodes
+    Node* head = new Node();                  @@a1
+    Node* second = new Node();                @@a2
+    // Initialize the nodes with values and link them
+    head->data = 20;      // First node's data     @@d1
+    head->next = second;  // First node points to the second node   @@n1
+    second->data = 30;    // Second node's data    @@d2
+    second->next = NULL;  // Second node points to null (end of list)   @@n2
+    return 0;                                 @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts.');
+    const a = s.alloc(); s.var('head', a); s.step('a1', `First node created at ${addr(a)}; head points to it.`);
+    const b = s.alloc(); s.var('second', b); s.step('a2', `Second node created at ${addr(b)}.`);
+    s.N(a).data = 20; s.step('d1', 'Store 20 in the first node.');
+    s.N(a).next = b; s.step('n1', 'Link: the first node points to the second.');
+    s.N(b).data = 30; s.step('d2', 'Store 30 in the second node.');
+    s.N(b).next = null; s.step('n2', 'The second node is the end of the list.');
+    s.step('ret', 'Done: 20 → 30 → NULL.');
+  } });
+
+P({ id: 'printlist', group: 'Traversing and displaying', slides: 'Slides 27–28', title: 'printList(head): traverse and print 1, 2, 3',
+  desc: 'The three-node list is built, then printList follows the next pointers from the first node until it reaches NULL.',
+  notes: ['printList receives a copy of head, called n. Moving n does not move head, so the list is never lost.'],
+  code: `#include <iostream>
+using namespace std;
+
+class Node {
+public:
+    int data;
+    Node* next;
+};
+
+// This function prints contents of linked list
+// starting from the given node
+void printList(Node* n)             @@p_sig
+{
+    while (n != NULL) {             @@p_while
+        cout << n->data << " ";     @@p_out
+        n = n->next;                @@p_adv
+    }
+}                                   @@p_end
+
+int main()                          @@main
+{
+    Node* head = NULL;              @@decl
+    Node* second = NULL;            @@decl
+    Node* third = NULL;             @@decl
+
+    // allocate 3 nodes
+    head = new Node();              @@alloc
+    second = new Node();            @@alloc
+    third = new Node();             @@alloc
+
+    head->data = 1;       // assign data in first node   @@link
+    head->next = second;  // Link first node with second   @@link
+    second->data = 2;     // assign data to second node   @@link
+    second->next = third;                                  @@link
+    third->data = 3;      // assign data to third node    @@link
+    third->next = NULL;                                    @@link
+
+    // Function call
+    printList(head);                @@call
+    return 0;                       @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts.');
+    s.var('head', null); s.var('second', null); s.var('third', null); s.step('decl', 'Three pointers, all NULL. (These lines were stepped through in detail in "Slides 19–21".)');
+    const a = s.alloc(), b = s.alloc(), c = s.alloc(); s.set('head', a); s.set('second', b); s.set('third', c);
+    s.step('alloc', 'Three nodes are allocated on the heap.');
+    s.N(a).data = 1; s.N(a).next = b; s.N(b).data = 2; s.N(b).next = c; s.N(c).data = 3; s.N(c).next = null;
+    s.step('link', 'Data is stored and the nodes are linked: 1 → 2 → 3 → NULL.');
+    s.step('call', 'main calls printList(head). The address inside head is copied into the parameter n.');
+    s.fn('printList', 'printList(Node* n)'); s.var('n', a); s.step('p_sig', `printList starts. n = ${addr(a)}, the same node head points to.`);
+    for (;;) {
+      const p = s.get('n');
+      if (p !== null) {
+        s.step('p_while', `n is ${addr(p)}, not NULL, so the loop runs.`);
+        s.print(s.d(p) + ' '); s.step('p_out', `Print n->data, which is ${s.d(p)}.`);
+        const nx = s.N(p).next; s.set('n', nx);
+        s.step('p_adv', nx === null ? 'n = n->next gives NULL: we passed the last node.' : `n moves to the next node (${s.d(nx)}). head in main still points to 1.`);
+      } else { s.step('p_while', 'n is NULL, so the loop stops.'); break; }
+    }
+    s.ret(); s.step('p_end', 'printList returns; its copy n disappears.');
+    s.step('ret', 'main returns. Output: 1 2 3');
+  } });
+
+P({ id: 'practice2', group: 'Traversing and displaying', slides: 'Slides 31–32 · Practice 2', title: 'Practice 2: print the two-node list',
+  desc: 'The Practice 1 list (20, 30) with a loop added that walks with a current pointer and prints each node.', notes: [],
+  code: `${STRUCT()}
+
+int main() {                                   @@main
+    // Create two nodes and Allocate memory for the nodes
+    Node* head = new Node();                   @@a1
+    Node* second = new Node();                 @@a2
+    // Initialize the nodes with values and link them
+    head->data = 20;      // First node's data     @@d1
+    head->next = second;  // First node points to the second node   @@n1
+    second->data = 30;    // Second node's data    @@d2
+    second->next = NULL;  // Second node points to null (end of list)   @@n2
+
+    Node* current = head;                      @@c
+    while (current != NULL) {                  @@w
+        cout << "Node data: " << current->data << endl;   @@o
+        current = current->next;  // Move to the next node   @@adv
+    }
+    return 0;                                  @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts.');
+    const a = s.alloc(); s.var('head', a); s.step('a1', 'First node created.');
+    const b = s.alloc(); s.var('second', b); s.step('a2', 'Second node created.');
+    s.N(a).data = 20; s.step('d1', 'Store 20.');
+    s.N(a).next = b; s.step('n1', 'Link 20 → second node.');
+    s.N(b).data = 30; s.step('d2', 'Store 30.');
+    s.N(b).next = null; s.step('n2', 'End of list.');
+    s.var('current', a); s.step('c', 'current starts at head. We move current, never head.');
+    for (;;) {
+      const c = s.get('current');
+      if (c !== null) {
+        s.step('w', `current is ${addr(c)}, not NULL: loop runs.`);
+        s.print(`Node data: ${s.d(c)}\n`); s.step('o', `Print "Node data: ${s.d(c)}".`);
+        const nx = s.N(c).next; s.set('current', nx); s.step('adv', nx === null ? 'current becomes NULL.' : `current moves to ${s.d(nx)}.`);
+      } else { s.step('w', 'current is NULL: the loop ends.'); break; }
+    }
+    s.step('ret', 'main returns.');
+  } });
+
+P({ id: 'fruits', group: 'Traversing and displaying', slides: 'Slides 33–34 · Practice', title: 'Practice: Apple, Banana, Cherry',
+  desc: 'Nodes can hold any type. Here each node stores a string, and the list is printed at the end.',
+  notes: ['The slide\'s answer builds the list but stops before printing it. The display loop at the bottom is added to finish the exercise.', 'new Node() makes the string empty (""), not garbage, because std::string has its own constructor.'],
+  anchor: 'first', dataW: 74, zeroData: '',
+  code: `struct Node {
+    string data;
+    Node* next;
+};
+
+int main() {                          @@main
+    // Create the nodes
+    Node* first = new Node();         @@a1
+    Node* second = new Node();        @@a2
+    Node* third = new Node();         @@a3
+
+    first->data = "Apple";            @@d1
+    second->data = "Banana";          @@d2
+    third->data = "Cherry";           @@d3
+    first->next = second;             @@n1
+    second->next = third;             @@n2
+    third->next = NULL;               @@n3
+
+    // Display all items (added: not on the slide)
+    Node* curr = first;               @@c
+    while (curr != NULL) {            @@w
+        cout << curr->data << endl;   @@o
+        curr = curr->next;            @@adv
+    }
+    return 0;                         @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts.');
+    const a = s.alloc(); s.var('first', a); s.step('a1', 'First node created; its string is empty.');
+    const b = s.alloc(); s.var('second', b); s.step('a2', 'Second node created.');
+    const c = s.alloc(); s.var('third', c); s.step('a3', 'Third node created.');
+    s.N(a).data = 'Apple'; s.step('d1', '"Apple" stored in the first node.');
+    s.N(b).data = 'Banana'; s.step('d2', '"Banana" stored in the second node.');
+    s.N(c).data = 'Cherry'; s.step('d3', '"Cherry" stored in the third node. Filled, but still not linked.');
+    s.N(a).next = b; s.step('n1', 'Apple → Banana.');
+    s.N(b).next = c; s.step('n2', 'Banana → Cherry. All three are now reachable from first.');
+    s.N(c).next = null; s.step('n3', 'Cherry is the last node.');
+    s.var('curr', a); s.step('c', 'curr starts at the first node.');
+    for (;;) {
+      const p = s.get('curr');
+      if (p !== null) {
+        s.step('w', `curr is ${addr(p)}, not NULL: loop runs.`);
+        s.print(s.d(p) + '\n'); s.step('o', `Print ${s.d(p)}.`);
+        const nx = s.N(p).next; s.set('curr', nx); s.step('adv', nx === null ? 'curr becomes NULL.' : `curr moves to ${s.d(nx)}.`);
+      } else { s.step('w', 'curr is NULL: done.'); break; }
+    }
+    s.step('ret', 'main returns.');
+  } });
+
+P({ id: 'append-37', group: 'Appending (add to the end)', slides: 'Slide 37', title: 'appendNode(0..3) then displayList()',
+  desc: 'A for loop appends 0, 1, 2, 3. Each call walks to the last node and links the new node after it.',
+  notes: ['The comment says "parenthesis are optional". Here the program works either way because data and next are set right after, but new Node() zero-initializes and new Node does not — compare with the next program.', 'Each append walks the whole list, so appending n nodes costs O(n²) in total. Keeping a tail pointer makes each append O(1).'],
+  code: `#include <iostream>
+using namespace std;
+
+${STRUCT()}
+
+Node* head;   // global pointer, starts as NULL   @@g
+
+${APPEND_S}
+
+// Function to print the elements of the linked list
+${DISPLAY_S(false)}
+
+int main()                             @@main
+{
+    for (int i = 0; i < 4; i++)        @@for
+        appendNode(i);
+    displayList();                     @@dcall
+    return 0;                          @@ret
+}
+// Output
+// 0 1 2 3`,
+  run(s) {
+    s.gvar('head', null); s.step('g', 'Global pointers start as NULL automatically, so head is NULL: an empty list.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    forLoop(s, 'for', 0, 4, i => appendS(s, i));
+    s.step('dcall', 'main calls displayList().'); displayS(s);
+    s.step('ret', 'main returns. The output is 0 1 2 3');
+  } });
+
+P({ id: 'append-38', group: 'Appending (add to the end)', slides: 'Slides 38–45', title: 'appendNode(2.5), (7.9), (12.6) step by step',
+  desc: 'The slides\' walkthrough: the first call makes 2.5 the head, and the next two walk to the end before linking.',
+  notes: ['new Node (no parentheses) leaves the fields as garbage until they are assigned — watch the ? values after the allocation line.', 'if (!head) means exactly the same as if (head == NULL).'],
+  code: `${STRUCT('double')}
+
+Node* head = NULL;                     @@g
+
+void appendNode(double value) {        @@ap_sig
+    Node *newNode, *curr;              @@ap_decl
+    newNode = new Node;                @@ap_new
+    newNode->data = value;             @@ap_data
+    newNode->next = NULL;              @@ap_nextnull
+    if (!head)                         @@ap_if
+        head = newNode;                @@ap_head
+    else {  // Otherwise, insert newNode at end
+        curr = head;                   @@ap_curr
+        // Find the last node in the list
+        while (curr->next != NULL)     @@ap_while
+            curr = curr->next;         @@ap_adv
+        // Insert newNode as the last node
+        curr->next = newNode;          @@ap_link
+    }
+}                                      @@ap_end
+
+int main() {                           @@main
+    appendNode(2.5);                   @@c1
+    appendNode(7.9);                   @@c2
+    appendNode(12.6);                  @@c3
+    return 0;                          @@ret
+}`,
+  run(s) {
+    s.gvar('head', null); s.step('g', 'head starts as NULL: the list is empty.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    [2.5, 7.9, 12.6].forEach((v, k) => { s.step('c' + (k + 1), `main calls appendNode(${v}).`); appendS(s, v, { garbage: true, cond: '!head' }); });
+    s.step('ret', `main returns. Final list: ${listStr(s)}.`);
+  } });
+
+P({ id: 'addfront', group: 'Inserting', slides: 'Slide 48', title: 'addFront(93): insert at the top',
+  desc: 'The list already holds 48 → 17 → 142. A new node is placed in front and head moves to it.',
+  notes: ['The slide writes newNode->value, but the struct\'s field is called data, so that line would not compile. It is corrected to newNode->data here.', 'newNode->next = head must happen before head changes; otherwise the old list would be lost.'],
+  code: `${STRUCT()}
+
+Node* head;   // already holds: 48 -> 17 -> 142   @@g
+
+void addFront(int value) {                   @@af_sig
+    Node* newNode = new Node();              @@af_new
+    // Create a new node
+    // Set the new node's next and value
+    newNode->next = head;                    @@af_next
+    newNode->data = value;  // slide: ->value   @@af_data
+    // Update head to the new node
+    head = newNode;                          @@af_head
+}                                            @@af_end
+
+int main() {                                 @@main
+    addFront(93);                            @@call
+    return 0;                                @@ret
+}`,
+  run(s) {
+    s.build('head', [48, 17, 142]); s.step('g', 'Starting state: head → 48 → 17 → 142 → NULL.');
+    s.fn('main'); s.step('call', 'main calls addFront(93).');
+    s.fn('addFront', 'addFront(value = 93)'); s.var('value', 93, 'val'); s.step('af_sig', 'addFront starts with value = 93.');
+    const n = s.alloc(); s.var('newNode', n); s.step('af_new', `Step 1: create a node at ${addr(n)}.`);
+    s.N(n).next = s.get('head'); s.step('af_next', 'The new node points to the current first node (48). It is not the head yet, but the old list is already attached behind it.');
+    s.N(n).data = 93; s.step('af_data', 'Step 2: store 93.');
+    s.set('head', n); s.step('af_head', 'Step 3: head moves to the new node. 93 is now the first node.');
+    s.ret(); s.step('af_end', 'addFront returns.');
+    s.step('ret', `main returns. List: ${listStr(s)}.`);
+  } });
+
+P({ id: 'ptr-between', group: 'Inserting', slides: 'Slide 54', title: 'Two lines that insert between two nodes',
+  desc: 'prev points to 20 and cur points to 40. Two pointer assignments splice the new node (30) between them.',
+  notes: ['Order is safe here because cur still holds the address of 40. Without a pointer like cur, you must set newPtr->next first, or the rest of the list is lost.'],
+  code: `// Given (already set up):
+//   prev   -> node 20
+//   cur    -> node 40
+//   newPtr -> new node 30 (not linked yet)
+prev->next = newPtr;          @@s1
+newPtr->next = cur;           @@s2`,
+  run(s) {
+    const ids = s.build('head', [20, 40, 100]); s.gvar('prev', ids[0]); s.gvar('cur', ids[1]);
+    const n = s.alloc(); s.N(n).data = 30; s.gvar('newPtr', n);
+    s.step(null, 'Starting state: 20 → 40 → 100. The new node 30 exists but is not linked.');
+    s.N(ids[0]).next = n; s.step('s1', 'prev->next = newPtr: 20 now points to 30. The dashed link to 40 is gone, but 40 is still safe because cur holds its address.');
+    s.N(n).next = ids[1]; s.step('s2', 'newPtr->next = cur: 30 points to 40. The list is 20 → 30 → 40 → 100.');
+  } });
+
+P({ id: 'ptr-begin', group: 'Inserting', slides: 'Slide 55', title: 'Two lines that insert at the beginning',
+  desc: 'With prev = NULL and cur on the first node, the new node (2) becomes the head.',
+  notes: ['The slide writes newPtr-next (the > is missing). It should be newPtr->next.', 'Between the two lines, the old list is only reachable through cur.'],
+  code: `// Given: cur -> first node (3), prev = NULL,
+//        newPtr -> new node 2
+head = newPtr;               @@s1
+newPtr->next = cur;          @@s2`,
+  run(s) {
+    const ids = s.build('head', [3, 6, 100]); s.gvar('prev', null); s.gvar('cur', ids[0]);
+    const n = s.alloc(); s.N(n).data = 2; s.gvar('newPtr', n);
+    s.step(null, 'Starting state: 3 → 6 → 100, plus a new node 2 that is not linked.');
+    s.set('head', n); s.step('s1', 'head = newPtr: the list now starts at 2 — but 2->next is still NULL, so 3, 6, 100 hang only on cur.');
+    s.N(n).next = ids[0]; s.step('s2', 'newPtr->next = cur: 2 → 3 → 6 → 100. Everything is reachable from head again.');
+  } });
+
+P({ id: 'ptr-end', group: 'Inserting', slides: 'Slide 56', title: 'Two lines that insert at the end',
+  desc: 'prev is on the last node and cur is NULL. The same two lines as the middle case append the new node.',
+  notes: ['Because cur is NULL, newPtr->next = cur makes the new node the last node. The end is not a special case.'],
+  code: `// Given: prev -> last node (100), cur = NULL,
+//        newPtr -> new node 102
+prev->next = newPtr;         @@s1
+newPtr->next = cur;   // cur is NULL   @@s2`,
+  run(s) {
+    const ids = s.build('head', [96, 100]); s.gvar('prev', ids[1]); s.gvar('cur', null);
+    const n = s.alloc(); s.N(n).data = 102; s.N(n).next = GARB; s.gvar('newPtr', n);
+    s.step(null, 'Starting state: … 96 → 100 → NULL, plus a new node 102 whose next has not been set (?).');
+    s.N(ids[1]).next = n; s.step('s1', 'prev->next = newPtr: 100 (formerly pointing to NULL) now points to 102.');
+    s.N(n).next = null; s.step('s2', 'newPtr->next = cur copies NULL: 102 is the new last node.');
+  } });
+
+const insertProg = (id, slides, title, desc, vals, v) => P({ id, group: 'Inserting', slides, title, desc,
+  notes: ['On the slide, previous is declared without a value. If the new value is smaller than every node, the loop never runs and previous holds garbage, so if (previous == NULL) is unreliable. It is initialized to NULL here.', 'The slide mixes float and int; double is used throughout here so 10.5 etc. fit.'],
+  code: `${STRUCT('double')}
+
+Node* head;   // ${vals.length ? 'already holds: ' + vals.join(' -> ') : 'empty list (NULL)'}   @@g
+
+${INSERT_S('double')}
+
+int main() {                    @@main
+    insertNode(${v});           @@call
+    return 0;                   @@ret
+}`,
+  run(s) {
+    s.build('head', vals); s.step('g', `Starting state: ${listStr(s)}.`);
+    s.fn('main'); s.step('call', `main calls insertNode(${v}).`);
+    insertS(s, v);
+    s.step('ret', `main returns. List: ${listStr(s)}.`);
+  } });
+insertProg('insert-mid', 'Slides 51–53, 57–60', 'insertNode(10.5): sorted insert in the middle', 'The slides\' walkthrough: curr and previous walk until curr->data is not smaller than 10.5, then the node is spliced in.', [2.5, 7.9, 12.6], 10.5);
+insertProg('insert-front', 'Slide 52 (front case)', 'insertNode(1.5): the smallest value goes first', 'The loop never runs, previous stays NULL, and the new node becomes head.', [2.5, 7.9, 12.6], 1.5);
+insertProg('insert-end', 'Slide 52 (end case)', 'insertNode(15.3): the largest value goes last', 'curr walks off the end (NULL); previous is on the last node.', [2.5, 7.9, 12.6], 15.3);
+insertProg('insert-empty', 'Slide 52 (empty case)', 'insertNode(4.2) into an empty list', 'head is NULL, so the new node simply becomes the first node.', [], 4.2);
+
+const deleteProg = (id, slides, title, desc, T, vals, v, extra = []) => P({ id, group: 'Deleting', slides, title, desc,
+  notes: extra.concat(['If the value is not in the list, the loop ends with curr == NULL and previousNode->next = curr->next crashes. The "value not in the list" program shows this.']),
+  code: `${STRUCT(T)}
+
+Node* head;   // already holds: ${vals.join(' -> ')}   @@g
+
+${DELETE_S(T)}
+
+int main() {                    @@main
+    deleteNode(${v});           @@call
+    return 0;                   @@ret
+}`,
+  run(s) {
+    s.build('head', vals); s.step('g', `Starting state: ${listStr(s)}.`);
+    s.fn('main'); s.step('call', `main calls deleteNode(${v}).`);
+    deleteS(s, v);
+    s.step('ret', `main returns. List: ${listStr(s)}.`);
+  } });
+deleteProg('delete-mid', 'Slides 67–70', 'deleteNode(7.9): delete from the middle', 'curr finds 7.9 while previousNode trails one node behind; then the link skips over 7.9 and the node is deleted.', 'double', [2.5, 7.9, 12.6], 7.9, ['The slide\'s function takes int but deletes 7.9; double is used here so the comparison works.']);
+deleteProg('delete-top', 'Slides 64, 67', 'deleteNode(6): delete the top node', 'The first node is a special case: head itself has to move.', 'int', [6, 4, 17, 42], 6);
+deleteProg('delete-last', 'Slide 65', 'deleteNode(42): delete the last node', 'Same code as the middle case; curr->next is NULL, so the previous node becomes the new end.', 'int', [6, 4, 17, 42], 42);
+deleteProg('delete-missing', 'Slide 68 (bug)', 'deleteNode(99): value not in the list', 'What the slide code does when the value does not exist. Step to the end to see the crash.', 'int', [6, 4, 17, 42], 99);
+
+P({ id: 'full-single', group: 'Full singly linked list', slides: 'Slides 71–74', title: 'Full program: append 4–8, insert 7, delete 5',
+  desc: 'All the singly-linked-list functions together. Expected output: 4 5 6 7 8 / 4 5 6 7 7 8 / 4 6 7 7 8.',
+  notes: ['previous is initialized to NULL in insertNode (the slide leaves it uninitialized).', 'insertNode(7) places the new 7 before the existing 7, because the loop stops at the first value that is not smaller.'],
+  code: `#include <iostream>
+using namespace std;
+
+${STRUCT()}
+
+Node* head;   // global, starts as NULL   @@g
+
+${APPEND_S}
+
+${INSERT_S('int')}
+
+${DELETE_S('int')}
+
+// Function to print the elements of the linked list
+${DISPLAY_S(true)}
+
+int main()                        @@main
+{
+    for (int i = 4; i < 9; i++)   @@for
+        appendNode(i);
+    displayList();                @@d1
+    insertNode(7);                @@i1
+    displayList();                @@d2
+    deleteNode(5);                @@x1
+    displayList();                @@d3
+    return 0;                     @@ret
+}`,
+  run(s) {
+    s.gvar('head', null); s.step('g', 'head starts as NULL.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    forLoop(s, 'for', 4, 9, i => appendS(s, i));
+    s.step('d1', 'main calls displayList().'); displayS(s, { endl: true });
+    s.step('i1', 'main calls insertNode(7).'); insertS(s, 7);
+    s.step('d2', 'main calls displayList().'); displayS(s, { endl: true });
+    s.step('x1', 'main calls deleteNode(5).'); deleteS(s, 5);
+    s.step('d3', 'main calls displayList().'); displayS(s, { endl: true });
+    s.step('ret', 'main returns.');
+  } });
+
+P({ id: 'circular', group: 'Circular and doubly linked lists', slides: 'Slide 75', title: 'Circular list: build A → B → C → back to A, then traverse',
+  desc: 'The last node points back to the first. There is no NULL, so traversal stops when curr comes back to head.',
+  notes: ['The slide\'s tip is while (curr != head). As a plain while loop starting at head, that condition is false immediately and nothing prints, so a do-while is used: print first, then check.', 'A loop that waits for NULL would run forever on a circular list.'],
+  zeroData: '\\0',
+  code: `struct Node {
+    char data;
+    Node* next;
+};
+
+int main() {                                        @@main
+    Node* head   = new Node();                      @@a1
+    Node* second = new Node();                      @@a2
+    Node* third  = new Node();                      @@a3
+    head->data   = 'A';  head->next   = second;     @@l1
+    second->data = 'B';  second->next = third;      @@l2
+    third->data  = 'C';  third->next  = head;  // back to the start   @@l3
+
+    // Traverse: stop when we are back at head
+    Node* curr = head;                              @@c
+    do {
+        cout << curr->data << " ";                  @@o
+        curr = curr->next;                          @@adv
+    } while (curr != head);                         @@w
+    return 0;                                       @@ret
+}`,
+  run(s) {
+    s.fn('main'); s.step('main', 'main() starts.');
+    const a = s.alloc(); s.var('head', a); s.step('a1', 'First node created.');
+    const b = s.alloc(); s.var('second', b); s.step('a2', 'Second node created.');
+    const c = s.alloc(); s.var('third', c); s.step('a3', 'Third node created.');
+    s.N(a).data = 'A'; s.N(a).next = b; s.step('l1', 'A is stored and linked to the second node.');
+    s.N(b).data = 'B'; s.N(b).next = c; s.step('l2', 'B is stored and linked to the third node.');
+    s.N(c).data = 'C'; s.N(c).next = a; s.step('l3', 'C is stored, and its next points back to A instead of NULL. The list is now a circle.');
+    s.var('curr', a); s.step('c', 'curr starts at head (A).');
+    for (;;) {
+      const p = s.get('curr');
+      s.print(s.d(p) + ' '); s.step('o', `Print ${s.d(p)}.`);
+      const nx = s.N(p).next; s.set('curr', nx); s.step('adv', `curr moves to ${s.d(nx)}.`);
+      if (nx !== a) s.step('w', `curr != head is true (curr is on ${s.d(nx)}), so repeat.`);
+      else { s.step('w', 'curr != head is false: we are back at A. Every node was visited exactly once — stop.'); break; }
+    }
+    s.step('ret', 'main returns. Output: A B C');
+  } });
+
+P({ id: 'dbl-delete', group: 'Circular and doubly linked lists', slides: 'Slide 78', title: 'Doubly list: delete the node cur points to',
+  desc: 'In a doubly linked list a node knows both neighbours, so two lines unlink it — no traversal needed.',
+  notes: ['The slide only unlinks B; delete cur is added so the memory is actually freed.', 'These two lines assume cur has a node before and after it. Deleting the first or last node needs NULL checks (see the full doubly program).'],
+  dbl: true, fieldNames: { prev: 'precede' }, dataW: 40,
+  code: `// Given: cur -> the node to delete (B)
+(cur->precede)->next = cur->next;        @@s1
+(cur->next)->precede = cur->precede;     @@s2
+delete cur;   // added: free the memory  @@s3`,
+  run(s) {
+    const ids = s.build('head', ['A', 'B', 'C']); s.gvar('cur', ids[1]);
+    s.step(null, 'Starting state: A ⇄ B ⇄ C. cur points to B.');
+    s.N(ids[0]).next = ids[2]; s.step('s1', 'The node before B (A) now points forward to the node after B (C).');
+    s.N(ids[2]).prev = ids[0]; s.step('s2', 'The node after B (C) now points back to A. B is no longer reachable in either direction.');
+    s.free(ids[1]); s.step('s3', 'delete cur frees B. cur is now dangling.');
+  } });
+
+P({ id: 'dbl-insert', group: 'Circular and doubly linked lists', slides: 'Slide 78', title: 'Doubly list: insert newNode before cur',
+  desc: 'Four pointers must be set: two on the new node and one on each neighbour.',
+  notes: ['After line 3, B is linked to both neighbours but A still skips over it; line 4 completes the insertion.', 'Like the delete snippet, this assumes cur has a previous node.'],
+  dbl: true, fieldNames: { prev: 'precede' }, dataW: 40,
+  code: `// Given: cur -> C, newNode -> new node B
+newNode->next = cur;                    @@s1
+newNode->precede = cur->precede;        @@s2
+cur->precede = newNode;                 @@s3
+newNode->precede->next = newNode;       @@s4`,
+  run(s) {
+    const ids = s.build('head', ['A', 'C']); s.gvar('cur', ids[1]);
+    const n = s.alloc(); s.N(n).data = 'B'; s.gvar('newNode', n);
+    s.step(null, 'Starting state: A ⇄ C. cur points to C. A new node B is not linked yet.');
+    s.N(n).next = ids[1]; s.step('s1', 'B points forward to C.');
+    s.N(n).prev = ids[0]; s.step('s2', 'B points back to whatever C pointed back to: A.');
+    s.N(ids[1]).prev = n; s.step('s3', 'C now points back to B.');
+    s.N(ids[0]).next = n; s.step('s4', 'newNode->precede is A, so A->next = B. The list is A ⇄ B ⇄ C.');
+  } });
+
+P({ id: 'full-double', group: 'Circular and doubly linked lists', slides: 'Slides 83–86', title: 'Full doubly linked list: append, insert 7, delete 5',
+  desc: 'Every node has next and prev. Expected output: 2 4 5 9 / 2 4 5 7 9 / 2 4 7 9.',
+  notes: ['If insertNode\'s value is larger than every node, it calls appendNode(value), which creates a second node; the newNode made at the top is never used (a memory leak).', 'Unlike the singly version, deleteNode checks for curr == NULL, so deleting a missing value is safe.'],
+  dbl: true, dataW: 42,
+  code: `#include <iostream>
+using namespace std;
+
+struct Node {
+    int data;
+    Node* next;
+    Node* prev;
+};
+Node* head = NULL;                          @@g
+
+${APPEND_D}
+
+${INSERT_D}
+
+${DELETE_D}
+
+${DISPLAY_D}
+
+int main() {                                @@main
+    int array[4] = {2, 4 ,5, 9};            @@arr
+    for (int i = 0; i < 4; i++)             @@for
+        appendNode(array[i]);
+    cout << "Creating the linkedlist one node by one" << endl;   @@c1
+    displayList();                          @@d1
+    cout << "Inserting the value 7 into the previous list" << endl;   @@c2
+    insertNode(7);                          @@i1
+    displayList();                          @@d2
+    cout << "Deleting the value 5 from the previous list" << endl;   @@c3
+    deleteNode(5);                          @@x1
+    displayList();                          @@d3
+    return 0;                               @@ret
+}`,
+  run(s) {
+    s.gvar('head', null); s.step('g', 'head starts as NULL.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    const arr = [2, 4, 5, 9]; s.var('array', '{2, 4, 5, 9}', 'val'); s.step('arr', 'A normal array holds the values to add.');
+    forLoop(s, 'for', 0, 4, i => appendD(s, arr[i]));
+    s.print('Creating the linkedlist one node by one\n'); s.step('c1', 'Print a heading.');
+    s.step('d1', 'main calls displayList().'); displayS(s, { combined: true, endl: true });
+    s.print('Inserting the value 7 into the previous list\n'); s.step('c2', 'Print a heading.');
+    s.step('i1', 'main calls insertNode(7).'); insertD(s, 7);
+    s.step('d2', 'main calls displayList().'); displayS(s, { combined: true, endl: true });
+    s.print('Deleting the value 5 from the previous list\n'); s.step('c3', 'Print a heading.');
+    s.step('x1', 'main calls deleteNode(5).'); deleteD(s, 5);
+    s.step('d3', 'main calls displayList().'); displayS(s, { combined: true, endl: true });
+    s.step('ret', 'main returns.');
+  } });
+
+function parseCode(src) {
+  const raw = src.replace(/\s+$/, '').split('\n'), lines = [], map = {};
+  raw.forEach((ln, i) => {
+    const m = ln.match(/^(.*?)\s*@@(\w+)\s*$/);
+    let text = ln;
+    if (m) { text = m[1]; (map[m[2]] = map[m[2]] || []).push(i); }
+    lines.push(text.replace(/\s+$/, ''));
+  });
+  return { lines, map };
+}
+function runProgram(p) {
+  const s = new Sim({ dbl: p.dbl, zeroData: p.zeroData });
+  try { p.run(s); } catch (e) { if (!(e instanceof Crash)) throw e; }
+  return s.snaps;
+}
+/*ENGINE-END*/
+
+/* ---------- UI ---------- */
+const $ = q => document.querySelector(q);
+const el = { sel: $('#prog'), slides: $('#slides'), title: $('#ptitle'), desc: $('#pdesc'), notesWrap: $('#notesWrap'), notesSum: $('#notesSum'), notes: $('#notes'),
+  chips: $('#chips'), vizWrap: $('#vizWrap'), svg: $('#viz'), stepNo: $('#stepNo'), note: $('#note'), diff: $('#diff'), code: $('#code'), codeWrap: $('#codeWrap'),
+  vars: $('#vars'), out: $('#out'), range: $('#range'), count: $('#count'), bFirst: $('#bFirst'), bPrev: $('#bPrev'), bPlay: $('#bPlay'), bNext: $('#bNext'), bLast: $('#bLast'), bSpeed: $('#bSpeed') };
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+let cur = { prog: null, parsed: null, snaps: [], i: 0 };
+let timer = null, speed = 1;
+
+const KW = 'int|float|double|char|void|struct|class|public|return|new|delete|while|if|else|for|do|NULL|using|namespace|string|include|endl|cout|std';
+const TOK = new RegExp(`(\\/\\/.*$)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b(${KW})\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'g');
+function hl(line) {
+  let out = '', last = 0;
+  line.replace(TOK, (m, com, str, kw, num, off) => {
+    out += esc(line.slice(last, off));
+    const cls = com ? 'c-com' : str ? 'c-str' : kw ? 'c-kw' : 'c-num';
+    out += `<span class="${cls}">${esc(m)}</span>`; last = off + m.length; return m;
+  });
+  return out + esc(line.slice(last));
+}
+
+function buildSelect() {
+  const groups = [];
+  PROGRAMS.forEach(p => { let g = groups.find(x => x.name === p.group); if (!g) { g = { name: p.group, items: [] }; groups.push(g); } g.items.push(p); });
+  el.sel.innerHTML = groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`).join('');
+}
+
+function load(id) {
+  stop();
+  const p = PROGRAMS.find(x => x.id === id) || PROGRAMS[0];
+  el.sel.value = p.id;
+  const parsed = parseCode(p.code);
+  cur = { prog: p, parsed, snaps: runProgram(p), i: 0 };
+  el.slides.textContent = p.slides; el.title.textContent = p.title; el.desc.textContent = p.desc;
+  if (p.notes && p.notes.length) {
+    el.notesWrap.hidden = false; el.notes.innerHTML = p.notes.map(n => `<li>${esc(n)}</li>`).join('');
+    el.notesSum.textContent = p.notes.length === 1 ? '1 note about this code' : `${p.notes.length} notes about this code`;
+  } else el.notesWrap.hidden = true;
+  el.code.innerHTML = parsed.lines.map((t, i) => `<div class="cl" data-i="${i}"><span class="ln">${i + 1}</span><span>${hl(t) || ' '}</span></div>`).join('');
+  el.codeWrap.scrollTop = 0; el.vizWrap.scrollLeft = 0;
+  el.range.max = cur.snaps.length - 1;
+  try { localStorage.setItem('ll-sim-prog', p.id); } catch (e) {}
+  go(0);
+}
+
+function go(i) {
+  cur.i = Math.max(0, Math.min(cur.snaps.length - 1, i));
+  render();
+}
+
+function fp(v, nodes) { return v === null ? 'NULL' : v === GARB ? '?' : `${addr(v)} [${fd(nodes[v].data)}]`; }
+function fvv(o, nodes) { return o.t === 'ptr' ? fp(o.v, nodes) : fd(o.v); }
+
+function computeDiff(ps, st, P) {
+  const fItems = [], nItems = [], oItems = [], nodes = {}, vars = new Set();
+  if (!ps) return { items: [], nodes, vars };
+  const fname = f => (P.fieldNames && P.fieldNames[f]) || f;
+  const L = Math.max(st.frames.length, ps.frames.length);
+  for (let fi = 0; fi < L; fi++) {
+    const a = ps.frames[fi], b = st.frames[fi];
+    const same = a && b && a.label === b.label;
+    if (a && !same) fItems.push(['ret', `${a.label} finished; its local variables are gone`]);
+    if (b && !same) {
+      fItems.push(['call', `Entered ${b.label}`]);
+      Object.entries(b.vars).forEach(([k, o]) => { vars.add(fi + ':' + k); fItems.push(['var', `${k} = ${fvv(o, st.nodes)}`]); });
+      continue;
+    }
+    if (same) {
+      Object.entries(b.vars).forEach(([k, o]) => {
+        const ov = a.vars[k];
+        if (!ov) { vars.add(fi + ':' + k); fItems.push(['var', `${k} created = ${fvv(o, st.nodes)}`]); }
+        else if (ov.v !== o.v) { vars.add(fi + ':' + k); fItems.push(['var', `${k}: ${fvv(ov, ps.nodes)} → ${fvv(o, st.nodes)}`]); }
+      });
+      Object.keys(a.vars).forEach(k => { if (!(k in b.vars)) fItems.push(['var', `${k} goes out of scope`]); });
+    }
+  }
+  st.nodes.forEach(n => {
+    const o = ps.nodes[n.id];
+    if (!o) { nItems.push(['new', `Node allocated at ${addr(n.id)} (data = ${fd(n.data)})`]); nodes[n.id] = { all: 1 }; return; }
+    const c = {};
+    ['data', 'next', 'prev'].forEach(f => {
+      if (!(f in n) || o[f] === n[f]) return;
+      c[f] = 1;
+      nItems.push(['set', f === 'data' ? `${addr(n.id)}->data: ${fd(o.data)} → ${fd(n.data)}` : `${addr(n.id)}->${fname(f)}: ${fp(o[f], ps.nodes)} → ${fp(n[f], st.nodes)}`]);
+    });
+    if (n.freed && !o.freed) { c.freed = 1; nItems.push(['del', `Node ${addr(n.id)} [${fd(n.data)}] deleted; its memory is returned`]); }
+    if (Object.keys(c).length) nodes[n.id] = c;
+  });
+  if (st.out.length > ps.out.length) oItems.push(['out', `Printed ${JSON.stringify(st.out.slice(ps.out.length))}`]);
+  return { items: fItems.concat(nItems, oItems), nodes, vars };
+}
+
+const BADGE = { new: 'new node', set: 'node', del: 'delete', var: 'variable', call: 'call', ret: 'return', out: 'output' };
+
+function render() {
+  const snap = cur.snaps[cur.i], prev = cur.i > 0 ? cur.snaps[cur.i - 1] : null, st = snap.state;
+  const ch = computeDiff(prev && prev.state, st, cur.prog);
+  const n = cur.snaps.length;
+  el.count.textContent = `Step ${cur.i + 1} of ${n}`;
+  el.stepNo.textContent = snap.label ? `line ${ (cur.parsed.map[snap.label] || [0])[0] + 1 }` : 'starting state';
+  el.range.value = cur.i;
+  el.note.textContent = snap.note; el.note.className = 'note' + (snap.crash ? ' crash' : '');
+  el.diff.innerHTML = ch.items.length ? ch.items.map(([k, t]) => `<li><span class="badge b-${k}">${BADGE[k]}</span><span>${esc(t)}</span></li>`).join('')
+    : `<li class="nodiff">${cur.i === 0 ? 'This is the starting point. Press Next to run the first line.' : 'Nothing in memory changed: this line only checked a condition or moved control.'}</li>`;
+  // code highlight
+  el.code.querySelectorAll('.cl.cur').forEach(x => x.classList.remove('cur'));
+  const lines = snap.label ? (cur.parsed.map[snap.label] || []) : [];
+  if (snap.label && !cur.parsed.map[snap.label]) console.warn('missing label', snap.label);
+  lines.forEach(li => { const d = el.code.children[li]; if (d) d.classList.add('cur'); });
+  if (lines.length) {
+    const f = el.code.children[lines[0]], w = el.codeWrap, lastEl = el.code.children[lines[lines.length - 1]];
+    const top = f.offsetTop, bot = lastEl.offsetTop + lastEl.offsetHeight;
+    if (top < w.scrollTop + 20 || bot > w.scrollTop + w.clientHeight - 20) w.scrollTo({ top: Math.max(0, (top + bot) / 2 - w.clientHeight / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  renderVars(st, ch); renderViz(st, ch);
+  const prevOut = prev ? prev.state.out : '';
+  if (!st.out) el.out.innerHTML = '<span class="muted">Nothing printed yet.</span>';
+  else if (st.out.length > prevOut.length && st.out.startsWith(prevOut)) el.out.innerHTML = esc(prevOut) + `<span class="new">${esc(st.out.slice(prevOut.length))}</span>`;
+  else el.out.textContent = st.out;
+  el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
+  el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  if (cur.i === n - 1) stop();
+}
+
+function renderVars(st, ch) {
+  let h = '';
+  st.frames.forEach((f, fi) => {
+    const ents = Object.entries(f.vars); if (!ents.length) return;
+    const active = fi === st.frames.length - 1 && fi > 0;
+    h += `<div class="frame"><div class="fh"><span>${esc(f.label)}</span>${active ? '<span class="act">running now</span>' : ''}</div>`;
+    ents.forEach(([k, o]) => {
+      let v;
+      if (o.t === 'ptr') {
+        if (o.v === null) v = '<span class="nul">NULL</span>';
+        else if (o.v === GARB) v = '<span class="garb">? (garbage)</span>';
+        else { const nd = st.nodes[o.v]; v = `${addr(o.v)} → node [${esc(fd(nd.data))}]` + (nd.freed ? ' <span class="dang">dangling: deleted</span>' : ''); }
+      } else v = esc(fd(o.v));
+      h += `<div class="vr${ch.vars.has(fi + ':' + k) ? ' chg' : ''}"><span class="vn">${esc(k)}</span><span class="vv">${v}</span></div>`;
+    });
+    h += '</div>';
+  });
+  el.vars.innerHTML = h || '<div class="muted">No variables yet.</div>';
+}
+
+function renderViz(st, ch) {
+  const narrow = el.vizWrap.clientWidth < 520;
+  const P = cur.prog, dbl = !!P.dbl, dw = P.dataW || 54, pw = 28, W = dbl ? pw * 2 + dw : dw + pw, H = 40, GAP = narrow ? 46 : 60, PX = narrow ? 14 : 22;
+  const nodes = st.nodes, anchor = P.anchor || 'head';
+  const ptrs = [];
+  st.frames.forEach((f, fi) => Object.entries(f.vars).forEach(([k, o]) => { if (o.t === 'ptr') ptrs.push({ n: k, fi, f, v: o.v }); }));
+  const cnt = {}; ptrs.forEach(p => cnt[p.n] = (cnt[p.n] || 0) + 1);
+  ptrs.forEach(p => { p.label = cnt[p.n] > 1 && p.fi > 0 ? `${p.n} (${p.f.name})` : p.n; p.chg = ch.vars.has(p.fi + ':' + p.n); });
+  let av = null; for (const p of ptrs) if (p.n === anchor) { av = p.v; break; }
+  el.chips.innerHTML = ptrs.filter(p => typeof p.v !== 'number').map(p =>
+    `<span class="chip${p.n === anchor ? ' head' : ''}${p.chg ? ' chg' : ''}">${esc(p.label)} = ${p.v === null ? 'NULL' : '? (garbage)'}</span>`).join('');
+  if (!nodes.length) {
+    el.svg.setAttribute('width', 320); el.svg.setAttribute('height', 64); el.svg.setAttribute('viewBox', '0 0 320 64');
+    el.svg.innerHTML = `<text x="${PX}" y="38" class="empty">The heap is empty: no nodes exist yet.</text>`; return;
+  }
+  // layout
+  const pos = {}, chain = [], seen = new Set();
+  let p = av;
+  while (typeof p === 'number' && !seen.has(p) && !nodes[p].freed) { chain.push(p); seen.add(p); p = nodes[p].next; }
+  chain.forEach((id, k) => pos[id] = { r: 0, c: k });
+  const rest = nodes.filter(n => !seen.has(n.id)).sort((a, b) => (a.freed - b.freed) || (a.id - b.id)).map(n => n.id);
+  const restSet = new Set(rest);
+  const pointed = new Set(rest.map(id => nodes[id].next).filter(x => typeof x === 'number' && restSet.has(x)));
+  let nextCol = chain.length; const placed = new Set();
+  const starts = rest.filter(id => !pointed.has(id)).concat(rest);
+  for (const s0 of starts) {
+    if (placed.has(s0)) continue;
+    const seq = []; let q = s0;
+    while (typeof q === 'number' && restSet.has(q) && !placed.has(q)) { seq.push(q); placed.add(q); q = nodes[q].next; }
+    let c0;
+    if (typeof q === 'number' && pos[q] && pos[q].r === 0) c0 = pos[q].c - 0.5 - (seq.length - 1);
+    else { c0 = nextCol; nextCol += seq.length; }
+    seq.forEach((id, j) => pos[id] = { r: 1, c: c0 + j });
+  }
+  const noChain = !chain.length;
+  if (noChain) Object.values(pos).forEach(o => { o.r = 0; });
+  const cols = Object.values(pos).map(o => o.c), minC = Math.min(...cols), maxC = Math.max(...cols);
+  const X = c => PX + (c - minC) * (W + GAP);
+  const tags = {};
+  ptrs.forEach(pp => { if (typeof pp.v === 'number' && pos[pp.v]) (tags[pp.v] = tags[pp.v] || []).push(pp); });
+  Object.values(tags).forEach(a => a.sort((x, y) => (y.n === anchor) - (x.n === anchor)));
+  let ms0 = 0, ms1 = 0;
+  for (const id in tags) { if (pos[id].r === 0) ms0 = Math.max(ms0, tags[id].length); else ms1 = Math.max(ms1, tags[id].length); }
+  const TH = 20, TS = TH + 5;
+  const hasR1 = Object.values(pos).some(o => o.r === 1);
+  const Y0 = 12 + ms0 * TS + 16 + (noChain ? 18 : 0);
+  const Y1 = Y0 + H + 100;
+  const h = hasR1 ? Y1 + H + 22 + ms1 * TS + 6 : Y0 + H + 58;
+  const w = Math.max(300, PX * 2 + (maxC - minC + 1) * (W + GAP) - GAP + 40);
+  const NP = id => ({ x: X(pos[id].c), y: pos[id].r === 0 ? Y0 : Y1 });
+  const cxData = x => x + (dbl ? pw : 0) + dw / 2;
+  const g = [];
+  g.push(`<defs>${['ink', 'acc', 'red', 'mut'].map(k => `<marker id="m-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="mk-${k}"/></marker>`).join('')}</defs>`);
+  if (hasR1) g.push(`<text x="${PX}" y="${Y1 - 18}" class="rowlbl">below: not reachable from ${esc(anchor)}</text>`);
+  if (noChain) g.push(`<text x="${PX}" y="16" class="rowlbl">${esc(anchor)} does not point to a live node, so none of these are in the list yet</text>`);
+  // nodes
+  const ptrCell = (v, cx, x0, cy) => v === null ? `<line x1="${x0 + 4}" y1="${H - 4}" x2="${x0 + pw - 4}" y2="4" class="nullslash"/>`
+    : v === GARB ? `<text x="${cx}" y="${H / 2 + 5}" class="garbq">?</text>` : `<circle cx="${cx}" cy="${cy}" r="3.6" class="dot"/>`;
+  nodes.forEach(n => {
+    if (!pos[n.id]) return;
+    const { x, y } = NP(n.id), c = ch.nodes[n.id] || {};
+    let s = `<g class="nd${n.freed ? ' freed' : ''}${c.all ? ' isnew' : ''}" transform="translate(${x},${y})">`;
+    let dx = 0;
+    if (dbl) {
+      s += `<rect x="0" y="0" width="${pw}" height="${H}" class="cell${c.prev || c.all ? ' chg' : ''}"/>` + ptrCell(n.prev, pw / 2, 0, H / 2 + 7);
+      s += `<text x="${pw / 2}" y="${H + 12}" class="fl">${esc((P.fieldNames && P.fieldNames.prev) ? 'prec' : 'prev')}</text>`;
+      dx = pw;
+    }
+    const dchg = c.data || c.all, txt = fd(n.data);
+    s += `<rect x="${dx}" y="0" width="${dw}" height="${H}" class="cell${dchg ? ' chg' : ''}"/>`;
+    s += `<text x="${dx + dw / 2}" y="${H / 2 + 5}" class="dt${dchg ? ' chgt' : ''}"${txt.length > 6 ? ` style="font-size:${Math.max(10, 15 - txt.length * 0.6)}px"` : ''}>${esc(txt)}</text>`;
+    s += `<rect x="${dx + dw}" y="0" width="${pw}" height="${H}" class="cell${c.next || c.all ? ' chg' : ''}"/>` + ptrCell(n.next, dx + dw + pw / 2, dx + dw, H / 2 + (dbl ? -7 : 0));
+    s += `<text x="${W}" y="${H + 12}" class="adr" text-anchor="end">${addr(n.id)}</text>`;
+    if (n.freed) s += `<line x1="6" y1="6" x2="${W - 6}" y2="${H - 6}" class="xmark"/><line x1="${W - 6}" y1="6" x2="6" y2="${H - 6}" class="xmark"/>`;
+    s += '</g>'; g.push(s);
+  });
+  // arrows
+  nodes.forEach(n => {
+    if (!pos[n.id] || n.freed) return;
+    const S = NP(n.id), sp = pos[n.id], c = ch.nodes[n.id] || {};
+    const edge = f => {
+      const t = n[f]; if (typeof t !== 'number' || !pos[t]) return;
+      const tp = pos[t], T = NP(t), isNext = f === 'next';
+      const sx = isNext ? S.x + W - pw / 2 : S.x + pw / 2;
+      const sy = S.y + H / 2 + (dbl ? (isNext ? -7 : 7) : 0);
+      const k = nodes[t].freed ? 'red' : (c[f] || c.all) ? 'acc' : 'ink';
+      let d;
+      if (tp.r === sp.r) {
+        const dc = tp.c - sp.c;
+        if (isNext && dc > 0.9 && dc < 1.1) d = `M${sx},${sy} L${T.x - 1},${sy}`;
+        else if (!isNext && dc < -0.9 && dc > -1.1) d = `M${sx},${sy} L${T.x + W + 1},${sy}`;
+        else {
+          const depth = 34 + Math.min(30, Math.abs(dc) * 6) + (isNext ? 0 : 14), by = S.y + H, ex = cxData(T.x) + (isNext ? -8 : 8);
+          d = `M${sx},${sy} L${sx},${by} C${sx},${by + depth} ${ex},${by + depth} ${ex},${T.y + H + 2}`;
+        }
+      } else {
+        const ex = Math.max(T.x + 10, Math.min(T.x + W - 10, sx)), ey = tp.r > sp.r ? T.y - 2 : T.y + H + 2;
+        d = `M${sx},${sy} L${ex},${ey}`;
+      }
+      g.push(`<path d="${d}" class="ar ar-${k}" marker-end="url(#m-${k})"/>`);
+    };
+    edge('next'); if (dbl) edge('prev');
+  });
+  // pointer tags
+  let focusX = null;
+  for (const id in tags) {
+    const T = NP(+id), r = pos[id].r, cx = cxData(T.x), freed = nodes[id].freed;
+    tags[id].forEach((pp, j) => {
+      const tw = pp.label.length * 7.4 + 14;
+      const k = freed ? 'red' : pp.chg ? 'acc' : pp.n === anchor ? 'head' : 'ptr';
+      const ty = r === 0 ? T.y - 14 - TH - j * TS : T.y + H + 22 + j * TS;
+      g.push(`<g class="tag tag-${k}"><rect x="${cx - tw / 2}" y="${ty}" width="${tw}" height="${TH}" rx="5"/><text x="${cx}" y="${ty + 14}">${esc(pp.label)}</text></g>`);
+      if (pp.chg && focusX === null) focusX = cx;
+    });
+    const k0 = freed ? 'red' : 'mut';
+    g.push(r === 0 ? `<path d="M${cx},${T.y - 14} L${cx},${T.y - 2}" class="ar ar-${k0}" marker-end="url(#m-${k0})"/>`
+      : `<path d="M${cx},${T.y + H + 22} L${cx},${T.y + H + 2}" class="ar ar-${k0}" marker-end="url(#m-${k0})"/>`);
+  }
+  const cw = el.vizWrap.clientWidth - 2, sc = w > cw ? cw / w : 1, fit = sc >= 0.68;
+  el.svg.setAttribute('width', fit ? Math.floor(w * sc) : w); el.svg.setAttribute('height', fit ? Math.ceil(h * sc) : h); el.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  el.svg.innerHTML = g.join('');
+  $('#vizHint').textContent = fit ? 'boxes are nodes on the heap' : 'swipe sideways to see every node';
+  if (fit) { el.vizWrap.scrollLeft = 0; return; }
+  if (focusX === null) { const cid = Object.keys(ch.nodes).find(id => pos[id]); if (cid !== undefined) focusX = NP(+cid).x + W / 2; }
+  if (focusX !== null) {
+    const vw = el.vizWrap.clientWidth, sl = el.vizWrap.scrollLeft;
+    if (focusX < sl + 30 || focusX > sl + vw - 30) el.vizWrap.scrollLeft = Math.max(0, focusX - vw / 2);
+  }
+}
+
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.bPlay.textContent = '▶ Play'; }
+function play() {
+  if (timer) { stop(); return; }
+  if (cur.i >= cur.snaps.length - 1) go(0);
+  el.bPlay.textContent = '❚❚ Pause';
+  timer = setInterval(() => { if (cur.i >= cur.snaps.length - 1) stop(); else go(cur.i + 1); }, 1100 / speed);
+}
+el.bFirst.onclick = () => { stop(); go(0); };
+el.bPrev.onclick = () => { stop(); go(cur.i - 1); };
+el.bNext.onclick = () => { stop(); go(cur.i + 1); };
+el.bLast.onclick = () => { stop(); go(cur.snaps.length - 1); };
+el.bPlay.onclick = play;
+el.bSpeed.onclick = () => {
+  const sp = [1, 2, 4, 0.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length];
+  el.bSpeed.textContent = (speed === 0.5 ? '½' : speed) + '×';
+  if (timer) { stop(); play(); }
+};
+el.range.oninput = () => { stop(); go(+el.range.value); };
+el.sel.onchange = () => load(el.sel.value);
+document.addEventListener('keydown', e => {
+  if (e.target.matches('select, input')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(cur.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(cur.i - 1); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+});
+
+buildSelect();
+let saved = null; try { saved = localStorage.getItem('ll-sim-prog'); } catch (e) {}
+load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'first-node');
+</script>
+</body>
+</html>
