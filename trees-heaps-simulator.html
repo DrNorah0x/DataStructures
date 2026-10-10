@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trees &amp; Heaps Simulator – Lecture 6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A; --live:#E6EEFF;
+  --head:#2D4FD8; --head-bg:#E3E9FF; --ptr:#0F6F6D; --ptr-bg:#DDF3F1;
+  --danger:#C8323A; --danger-bg:#FBE3E4; --node:#FFFFFF;
+  --codebg:#FBFCFE; --kw:#7B3FC4; --str:#0B7A47; --com:#8A94A6; --num:#B4561B;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+    --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+    --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+    --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+  --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+  --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+  --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45;background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;padding-bottom:128px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--head);outline-offset:2px}
+[hidden]{display:none!important}
+
+.top{max-width:1320px;margin:0 auto;padding:18px 16px 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.25rem,3.6vw,1.8rem);margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.mark{display:inline-flex;flex-direction:column-reverse;gap:2px;border:2px solid var(--ink);border-top:0;padding:2px 2px 2px;border-radius:0 0 3px 3px}
+.mark i{display:block;width:22px;height:5px;background:var(--ink);border-radius:1px}
+.mark i.on{background:var(--hl);outline:1.5px solid var(--hl-line)}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:min(100%,380px);flex:1 1 320px;max-width:540px}
+.pick span{font-size:.85rem;color:var(--muted)}
+.pick select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);font-family:var(--mono);font-size:.88rem;cursor:pointer}
+
+.layout{max-width:1320px;margin:0 auto;padding:8px 16px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"info" "viz" "change" "code" "vars" "out"}
+.info{grid-area:info}.viz{grid-area:viz}.change{grid-area:change}.code{grid-area:code}.vars{grid-area:vars}.out{grid-area:out}
+@media (min-width:980px){
+  .layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);grid-template-areas:"info info" "code viz" "code change" "code vars" "code out";align-items:start}
+  .code{position:sticky;top:12px}
+  .codewrap{max-height:max(320px,calc(100vh - 380px))!important}
+}
+.panel{background:var(--panel);border:1.5px solid var(--rule);border-radius:4px;padding:12px 14px;min-width:0}
+.panel h3{margin:0;font-size:1rem;font-weight:700}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.82rem}
+
+.info{border-left:6px solid var(--ink)}
+.info h2{margin:0;font-size:1.2rem;line-height:1.3}
+.slides{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:2px 7px;border:1.5px solid var(--ink);border-radius:3px;margin-bottom:6px}
+.info p{margin:6px 0 0;max-width:78ch}
+.info details{margin-top:8px}
+.info summary{cursor:pointer;font-weight:700;color:var(--head);font-size:.92rem}
+.info ul{margin:6px 0 0;padding-left:1.2em;max-width:78ch}
+.info li{margin:4px 0}
+.inwrap{margin-top:12px;padding-top:10px;border-top:1.5px dashed var(--rule)}
+.inwrap label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.inrow{display:flex;gap:8px}
+.inrow input{flex:1;min-width:0;padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem}
+.inrow button{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{border:1.5px solid var(--rule);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:.8rem;cursor:pointer}
+.presets button.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.inerr{color:var(--danger);font-weight:700;font-size:.88rem;margin:6px 0 0;min-height:0}
+
+.structs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sc{border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;background:var(--paper);min-width:0;max-width:100%}
+.sc.wide{flex:1 1 100%}
+.sc h4{margin:0 0 6px;font-size:.82rem;font-weight:700;color:var(--muted)}
+svg.fit{display:block;max-width:100%;height:auto}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:12px;border:1.5px solid var(--ink);display:inline-block;border-radius:2px}
+.sw.hl{background:var(--hl);border-color:var(--hl-line)}.sw.lv{background:var(--live)}
+.sw.rd{background:var(--ptr-bg);border-color:var(--ptr)}.sw.dl{background:var(--danger-bg);border-color:var(--danger);border-style:dashed}
+
+/* svg parts */
+.ac{fill:var(--node);stroke:var(--ink);stroke-width:1.4}
+.ac.live{fill:var(--live)}
+.hl-push{fill:var(--hl)!important;stroke:var(--hl-line)!important;stroke-width:2.2!important}
+.hl-read{fill:var(--ptr-bg)!important;stroke:var(--ptr)!important;stroke-width:2.2!important}
+.hl-pop{fill:var(--danger-bg)!important;stroke:var(--danger)!important;stroke-dasharray:4 3}
+.av{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+.av.stale{fill:var(--muted);font-weight:400;opacity:.65}
+.idx{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tp{stroke:var(--head);stroke-width:2;fill:none}
+.tp2{stroke:var(--ptr);stroke-width:2;fill:none}
+.tpl{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--head)}
+.tpl2{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--ptr)}
+.tplbg{fill:var(--hl);stroke:var(--hl-line)}
+.bk{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linejoin:round}
+.it{fill:var(--live);stroke:var(--ink);stroke-width:1.4}
+.gh{fill:var(--danger-bg);stroke:var(--danger);stroke-dasharray:4 3;stroke-width:1.5}
+.ght{font-family:var(--ui);font-size:11px;fill:var(--danger);font-style:italic}
+.lbl{font-family:var(--ui);font-size:12px;fill:var(--muted)}
+.lblb{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--head)}
+.empty{font-family:var(--ui);font-size:13px;fill:var(--muted);font-style:italic}
+.pipe{stroke:var(--ink);stroke-width:2.4}
+.cell{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.cell.chg{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.2}
+.nd.freed{opacity:.5}
+.nd.freed .cell{stroke-dasharray:4 3;fill:var(--danger-bg);stroke:var(--danger)}
+.dt{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.garbq{font-family:var(--mono);font-weight:700;font-size:15px;fill:var(--danger);text-anchor:middle}
+.adr{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.nullslash{stroke:var(--muted);stroke-width:1.5}
+.dot{fill:var(--ink)}
+.xmark{stroke:var(--danger);stroke-width:3;stroke-linecap:round}
+.ar{fill:none;stroke-width:1.8}
+.ar-ink{stroke:var(--ink)}.ar-acc{stroke:var(--hl-line);stroke-width:3}.ar-red{stroke:var(--danger);stroke-dasharray:5 4}.ar-mut{stroke:var(--muted)}.ar-head{stroke:var(--head);stroke-width:3}
+.mk-ink{fill:var(--ink)}.mk-acc{fill:var(--hl-line)}.mk-red{fill:var(--danger)}.mk-mut{fill:var(--muted)}.mk-head{fill:var(--head)}.mk-ptr{fill:var(--ptr)}
+.tag rect{stroke-width:1.5}
+.tag text{font-family:var(--mono);font-weight:600;font-size:12px;text-anchor:middle}
+.tag-ptr rect{fill:var(--ptr-bg);stroke:var(--ptr)}.tag-ptr text{fill:var(--ptr)}
+.tag-head rect{fill:var(--head-bg);stroke:var(--head)}.tag-head text{fill:var(--head)}
+.tag-acc rect{fill:var(--hl);stroke:var(--hl-line)}.tag-acc text{fill:var(--hl-ink)}
+.tag-red rect{fill:var(--danger-bg);stroke:var(--danger)}.tag-red text{fill:var(--danger)}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.gn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.gn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.6}
+.gn.dead circle{fill:var(--paper);stroke:var(--muted);stroke-dasharray:3 3}
+.gn.cur circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.gn text{font-family:var(--mono);font-weight:700;font-size:14px;text-anchor:middle;fill:var(--ink)}
+.gn.dead text{fill:var(--muted)}
+.gring{fill:none;stroke:var(--danger);stroke-width:1.6;stroke-dasharray:3 2}
+.gtag{font-family:var(--ui);font-size:10px;fill:var(--muted);text-anchor:middle}
+.ge{fill:none;stroke:var(--muted);stroke-width:1.5}
+.ge.path{stroke:var(--head);stroke-width:3}.ge.try{stroke:var(--hl-line);stroke-width:3.6}
+.peg{fill:var(--muted)}
+.disk{stroke:var(--ink);stroke-width:1.2}
+.disk.mv{stroke:var(--hl-line);stroke-width:3.5}
+.dkt{font-family:var(--mono);font-weight:700;font-size:11px;fill:#1B2A4A;text-anchor:middle}
+.pegl{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+
+.tape{display:flex;flex-wrap:wrap;gap:4px}
+.tk{font-family:var(--mono);font-size:.88rem;padding:3px 8px;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel);white-space:pre}
+.tk.done{opacity:.45}
+.tk.ok{border-color:var(--ptr)}
+.tk.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);font-weight:700;opacity:1}
+.tk.err{background:var(--danger-bg);border-color:var(--danger);color:var(--danger);font-weight:700;opacity:1}
+.tbl{max-height:250px;overflow:auto;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel)}
+.tbl table{border-collapse:collapse;font-family:var(--mono);font-size:.78rem;width:100%}
+.tbl th,.tbl td{border-bottom:1px solid var(--grid);padding:4px 8px;text-align:left;vertical-align:top}
+.tbl th{position:sticky;top:0;background:var(--paper);font-family:var(--ui);font-size:.78rem;border-bottom:1.5px solid var(--rule);white-space:nowrap}
+.tbl td{white-space:nowrap}
+.tbl td:last-child{white-space:normal;min-width:12em}
+.tbl tr.hl td{background:var(--hl);color:var(--hl-ink)}
+.tbl .none{color:var(--muted);font-family:var(--ui);font-style:italic}
+.tv{font-family:var(--mono);font-weight:700;font-size:1.02rem;padding:6px 10px;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);word-break:break-word;min-width:8em}
+.tv.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.tv.good{border-color:var(--ptr);color:var(--ptr)}
+.tv.good.chg{color:var(--hl-ink)}
+.tv.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.chip{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:5px;border:1.5px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr)}
+.chip.head{border-color:var(--head);background:var(--head-bg);color:var(--head)}
+.chip.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+
+.change{border-top:5px solid var(--hl-line)}
+.note{margin:0 0 8px;font-size:1rem;max-width:78ch}
+.note.crash{color:var(--danger);font-weight:700;background:var(--danger-bg);padding:8px 10px;border-radius:4px}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diff li{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:.8rem;line-height:1.35;word-break:break-word}
+.badge{flex:0 0 auto;font-family:var(--ui);font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:3px;border:1.5px solid var(--ink);min-width:58px;text-align:center}
+.b-push,.b-enq,.b-set,.b-add,.b-move,.b-new,.b-node{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-pop,.b-deq,.b-del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.b-err{background:var(--danger);border-color:var(--danger);color:#fff}
+.b-read,.b-var{background:var(--ptr-bg);border-color:var(--ptr);color:var(--ptr)}
+.b-call,.b-ret{background:var(--head-bg);border-color:var(--head);color:var(--head)}
+.b-out{background:var(--panel)}
+.nodiff{color:var(--muted);font-family:var(--ui)!important;font-size:.85rem!important}
+
+.codewrap{position:relative;max-height:46vh;overflow:auto;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:6px 0}
+#code{font-family:var(--mono);font-size:12.5px;line-height:1.6;min-width:max-content}
+.cl{display:flex;padding:0 12px 0 0;border-left:4px solid transparent;white-space:pre}
+.cl .ln{width:3.2em;flex:0 0 auto;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.cl.cur{background:var(--hl);border-left-color:var(--hl-line);color:var(--hl-ink)}
+.cl.cur .ln{color:var(--hl-ink);font-weight:700;opacity:1}
+.c-kw{color:var(--kw);font-weight:600}.c-str{color:var(--str)}.c-com{color:var(--com);font-style:italic}.c-num{color:var(--num)}
+.cl.cur .c-kw,.cl.cur .c-str,.cl.cur .c-num,.cl.cur .c-com{color:var(--hl-ink)}
+
+.frame{border:1.5px solid var(--rule);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.fh{font-family:var(--mono);font-size:.8rem;font-weight:700;padding:4px 8px;background:var(--paper);border-bottom:1.5px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.fh .act{font-family:var(--ui);font-weight:400;color:var(--head)}
+.vr{display:flex;gap:10px;padding:4px 8px;font-family:var(--mono);font-size:.82rem;border-top:1px solid var(--grid);align-items:baseline}
+.vr:first-of-type{border-top:0}
+.vr.chg{background:var(--hl);color:var(--hl-ink)}
+.vn{min-width:7.5em;font-weight:600}
+.vv{word-break:break-word}
+.nul{color:var(--muted)}.garb{color:var(--danger);font-weight:700}.dang{color:var(--danger);font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+#out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;min-height:2.4em;white-space:pre-wrap;word-break:break-word}
+#out .new{background:var(--hl);color:var(--hl-ink)}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.controls .in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:10px}
+.r1 input{flex:1;accent-color:var(--head);min-width:0;height:28px}
+#count{font-family:var(--mono);font-size:.85rem;white-space:nowrap;min-width:7.5em;text-align:right}
+.r2{display:flex;gap:6px;justify-content:center}
+.r2 button{border:2px solid var(--ink);background:var(--panel);border-radius:6px;padding:8px 10px;cursor:pointer;min-height:42px;font-weight:700;font-size:.92rem;white-space:nowrap}
+.r2 button:disabled{opacity:.35;cursor:default}
+.r2 button.primary{background:var(--ink);color:var(--panel);min-width:92px}
+.r2 .grow{flex:1 1 0;max-width:150px}
+@media (max-width:420px){#bFirst,#bLast{display:none}.r2 button.primary{min-width:84px}}
+@media (min-width:980px){.controls .in{flex-direction:row-reverse;align-items:center;gap:18px}.r1{flex:1}.r2{flex:0 0 auto}body{padding-bottom:84px}}
+@media (hover:hover){.r2 button:not(:disabled):hover,.presets button:not(.on):hover{background:var(--hl);color:var(--hl-ink);border-color:var(--hl-line)}}
+.back{display:inline-block;margin-bottom:6px;font-size:.88rem;color:var(--head);text-decoration:none;font-weight:700}.back:hover{text-decoration:underline}
+.tmark{display:inline-flex;color:var(--ink)}
+:root{--ok:#1E7A45;--ok-bg:#DCF3E4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ok:#6FD49A;--ok-bg:#12321F}}
+:root[data-theme="dark"]{--ok:#6FD49A;--ok-bg:#12321F}
+.flds{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld span{font-size:.85rem;color:var(--muted)}
+.fld input,.fld select{padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem;min-width:0;width:100%}
+.fld.w-l{flex:3 1 280px}.fld.w-m{flex:1 1 190px}.fld.w-s{flex:0 1 110px}
+.inwrap .runbtn{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:9px 16px;font-weight:700;cursor:pointer;white-space:nowrap;height:42px}
+.tn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.tn text{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.tn.cur circle,.tn.new circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.tn.cur text,.tn.new text{fill:var(--hl-ink)}
+.tn.cmp circle{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.6}
+.tn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.4}
+.tn.done circle{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2.4}
+.tn.bad circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.6}
+.tn.bad text{fill:var(--danger)}
+.tn.del circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.4;stroke-dasharray:4 3}
+.tn.del text{fill:var(--danger)}
+.tn.todo circle{stroke:var(--danger);stroke-width:2.6}
+.tn.hole circle{fill:var(--paper);stroke:var(--muted);stroke-width:2;stroke-dasharray:4 3}
+.tn.hole text{fill:var(--muted);font-weight:400;opacity:.6}
+.tn.ph circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2;stroke-dasharray:4 3}
+.tn.ph text{fill:var(--danger)}
+.te{stroke:var(--muted);stroke-width:1.6}
+.te.path{stroke:var(--head);stroke-width:3}
+.te.new{stroke:var(--hl-line);stroke-width:3.6}
+.te.ph{stroke:var(--danger);stroke-dasharray:4 3}
+.tsub{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.ttag rect{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:1.3}
+.ttag text{font-family:var(--mono);font-size:10.5px;font-weight:700;fill:var(--ptr);text-anchor:middle}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.ac.cur,.ac.new{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.4}
+.ac.cmp{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.2}
+.ac.done{fill:var(--ok-bg);stroke:var(--ok)}
+.ac.bad,.ac.del{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2}
+.ac.todo{stroke:var(--danger);stroke-width:2.2}
+.ac.hole{fill:var(--paper);stroke:var(--muted);stroke-dasharray:4 3}
+.ac.out{fill:var(--paper)}
+.ac.unused{fill:var(--grid);stroke:var(--rule)}
+.szl{stroke:var(--head);stroke-width:2.5}
+.szt{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--head)}
+.arrlbl{font-size:.78rem;color:var(--muted);margin:8px 0 2px}
+.tk.done{opacity:.45}
+.frame.active{border-color:var(--head)}
+.b-link,.b-move,.b-swap,.b-new,.b-push{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-del,.b-pop{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.sw.ok{background:var(--ok-bg);border-color:var(--ok)}
+.sw.pa{background:var(--head-bg);border-color:var(--head)}
+.sw.hole{background:var(--paper);border-style:dashed;border-color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="back" href="index.html">← All lectures</a>
+    <h1><span class="tmark" aria-hidden="true"><svg width="30" height="26" viewBox="0 0 30 26"><line x1="15" y1="6" x2="7" y2="19" stroke="currentColor" stroke-width="2"/><line x1="15" y1="6" x2="23" y2="19" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="6" r="5" fill="var(--hl)" stroke="currentColor" stroke-width="2"/><circle cx="7" cy="20" r="5" fill="var(--panel)" stroke="currentColor" stroke-width="2"/><circle cx="23" cy="20" r="5" fill="var(--panel)" stroke="currentColor" stroke-width="2"/></svg></span>Trees &amp; heaps simulator</h1>
+    <p>Every program and diagram from Lecture 6 (Data Structures 501324-3), run one step at a time.</p>
+  </div>
+  <label class="pick"><span>Choose a program or topic from the slides</span><select id="prog"></select></label>
+</header>
+
+<main class="layout">
+  <section class="panel info">
+    <span class="slides" id="slides"></span>
+    <h2 id="ptitle"></h2>
+    <p id="pdesc"></p>
+    <details id="notesWrap"><summary id="notesSum"></summary><ul id="notes"></ul></details>
+    <div class="inwrap" id="inWrap" hidden>
+      <div class="flds"><div class="flds" id="inFields" style="flex:1 1 auto"></div><button id="inRun" class="runbtn">Run it</button></div>
+      <div class="presets" id="inPresets"></div>
+      <p class="inerr" id="inErr" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="panel viz">
+    <div class="ph"><h3>The tree right now</h3><span class="hint">yellow = changed or current</span></div>
+    <div class="structs" id="structs"></div>
+    <div class="legend">
+      <span><i class="sw hl"></i>current / just changed</span>
+      <span><i class="sw rd"></i>being compared</span>
+      <span><i class="sw pa"></i>path taken / on the call stack</span>
+      <span><i class="sw ok"></i>done / visited</span>
+      <span><i class="sw dl"></i>problem or removed</span>
+      <span><i class="sw hole"></i>hole (empty spot)</span>
+    </div>
+  </section>
+
+  <section class="panel change">
+    <div class="ph"><h3>What this step did</h3><span class="hint" id="stepNo"></span></div>
+    <p id="note" class="note"></p>
+    <ul id="diff" class="diff"></ul>
+  </section>
+
+  <section class="panel code">
+    <div class="ph"><h3 id="codeH">Code</h3><span class="hint">yellow line = the one that just ran</span></div>
+    <div class="codewrap" id="codeWrap"><div id="code"></div></div>
+  </section>
+
+  <section class="panel vars" id="varsCard">
+    <div class="ph"><h3>Variables</h3><span class="hint">one box per function call that is running</span></div>
+    <div id="vars"></div>
+  </section>
+
+  <section class="panel out" id="outCard">
+    <div class="ph"><h3>Console output</h3></div>
+    <pre id="out"></pre>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Step controls">
+  <div class="in">
+    <div class="r1"><input type="range" id="range" min="0" max="0" value="0" aria-label="Step"><span id="count"></span></div>
+    <div class="r2">
+      <button id="bFirst" aria-label="Go to first step">⏮</button>
+      <button id="bPrev" class="grow">◀ Back</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <button id="bNext" class="grow">Next ▶</button>
+      <button id="bLast" aria-label="Go to last step">⏭</button>
+      <button id="bSpeed" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+/*ENGINE-START*/
+const GARB = '?';
+class Crash extends Error {}
+class InputError extends Error {}
+const fv = v => v === null || v === undefined ? '' : String(v);
+const T_OBJ = ['mark', 'tags', 'edge', 'info'];
+const T_VAL = ['chg', 'hlRow'];
+
+class Sim {
+  constructor() { this.frames = [{ name: 'global', label: 'Global variables', vars: {} }]; this.out = ''; this.snaps = []; this.st = {}; this.order = []; this.ops = []; this.code = null; }
+  fn(name, label) { this.frames.push({ name, label: label || name + '()', vars: {} }); }
+  ret() { this.frames.pop(); }
+  var(n, v, t = 'val') { this.frames[this.frames.length - 1].vars[n] = { t, v }; }
+  gvar(n, v, t = 'val') { this.frames[0].vars[n] = { t, v }; }
+  drop(n) { delete this.frames[this.frames.length - 1].vars[n]; }
+  find(n) { for (let i = this.frames.length - 1; i >= 0; i--) if (n in this.frames[i].vars) return this.frames[i].vars[n]; throw new Error('unknown variable ' + n); }
+  get(n) { return this.find(n).v; }
+  set(n, v) { this.find(n).v = v; }
+  print(x) { this.out += x; }
+  mk(name, o) { this.st[name] = o; if (!this.order.includes(name)) this.order.push(name); return o; }
+  op(k, t) { this.ops.push([k, t]); }
+  step(label, note, extra) {
+    if (this.snaps.length > 3000) throw new InputError('This input makes too many steps. Try a smaller one.');
+    this.snaps.push(Object.assign({ label, note, ops: this.ops, state: JSON.parse(JSON.stringify({ frames: this.frames, out: this.out, st: this.st, order: this.order })) }, extra || {}));
+    this.ops = [];
+    for (const k in this.st) { const t = this.st[k]; T_OBJ.forEach(f => { if (f in t) t[f] = {}; }); T_VAL.forEach(f => { delete t[f]; }); }
+  }
+}
+const isNum = x => typeof x === 'number';
+const cmpv = (a, b) => (isNum(a) && isNum(b)) ? a - b : String(a).localeCompare(String(b));
+
+/* ---------- input parsing ---------- */
+const NUM = /^-?\d+(\.\d+)?$/;
+function parseNums(str, what, max = 20) {
+  const toks = String(str).trim().split(/[\s,]+/).filter(Boolean);
+  if (!toks.length) throw new InputError(`Type some ${what}, separated by spaces.`);
+  if (toks.length > max) throw new InputError(`Use ${max} ${what} or fewer.`);
+  return toks.map(t => { if (!NUM.test(t)) throw new InputError(`"${t}" is not a number.`); if (t.length > 4) throw new InputError(`Keep numbers to 4 characters: "${t}"`); return +t; });
+}
+function parseNum(str, what) { const t = String(str).trim(); if (!NUM.test(t)) throw new InputError(`Type one number for ${what}.`); if (t.length > 4) throw new InputError('Keep numbers to 4 characters.'); return +t; }
+function parseLevel(str, max = 31) {
+  const toks = String(str).trim().split(/[\s,]+/).filter(Boolean).map(t => /^(_|null|nil)$/i.test(t) ? null : (NUM.test(t) ? +t : t));
+  if (!toks.length || toks[0] === null) throw new InputError('Type the tree level by level, using _ for an empty spot. Example: 10 5 30 2 _ 25 45');
+  if (toks.filter(x => x !== null).length > max) throw new InputError(`Use ${max} nodes or fewer.`);
+  toks.forEach(t => { if (t !== null && String(t).length > 4) throw new InputError(`Keep node values to 4 characters: "${t}"`); });
+  return toks;
+}
+
+/* ---------- tree helpers ---------- */
+function mkTree(s, name, title, o = {}) { return s.mk(name, Object.assign({ type: 'tree', title, nodes: {}, root: null, nid: 0, keep: {}, mark: {}, tags: {}, edge: {}, info: {}, sub: {} }, o)); }
+function tNew(T, v) { const id = T.nid++; T.nodes[id] = { v, l: null, r: null }; return id; }
+function tBST(T, v) {
+  if (T.root === null) { T.root = tNew(T, v); return T.root; }
+  let c = T.root;
+  for (let g = 0; g < 100; g++) {
+    const n = T.nodes[c];
+    if (cmpv(v, n.v) === 0) return null;
+    const side = cmpv(v, n.v) < 0 ? 'l' : 'r';
+    if (n[side] === null) { n[side] = tNew(T, v); return n[side]; }
+    c = n[side];
+  }
+}
+function tDepthOK(T) { const d = id => id === null ? -1 : 1 + Math.max(d(T.nodes[id].l), d(T.nodes[id].r)); if (d(T.root) > 6) throw new InputError('That tree is too tall to draw (at most 6 levels below the root). Try fewer keys or a different order.'); }
+function tFromLevel(T, toks) {
+  T.root = tNew(T, toks[0]); const q = [[T.root, 0]]; let i = 1;
+  while (q.length && i < toks.length) {
+    const [p, d] = q.shift();
+    for (const side of ['l', 'r']) {
+      if (i >= toks.length) break;
+      const t = toks[i++];
+      if (t !== null) { if (d + 1 > 6) throw new InputError('That tree is too tall to draw (at most 6 levels below the root).'); const c = tNew(T, t); T.nodes[p][side] = c; q.push([c, d + 1]); }
+    }
+  }
+  if (i < toks.length && toks.slice(i).some(x => x !== null)) throw new InputError('Some values have no parent. List the tree level by level and use _ for each empty child.');
+}
+const tH = (T, id) => id === null ? -1 : 1 + Math.max(tH(T, T.nodes[id].l), tH(T, T.nodes[id].r));
+const tCount = (T, id) => id === null ? 0 : 1 + tCount(T, T.nodes[id].l) + tCount(T, T.nodes[id].r);
+function tParent(T, id) { for (const k in T.nodes) { const n = T.nodes[k]; if (n.l === id) return [+k, 'l']; if (n.r === id) return [+k, 'r']; } return [null, null]; }
+function tWalk(T, id, f, d = 0) { if (id === null) return; f(id, d); tWalk(T, T.nodes[id].l, f, d + 1); tWalk(T, T.nodes[id].r, f, d + 1); }
+const tV = (T, id) => id === null ? 'NULL' : fv(T.nodes[id].v);
+const vlist = a => a.map(fv).join(', ');
+
+/* ---------- heap helpers ---------- */
+function mkHeap(s, name, title, arr, o = {}) { const a = [null].concat(arr); return s.mk(name, Object.assign({ type: 'heap', title, arr: a, size: arr.length, keep: {}, mark: {}, tags: {}, info: {}, sub: {}, hole: null, ph: {} }, o)); }
+const better = (mode, a, b) => mode === 'max' ? a > b : a < b;
+function heapViolation(arr, size, mode) {
+  for (let i = 2; i <= size; i++) if (better(mode, arr[i], arr[i >> 1])) return [i >> 1, i];
+  return null;
+}
+const MINW = { min: 'smaller', max: 'larger' };
+
+/* ======================= programs ======================= */
+const PROGRAMS = [];
+const P = o => PROGRAMS.push(o);
+const SL9A = '10 5 30 2 _ 25 45', SL9B = '5 2 45 _ _ 30 _ 10 _ _ 25', SL9N = '10 5 45 2 25 _ 30';
+const SL35 = '1 3 7 5 _ 8 9 4 6 _ _ _ 10 _ _ _ _ 11 12';
+const SL37 = '15 8 20 2 11 _ 27 _ 6 10 12 22 30 3 7 _ _ _ 14';
+const SL41 = 'A B C D _ F G _ H _ _ I J';
+const EXPR = '+ - % A * * 4 _ _ / 2 D 5 _ _ C 5';
+const SL44 = '15 8 20 2 11 30 27 13 6 18 12';
+const K9 = '10 5 30 2 25 45', K9B = '5 2 45 30 10 25', K39 = '14 58 18 10 99 52 33 69 74 17', K45 = '8 4 10 1 6 3 7 13 14';
+const H67 = '10 20 80 40 60 85 99 50 700 65', H80 = '3 4 7 21 10 20 8 22 28 13 19 25';
+const H71 = '5 8 20 15 11 30 27 33 16 18 12', H70 = '10 20 15 40 60 85 99 50 700 65', H100 = '3 4 6 21 10 7 8 22 28 13 19 25 20';
+const treeField = (def, label = 'Tree, level by level (_ = empty spot)') => ({ k: 'tree', label, def, w: 'l' });
+const keysField = (def, label = 'Keys, inserted in this order') => ({ k: 'tree', label, def, w: 'l' });
+
+/* ---------- 1. terminology ---------- */
+P({ id: 'terms', group: 'Tree basics', slides: 'Slides 3–5', title: 'Tree terminology tour',
+  desc: 'Each step lights up one term from slide 5 on a real tree: root, parent, child, leaf, interior node, level, height and subtree. Try it on your own tree too.',
+  notes: ['Interior means "not a leaf", so the root counts as an interior node when it has children.', 'Level and height are both counted in edges, not nodes: the root is at level 0.'],
+  codeTitle: 'Terms (slide 5)',
+  input: { fields: [treeField(SL35)], presets: [['Slide 35 tree', { tree: SL35 }], ['Slide 41 tree', { tree: SL41 }], ['Slide 9 BST', { tree: SL9A }]] },
+  code: `Root: the only node with no parent                @@root
+Edge: the link between a parent and a child       @@edge
+Parent: a predecessor of a node (directly above)  @@parent
+Child: an immediate successor (directly below)    @@child
+Siblings: children of the same parent             @@sib
+Leaf: a node with no children                     @@leaf
+Interior node: any node that is not a leaf        @@int
+Level of a node: edges on the path from the root  @@level
+Height of the tree: edges on the longest
+                    path from the root to a leaf   @@height
+Subtree: a node and everything below it           @@sub
+Binary tree: every node has 0, 1 or 2 children    @@bin`,
+  run(s, v) {
+    const T = mkTree(s, 'T', 'The tree'); tFromLevel(T, parseLevel(v.tree));
+    const all = []; tWalk(T, T.root, (id, d) => all.push([id, d]));
+    const n = all.length, kids = id => [T.nodes[id].l, T.nodes[id].r].filter(x => x !== null);
+    const leaves = all.filter(([id]) => !kids(id).length).map(x => x[0]), inner = all.filter(([id]) => kids(id).length).map(x => x[0]);
+    s.step(null, `A tree with ${n} nodes. Press Next to tour the terms.`);
+    T.mark[T.root] = 'cur'; T.info[T.root] = 'root'; s.step('root', `The root is ${tV(T, T.root)}. It is the only node with no parent; every other node is reached from it.`);
+    all.forEach(([id]) => { if (id !== T.root) T.edge[id] = 'path'; });
+    s.step('edge', `Each edge links a parent to a child. ${n} nodes are joined by exactly ${n - 1} edges (every node except the root has one edge going up).`);
+    let p = inner.find(id => id !== T.root && kids(id).length === 2) ?? inner.find(id => id !== T.root) ?? T.root;
+    const [pp] = tParent(T, p);
+    if (pp !== null) { T.mark[p] = 'cur'; T.mark[pp] = 'cmp'; T.info[pp] = 'parent'; T.edge[p] = 'new'; s.step('parent', `Take node ${tV(T, p)}. Its parent is ${tV(T, pp)}: the node directly above it. A node has at most one parent.`); }
+    T.mark[p] = 'cur'; kids(p).forEach(c => { T.mark[c] = 'cmp'; T.info[c] = 'child'; T.edge[c] = 'new'; });
+    s.step('child', `The children of ${tV(T, p)} are ${vlist(kids(p).map(c => T.nodes[c].v))}: the nodes directly below it.`);
+    const sp = all.find(([id]) => kids(id).length === 2);
+    if (sp) { const [a, b] = kids(sp[0]); T.mark[a] = T.mark[b] = 'cur'; T.mark[sp[0]] = 'cmp'; s.step('sib', `${tV(T, a)} and ${tV(T, b)} are siblings: they share the parent ${tV(T, sp[0])}.`); }
+    else s.step('sib', 'No node here has two children, so there are no siblings.');
+    leaves.forEach(id => { T.mark[id] = 'done'; T.info[id] = 'leaf'; }); s.step('leaf', `The leaves are ${vlist(leaves.map(id => T.nodes[id].v))}: they have no children (${leaves.length} leaves).`);
+    inner.forEach(id => { T.mark[id] = 'path'; }); s.step('int', `The interior nodes are ${vlist(inner.map(id => T.nodes[id].v))}. Every node is either a leaf or an interior node.`);
+    const maxD = Math.max(...all.map(x => x[1]));
+    for (let d = 0; d <= maxD; d++) {
+      all.forEach(([id, dd]) => { T.info[id] = 'L' + dd; if (dd === d) T.mark[id] = 'cur'; else if (dd < d) T.mark[id] = 'path'; });
+      s.step('level', `Level ${d}: ${vlist(all.filter(x => x[1] === d).map(x => T.nodes[x[0]].v))}. ${d === 0 ? 'The root is at level 0.' : `These are ${d} edge${d > 1 ? 's' : ''} below the root.`}`);
+    }
+    const path = []; let c = T.root;
+    while (c !== null) { path.push(c); const n2 = T.nodes[c]; c = n2.l === null ? n2.r : n2.r === null ? n2.l : (tH(T, n2.l) >= tH(T, n2.r) ? n2.l : n2.r); }
+    path.forEach((id, k) => { T.mark[id] = 'cur'; if (k) T.edge[id] = 'new'; });
+    s.step('height', `The longest path from the root down to a leaf is ${vlist(path.map(id => T.nodes[id].v))}. It has ${path.length - 1} edges, so the height of the tree is ${path.length - 1}.`);
+    const subs = []; tWalk(T, p, id => subs.push(id)); subs.forEach(id => { T.mark[id] = id === p ? 'cur' : 'path'; if (id !== p) T.edge[id] = 'path'; });
+    s.step('sub', `The subtree rooted at ${tV(T, p)} is ${tV(T, p)} together with everything below it: ${vlist(subs.map(id => T.nodes[id].v))}. A subtree is itself a tree.`);
+    all.forEach(([id]) => { T.info[id] = kids(id).length + (kids(id).length === 1 ? ' child' : ' kids'); });
+    s.step('bin', 'Every node has 0, 1 or 2 children, so this is a binary tree.');
+  } });
+
+/* ---------- 2. BST or not ---------- */
+P({ id: 'bstcheck', group: 'Tree basics', slides: 'Slides 8–9', title: 'Is it a binary search tree? Check every node',
+  desc: 'A BST needs more than "left child smaller, right child bigger". Every node must fit between bounds set by ALL its ancestors. Watch the allowed range shrink as we go down.',
+  notes: ['Slide 8 says the left and right subtrees must also be BSTs. Checking each node against its range is how you test that for the whole tree at once.', 'Try the "Tricky" preset: every parent–child pair looks right, but it is still not a BST.'],
+  codeTitle: 'Range check',
+  input: { fields: [treeField(SL9A)], presets: [['Slide 9 BST 1', { tree: SL9A }], ['Slide 9 BST 2', { tree: SL9B }], ['Slide 9 not a BST', { tree: SL9N }], ['Tricky', { tree: '10 5 30 2 12 25 45' }]] },
+  code: `check(node, low, high):                        @@call
+    if node is empty: nothing to check
+    is low < node.value < high ?                @@test
+        no → this node breaks the BST rule      @@bad
+    check(node.left,  low, node.value)          @@left
+    check(node.right, node.value, high)         @@right
+start: check(root, −∞, +∞)                      @@start
+result                                          @@end`,
+  run(s, v) {
+    const T = mkTree(s, 'T', 'The tree'); tFromLevel(T, parseLevel(v.tree));
+    mkTable(s, 'C', 'Checks', ['Node', 'Must be between', 'OK?']); mkText(s, 'R', 'Result', 'checking…');
+    const rng = (lo, hi) => `${lo === null ? '−∞' : fv(T.nodes[lo].v)} and ${hi === null ? '+∞' : fv(T.nodes[hi].v)}`;
+    let bad = 0;
+    s.step('start', `Start at the root with no limits: it may hold any value.`);
+    const chk = (id, lo, hi) => {
+      const n = T.nodes[id]; T.mark[id] = 'cur'; T.info[id] = `${lo === null ? '−∞' : fv(T.nodes[lo].v)}…${hi === null ? '+∞' : fv(T.nodes[hi].v)}`;
+      if (lo !== null) T.mark[lo] = 'cmp'; if (hi !== null) T.mark[hi] = 'cmp';
+      const ok = (lo === null || cmpv(T.nodes[lo].v, n.v) < 0) && (hi === null || cmpv(n.v, T.nodes[hi].v) < 0);
+      s.row('C', [n.v, rng(lo, hi), ok ? '✓' : '✗']);
+      if (ok) { T.keep[id] = 'done'; s.step('test', `${fv(n.v)} must be between ${rng(lo, hi)}. It is, so this node is fine.`); }
+      else {
+        bad++; T.keep[id] = 'bad'; const who = lo !== null && cmpv(T.nodes[lo].v, n.v) >= 0 ? lo : hi;
+        T.mark[who] = 'bad'; s.step('bad', `${fv(n.v)} must be between ${rng(lo, hi)}, but it is not. Because it sits in ${who === lo ? 'the right' : 'the left'} subtree of ${fv(T.nodes[who].v)}, it must be ${who === lo ? 'bigger' : 'smaller'} than ${fv(T.nodes[who].v)}.`);
+      }
+      if (n.l !== null) { T.mark[id] = 'cur'; T.edge[n.l] = 'new'; s.step('left', `Go to the left child of ${fv(n.v)}: everything there must be smaller than ${fv(n.v)}.`); chk(n.l, lo, id); }
+      if (n.r !== null) { T.mark[id] = 'cur'; T.edge[n.r] = 'new'; s.step('right', `Go to the right child of ${fv(n.v)}: everything there must be bigger than ${fv(n.v)}.`); chk(n.r, id, hi); }
+    };
+    chk(T.root, null, null);
+    s.text('R', bad ? `Not a BST: ${bad} node${bad > 1 ? 's break' : ' breaks'} the rule` : 'Binary search tree ✓', bad ? 'bad' : 'good');
+    s.step('end', bad ? `Not a binary search tree. The red node${bad > 1 ? 's are' : ' is'} on the wrong side of an ancestor.` : 'Every node fits its range, so this IS a binary search tree.');
+  } });
+
+/* ---------- 3. Find ---------- */
+P({ id: 'find', group: 'Binary search trees', slides: 'Slides 11–14, 17–18', title: 'Find(root, key): iterative search',
+  desc: 'Each comparison throws away half of what is left (in a balanced tree). Compare the number of steps in the balanced tree with the tall, thin tree from slide 13.',
+  notes: ['The slide writes return null; in C++ it must be NULL (or nullptr).', 'The number of comparisons is at most the height + 1. That is why a balanced tree gives O(log n) and a degenerate one O(n) (slides 17–18).'],
+  input: { fields: [keysField(K9), { k: 'key', label: 'Search for', def: '2', w: 's' }],
+    presets: [['Find 2 (slide 13)', { tree: K9, key: '2' }], ['Find 25 (slide 14)', { tree: K9, key: '25' }], ['Find 25, tall tree (slide 14)', { tree: K9B, key: '25' }], ['Find 7 (missing)', { tree: K9, key: '7' }]] },
+  code: v => `struct Node {
+    int data;
+    Node *left, *right;
+};
+Node *root;   // tree built from: ${v.tree}     @@g
+
+Node *Find(Node *n, int key)                 @@sig
+{
+    while (n != NULL)                        @@while
+    {
+        if (n->data == key)    // Found it   @@if1
+            return n;                        @@found
+        if (n->data > key)     // In left subtree    @@if2
+            n = n->left;                     @@left
+        else                   // In right subtree
+            n = n->right;                    @@right
+    }
+    return NULL;   // slide: null            @@nf
+}
+
+int main() {                                 @@main
+    Node *n = Find(root, ${v.key});${' '.repeat(Math.max(1, 14 - String(v.key).length))}@@call
+}`,
+  run(s, v) {
+    const keys = parseNums(v.tree, 'keys'), key = parseNum(v.key, 'the key');
+    const T = mkTree(s, 'T', 'The binary search tree', { ptrs: true }); keys.forEach(k => tBST(T, k)); tDepthOK(T);
+    mkTable(s, 'C', 'Comparisons (like slides 13–14)', ['Node', 'Comparison', 'Decision']);
+    s.gvar('root', T.root, 'ptr'); s.step('g', `The tree is built by inserting ${keys.join(', ')}. Its height is ${tH(T, T.root)}. root points to ${tV(T, T.root)}.`);
+    s.fn('main'); s.step('main', 'main() starts.');
+    s.step('call', `main calls Find(root, ${key}). The address inside root is copied into the parameter n.`);
+    s.fn('Find', `Find(n, key = ${key})`); s.var('n', T.root, 'ptr'); s.var('key', key);
+    s.step('sig', `Find starts with n at the root (${tV(T, T.root)}).`);
+    let res = null, cmp = 0;
+    for (;;) {
+      const id = s.get('n');
+      if (id === null) { s.step('while', `n is NULL: we walked off the bottom of the tree. ${key} is not in it.`); s.step('nf', 'return NULL.'); break; }
+      const nd = T.nodes[id]; T.mark[id] = 'cur';
+      s.step('while', `n is not NULL (it points to ${nd.v}), so keep looking.`);
+      T.mark[id] = 'cmp'; cmp++;
+      if (nd.v === key) { s.step('if1', `n->data (${nd.v}) == ${key}: found it after ${cmp} comparison${cmp > 1 ? 's' : ''}!`); T.keep[id] = 'done'; s.row('C', [nd.v, `${nd.v} = ${key}`, 'found']); s.step('found', 'return n: give back the node that holds the key.'); res = id; break; }
+      s.step('if1', `n->data (${nd.v}) == ${key} is false.`);
+      T.keep[id] = 'path';
+      if (nd.v > key) {
+        s.row('C', [nd.v, `${nd.v} > ${key}`, 'left']); T.mark[id] = 'cmp';
+        s.step('if2', `${nd.v} > ${key}: ${key} can only be in the LEFT subtree. The whole right subtree is skipped.`);
+        s.set('n', nd.l); if (nd.l !== null) T.edge[nd.l] = 'new';
+        s.step('left', nd.l === null ? 'n = n->left, which is NULL.' : `n moves to the left child (${tV(T, nd.l)}).`);
+      } else {
+        s.row('C', [nd.v, `${nd.v} < ${key}`, 'right']); T.mark[id] = 'cmp';
+        s.step('if2', `${nd.v} > ${key} is false, so ${key} is bigger: go RIGHT. The whole left subtree is skipped.`);
+        s.set('n', nd.r); if (nd.r !== null) T.edge[nd.r] = 'new';
+        s.step('right', nd.r === null ? 'n = n->right, which is NULL.' : `n moves to the right child (${tV(T, nd.r)}).`);
+      }
+    }
+    s.ret(); s.var('n', res, 'ptr');
+    s.step('call', `Find returned ${res === null ? 'NULL' : 'the node holding ' + key}, and main stores it in n. It took ${cmp} comparison${cmp === 1 ? '' : 's'}; this tree has height ${tH(T, T.root)}, so no search needs more than ${tH(T, T.root) + 1}.`);
+  } });
+
+/* ---------- 4. Insert (recursive) ---------- */
+P({ id: 'insert', group: 'Binary search trees', slides: 'Slides 20–22, 45', title: 'insert(root, val): recursive insertion',
+  desc: 'The slide 22 code. Each call goes one level down; the new node is created when a call reaches an empty spot (NULL), and the links are set as the calls return.',
+  notes: ['getNewNode is not shown on the slide; the version here simply makes a node and fills it.', 'Every return re-assigns root->left or root->right. Only the call just above the new node actually changes a link; the others write back the same pointer.', 'A value that is already in the tree is not inserted again (no duplicates).'],
+  input: { fields: [keysField(K9), { k: 'val', label: 'Insert', def: '20', w: 's' }],
+    presets: [['Insert 20 (slides 21–22)', { tree: K9, val: '20' }], ['Insert 12 (slide 45)', { tree: K45, val: '12' }], ['Insert 25 (already there)', { tree: K9, val: '25' }], ['Empty tree', { tree: '', val: '50' }]] },
+  code: v => `struct node {
+    int key;
+    struct node *left, *right;
+};
+struct node *root;   // ${String(v.tree).trim() ? 'built from: ' + String(v.tree).trim() : 'empty (NULL)'}   @@g
+
+struct node *getNewNode(int val)   // (not on the slide)   @@g_sig
+{
+    struct node *n = new node();             @@g_new
+    n->key = val;                            @@g_key
+    n->left = n->right = NULL;               @@g_lr
+    return n;                                @@g_ret
+}
+
+struct node *insert(struct node *root, int val)   @@sig
+{
+    if (root == NULL)                        @@if0
+        return getNewNode(val);              @@new
+    if (root->key < val)                     @@ifr
+        root->right = insert(root->right, val);   @@right
+    else if (root->key > val)                @@ifl
+        root->left = insert(root->left, val);     @@left
+    return root;                             @@ret
+}
+
+int main() {                                 @@main
+    root = insert(root, ${v.val});${' '.repeat(Math.max(1, 15 - String(v.val).length))}@@call
+}`,
+  run(s, v) {
+    const keys = String(v.tree).trim() ? parseNums(v.tree, 'keys') : [], val = parseNum(v.val, 'the value');
+    const T = mkTree(s, 'T', 'The binary search tree', { ptrs: true }); keys.forEach(k => tBST(T, k)); tDepthOK(T);
+    s.gvar('root', T.root, 'ptr'); s.step('g', keys.length ? `The tree is built from ${keys.join(', ')}. root points to ${tV(T, T.root)}.` : 'The tree is empty: root is NULL.');
+    s.fn('main'); s.step('main', 'main() starts.');
+    s.step('call', `main calls insert(root, ${val}).`);
+    const ins = id => {
+      s.fn('insert', `insert(root = ${tV(T, id)}, val = ${val})`); s.var('root', id, 'ptr'); s.var('val', val);
+      if (id !== null) T.mark[id] = 'cur';
+      s.step('sig', id === null ? 'This call received root = NULL: an empty spot.' : `This call looks at the subtree whose root is ${tV(T, id)}.`);
+      if (id === null) {
+        s.step('if0', 'root == NULL is true: this empty spot is where the new value belongs.');
+        s.step('new', 'Call getNewNode(val) to make the node.');
+        s.fn('getNewNode', `getNewNode(val = ${val})`); s.var('val', val); s.step('g_sig', 'getNewNode starts.');
+        const n = tNew(T, 0); s.var('n', n, 'ptr'); T.mark[n] = 'cur'; s.op('new', 'a node is created on the heap'); s.step('g_new', 'A new node is created. It is not linked into the tree yet (drawn below).');
+        T.nodes[n].v = val; T.mark[n] = 'cur'; s.op('set', `n->key = ${val}`); s.step('g_key', `Store ${val} in it.`);
+        s.step('g_lr', 'Both children are NULL: it is a leaf.');
+        s.step('g_ret', 'Return the new node.'); s.ret();
+        T.mark[n] = 'cur'; s.step('new', `This call returns the new node (${val}) to the call above it.`); s.ret(); return n;
+      }
+      const nd = T.nodes[id]; T.keep[id] = 'path';
+      s.step('if0', `root == NULL is false (root is ${nd.v}).`);
+      T.mark[id] = 'cmp';
+      if (nd.v < val) {
+        s.step('ifr', `${nd.v} < ${val}: ${val} belongs in the RIGHT subtree.`);
+        if (nd.r !== null) T.edge[nd.r] = 'new';
+        s.step('right', `Call insert(root->right, ${val}) on ${tV(T, nd.r)}${nd.r === null ? ' — the right spot is empty' : ''}. This call waits.`);
+        const old = nd.r, r = ins(nd.r); nd.r = r; T.mark[id] = 'cur';
+        if (r !== old) { T.edge[r] = 'new'; s.op('link', `${nd.v}->right = node ${val}`); }
+        s.step('right', r !== old ? `Back in insert(${nd.v}): root->right = the returned node. ${val} is now linked as the right child of ${nd.v}.` : `Back in insert(${nd.v}): root->right gets the same pointer it already had (${tV(T, r)}). Nothing changes here.`);
+      } else {
+        s.step('ifr', `${nd.v} < ${val} is false.`);
+        if (nd.v > val) {
+          s.step('ifl', `${nd.v} > ${val}: ${val} belongs in the LEFT subtree.`);
+          if (nd.l !== null) T.edge[nd.l] = 'new';
+          s.step('left', `Call insert(root->left, ${val}) on ${tV(T, nd.l)}${nd.l === null ? ' — the left spot is empty' : ''}. This call waits.`);
+          const old = nd.l, l = ins(nd.l); nd.l = l; T.mark[id] = 'cur';
+          if (l !== old) { T.edge[l] = 'new'; s.op('link', `${nd.v}->left = node ${val}`); }
+          s.step('left', l !== old ? `Back in insert(${nd.v}): root->left = the returned node. ${val} is now linked as the left child of ${nd.v}.` : `Back in insert(${nd.v}): root->left gets the same pointer it already had (${tV(T, l)}). Nothing changes here.`);
+        } else { T.mark[id] = 'bad'; s.step('ifl', `${nd.v} > ${val} is false too: ${val} is already in the tree, so nothing is inserted.`); }
+      }
+      T.mark[id] = 'cur'; s.step('ret', `return root: hand ${nd.v} back to the caller.`); s.ret(); return id;
+    };
+    const r = ins(T.root); const was = T.root; T.root = r; s.set('root', r);
+    s.step('call', was === null ? `root = the returned node: ${val} is now the root of the tree.` : `root = the returned pointer, which is still ${tV(T, r)}. The tree now has ${tCount(T, r)} nodes and height ${tH(T, r)}.`);
+  } });
+
+/* ---------- 5. Build ---------- */
+P({ id: 'build', group: 'Binary search trees', slides: 'Slides 15–18, 20, 27, 39–40', title: 'Build a BST from a list of keys',
+  desc: 'The same keys in a different order give a very different tree. Sorted input makes a degenerate tree (like a linked list); a good order makes a balanced one.',
+  notes: ['Slide 40\'s answer for the exercise: 14 at the root, 10 and 58 below it, and so on. Step through to check it.', 'Height-balanced (slide 27): at every node, the heights of the left and right subtrees differ by at most 1. The small number next to each node at the end is left height − right height.'],
+  codeTitle: 'Insertion algorithm (slide 20)',
+  input: { fields: [keysField(K39)], presets: [['Slide 39 exercise', { tree: K39 }], ['Sorted → degenerate', { tree: '1 2 3 4 5 6 7' }], ['Same keys, balanced', { tree: '4 2 6 1 3 5 7' }], ['Slide 9 tree', { tree: K9 }], ['Slide 37 tree', { tree: '15 8 20 2 11 27 6 10 12 22 30 3 7 14' }]] },
+  code: `for each key X in the list:                       @@next
+    start at the root
+    compare X with the node Y you are on:          @@cmp
+        X < Y → go left,  X > Y → go right
+    when that spot is empty:                       @@place
+        insert X there as a new leaf
+    X == Y → already in the tree: skip it          @@dup
+finally: height and balance                         @@end`,
+  run(s, v) {
+    const keys = parseNums(v.tree, 'keys', 15);
+    s.mk('in', { type: 'tape', title: 'Keys to insert', tokens: keys.map(String), pos: -1, marks: {} });
+    const T = mkTree(s, 'T', 'The binary search tree');
+    mkTable(s, 'C', 'Insertions', ['Key', 'Path', 'Placed as']); mkText(s, 'H', 'Height', 'empty tree');
+    s.step(null, `Insert ${keys.join(', ')} one at a time, starting from an empty tree.`);
+    keys.forEach((k, i) => {
+      s.st.in.pos = i;
+      if (T.root === null) { T.root = tNew(T, k); T.mark[T.root] = 'cur'; s.row('C', [k, '—', 'root']); s.text('H', 'height 0 · 1 node'); s.op('new', `${k} becomes the root`); s.step('place', `The tree is empty, so ${k} becomes the root.`); return; }
+      s.step('next', `Next key: ${k}. Start at the root (${tV(T, T.root)}).`);
+      let c = T.root; const path = [];
+      for (;;) {
+        const n = T.nodes[c]; T.mark[c] = 'cmp';
+        if (k === n.v) { T.mark[c] = 'bad'; s.row('C', [k, path.join(' → ') || '—', 'duplicate, skipped']); s.step('dup', `${k} is already in the tree. Skip it.`); break; }
+        const side = k < n.v ? 'l' : 'r', dir = side === 'l' ? 'left' : 'right';
+        path.push(`${n.v} ${side === 'l' ? 'L' : 'R'}`);
+        s.step('cmp', `${k} ${side === 'l' ? '<' : '>'} ${n.v}: go ${dir}.`);
+        T.keep[c] = 'path';
+        if (n[side] === null) {
+          const id = tNew(T, k); n[side] = id; T.mark[id] = 'cur'; T.edge[id] = 'new';
+          tDepthOK(T);
+          s.row('C', [k, path.join(' → '), `${dir} child of ${n.v}`]); s.text('H', `height ${tH(T, T.root)} · ${tCount(T, T.root)} nodes`);
+          s.op('new', `${k} inserted as the ${dir} child of ${n.v}`);
+          s.step('place', `The ${dir} spot of ${n.v} is empty: ${k} goes there as a new leaf.`); break;
+        }
+        c = n[side];
+      }
+      T.keep = {};
+    });
+    s.st.in.pos = keys.length;
+    const h = tH(T, T.root), n = tCount(T, T.root), best = Math.floor(Math.log2(n));
+    const unb = []; tWalk(T, T.root, id => { const b = tH(T, T.nodes[id].l) - tH(T, T.nodes[id].r); T.sub[id] = (b > 0 ? '+' : '') + b; if (Math.abs(b) > 1) { unb.push(id); T.keep[id] = 'bad'; } });
+    s.text('H', `height ${h} · ${n} nodes · ${unb.length ? 'not balanced' : 'height-balanced'}`, unb.length ? 'bad' : 'good');
+    s.step('end', `Height = ${h}. The best possible height for ${n} nodes is ${best}. ${unb.length ? `Nodes ${vlist(unb.map(id => T.nodes[id].v))} are out of balance (left and right heights differ by more than 1).${h === n - 1 ? ' Every node has one child: this is a degenerate tree, and searching it is as slow as a linked list (O(n)).' : ''}` : 'Every node is in balance, so searching takes about log₂ n steps (O(log n)).'}`);
+  } });
+
+/* ---------- 6. Delete ---------- */
+P({ id: 'delete', group: 'Binary search trees', slides: 'Slides 23–26, 45', title: 'Delete a value (leaf or internal node)',
+  desc: 'A leaf is simply removed. An internal node is not removed: its value is replaced by the largest value on its left (or smallest on its right), and that value is then deleted from below.',
+  notes: ['Slide 25 uses the largest value in the left subtree; slide 26 uses the smallest in the right subtree. Switch the rule to compare.', 'If the chosen side is empty (for example "largest on the left" but there is no left subtree), the other side is used.', 'Slide 45\'s answer drawing shows the inserted node as 14; it should be 12.'],
+  codeTitle: 'Deletion algorithm (slide 23)',
+  input: { fields: [keysField(K9), { k: 'val', label: 'Delete', def: '10', w: 's' }, { k: 'rule', label: 'Replace an internal node with', type: 'select', def: 'pred', options: [['pred', 'largest in left subtree'], ['succ', 'smallest in right subtree']] }],
+    presets: [['Delete 25, a leaf (slide 24)', { tree: K9, val: '25', rule: 'pred' }], ['Delete 10, largest left (slide 25)', { tree: K9, val: '10', rule: 'pred' }], ['Delete 10, smallest right (slide 26)', { tree: K9, val: '10', rule: 'succ' }], ['Delete 6 (slide 45)', { tree: K45, val: '6', rule: 'succ' }], ['Delete 99 (missing)', { tree: K9, val: '99', rule: 'pred' }]] },
+  code: `delete(X):
+    search for X                                     @@search
+    X not found → nothing to delete                  @@nf
+    if X is a leaf: remove it                        @@leaf
+    else (internal node):
+      a) find the replacement:                       @@find
+         largest value Y in the left subtree
+         OR smallest value Z in the right subtree
+         and copy it into X's node                   @@copy
+      b) delete the replacement from its subtree     @@again
+         (same rules: it may be a leaf or internal)`,
+  run(s, v) {
+    const keys = parseNums(v.tree, 'keys'), key = parseNum(v.val, 'the value'), pred = v.rule !== 'succ';
+    const T = mkTree(s, 'T', 'The binary search tree'); keys.forEach(k => tBST(T, k)); tDepthOK(T);
+    mkText(s, 'R', 'Result', '…');
+    s.step(null, `Delete ${key} from the tree built from ${keys.join(', ')}.`);
+    let c = T.root;
+    while (c !== null && T.nodes[c].v !== key) {
+      const n = T.nodes[c]; T.mark[c] = 'cmp'; T.tags[c] = ['search'];
+      const side = key < n.v ? 'l' : 'r';
+      s.step('search', `${key} ${side === 'l' ? '<' : '>'} ${n.v}: go ${side === 'l' ? 'left' : 'right'}.`);
+      T.keep[c] = 'path'; c = n[side];
+    }
+    if (c === null) { s.text('R', `${key} is not in the tree`, 'bad'); s.step('nf', `We reached an empty spot: ${key} is not in the tree, so nothing changes.`); return; }
+    T.mark[c] = 'cur'; T.tags[c] = ['X']; s.step('search', `Found ${key}.`); T.keep = {};
+    for (let g = 0; g < 20; g++) {
+      const n = T.nodes[c];
+      if (n.l === null && n.r === null) {
+        T.mark[c] = 'del'; s.step('leaf', `${n.v} is a leaf (no children), so it can be removed directly.`);
+        const [p, side] = tParent(T, c);
+        if (p === null) T.root = null; else T.nodes[p][side] = null;
+        delete T.nodes[c]; if (p !== null) T.mark[p] = 'cmp'; s.op('del', `leaf ${n.v} removed`);
+        s.step('leaf', p === null ? 'The tree is now empty.' : `Removed. ${tV(T, p)} now has an empty ${side === 'l' ? 'left' : 'right'} spot.`);
+        break;
+      }
+      const useL = pred ? n.l !== null : n.r === null;
+      const fallback = pred !== useL;
+      T.mark[c] = 'cur'; T.tags[c] = ['X'];
+      s.step('find', `${n.v} is an internal node (it has ${n.l !== null && n.r !== null ? 'two children' : 'one child'}), so it is NOT removed. Instead find the ${useL ? 'largest value in its left' : 'smallest value in its right'} subtree${fallback ? ` (its ${pred ? 'left' : 'right'} subtree is empty, so use the other side)` : ''}.`);
+      let r = useL ? n.l : n.r; const walk = [r];
+      while ((useL ? T.nodes[r].r : T.nodes[r].l) !== null) { r = useL ? T.nodes[r].r : T.nodes[r].l; walk.push(r); }
+      walk.forEach((id, k) => { T.mark[id] = k === walk.length - 1 ? 'cmp' : 'path'; T.edge[id] = 'new'; }); T.mark[c] = 'cur'; T.tags[c] = ['X']; T.tags[r] = [useL ? 'Y' : 'Z'];
+      s.step('find', `Go ${useL ? 'left' : 'right'} once, then keep going ${useL ? 'right' : 'left'} as far as possible: ${vlist(walk.map(id => T.nodes[id].v))}. The replacement is ${T.nodes[r].v}.`);
+      const old = n.v; n.v = T.nodes[r].v; T.mark[c] = 'new'; T.mark[r] = 'cmp'; T.tags[r] = [useL ? 'Y' : 'Z']; s.op('set', `${old} replaced by ${n.v}`);
+      s.step('copy', `Copy ${n.v} into the node that held ${old}. ${n.v} now appears twice; the BST order still holds because ${n.v} was the ${useL ? 'largest value on the left' : 'smallest value on the right'}.`);
+      T.mark[r] = 'cur'; T.tags[r] = ['X']; s.step('again', `Now delete the old ${n.v} from below, using the same rules.`);
+      c = r;
+    }
+    const h = T.root === null ? -1 : tH(T, T.root);
+    s.text('R', `Deleted ${key} · height ${h}`, 'good'); s.step(null, `Done: ${key} is gone and the tree is still a BST (height ${h}).`);
+  } });
+
+/* ---------- 7. Traversals ---------- */
+const TRAV = { inOrder: ['[left] [root] [right]', 'in'], preOrder: ['[root] [left] [right]', 'pre'], postOrder: ['[left] [right] [root]', 'post'] };
+P({ id: 'trav', group: 'Traversals', slides: 'Slides 31–38, 41–42', title: 'Preorder, inorder and postorder (recursive)',
+  desc: 'The traversal functions from slides 33–34. Blue nodes are waiting on the call stack; green nodes have been printed. Watch where the cout happens in each version.',
+  notes: ['Slide 34\'s postOrder calls left->preOrder() and right->preOrder(). That is a bug: postOrder must call postOrder. It is fixed here.', 'Slides 33–34 print with endl (one value per line); here a space is used so the output fits on one line.', 'Slide 41\'s notes give the inorder answer as H, D, B, …, but in the drawing H is the RIGHT child of D, so inorder starts D, H, B. Run it to see.', 'Inorder on a BST prints the keys in sorted order (slide 42). Try the slide 37 tree.'],
+  input: { fields: [treeField(EXPR), { k: 'order', label: 'Traversal', type: 'select', def: 'inOrder', options: [['inOrder', 'inorder'], ['preOrder', 'preorder'], ['postOrder', 'postorder']] }],
+    presets: [['Expression tree (slides 31–34)', { tree: EXPR }], ['Slide 35 tree', { tree: SL35 }], ['Slide 37 BST', { tree: SL37 }], ['Slide 41 exercise', { tree: SL41 }]] },
+  code: v => {
+    const f = v.order in TRAV ? v.order : 'inOrder', out = '    cout << data << " ";                @@out';
+    const L = `    if (left != NULL)                   @@lchk\n        left->${f}();${' '.repeat(Math.max(1, 26 - f.length))}@@lcall`;
+    const Rr = `    if (right != NULL)                  @@rchk\n        right->${f}();${' '.repeat(Math.max(1, 25 - f.length))}@@rcall`;
+    const body = f === 'preOrder' ? [out, L, Rr] : f === 'inOrder' ? [L, out, Rr] : [L, Rr, out];
+    return `// ${TRAV[f][0]}
+void ${f}()                         @@sig
+{
+${body.join('\n')}
+}                                       @@end
+
+int main() {                            @@main
+    root->${f}();${' '.repeat(Math.max(1, 25 - f.length))}@@call
+}`;
+  },
+  run(s, v) {
+    const f = v.order in TRAV ? v.order : 'inOrder';
+    const T = mkTree(s, 'T', 'The tree', { ptrs: true }); tFromLevel(T, parseLevel(v.tree));
+    mkText(s, 'O', `${f} output`, '(nothing yet)');
+    s.gvar('root', T.root, 'ptr'); s.fn('main'); s.step('main', `${f}: ${TRAV[f][0]}.`);
+    s.step('call', `main calls ${f}() on the root (${tV(T, T.root)}).`);
+    const printed = [];
+    let back = '';
+    const say = t => { const x = back + t; back = ''; return x; };
+    const visit = id => {
+      const n = T.nodes[id];
+      s.fn(f, `${f}() on node ${n.v}`); s.var('this', id, 'ptr'); T.keep[id] = 'path'; T.mark[id] = 'cur';
+      s.step('sig', say(`${f}() starts on node ${n.v}. (It is now on the call stack.)`));
+      const doOut = () => { T.keep[id] = 'done'; T.mark[id] = 'cur'; printed.push(n.v); s.print(fv(n.v) + ' '); s.text('O', printed.map(fv).join(' ')); s.step('out', say(`Print ${n.v}.`)); };
+      const doSide = side => {
+        const c = n[side], w = side === 'l' ? 'left' : 'right';
+        T.mark[id] = 'cur';
+        if (c === null) { s.step(side === 'l' ? 'lchk' : 'rchk', say(`${n.v} has no ${w} child: skip.`)); return; }
+        s.step(side === 'l' ? 'lchk' : 'rchk', say(`${n.v} has a ${w} child (${T.nodes[c].v}).`));
+        T.edge[c] = 'new'; s.step(side === 'l' ? 'lcall' : 'rcall', `Call ${w}->${f}(). Node ${n.v} waits on the call stack until it returns.`);
+        visit(c); T.mark[id] = 'cur'; back = `Back in node ${n.v}. `;
+      };
+      if (f === 'preOrder') { doOut(); doSide('l'); doSide('r'); }
+      else if (f === 'inOrder') { doSide('l'); doOut(); doSide('r'); }
+      else { doSide('l'); doSide('r'); doOut(); }
+      T.mark[id] = 'cur'; s.step('end', say(`${f}() on ${n.v} is finished; it is popped off the call stack.`));
+      s.ret();
+    };
+    visit(T.root);
+    const vals = printed.filter(isNum), sorted = f === 'inOrder' && vals.length === printed.length && vals.every((x, i) => !i || vals[i - 1] <= x);
+    s.st.O.cls = 'good';
+    s.step('call', `Done. ${f} output: ${printed.map(fv).join(' ')}${sorted ? ' — sorted! Inorder on a BST always gives sorted order.' : ''}`);
+  } });
+
+/* ---------- 8. Array representation ---------- */
+P({ id: 'array', group: 'Array representation', slides: 'Slides 43–44, 62–64', title: 'Storing a tree in an array: A[k], A[2k], A[2k+1]',
+  desc: 'Number the nodes level by level, left to right, starting at 1. Node k goes in A[k]; no left/right pointers are needed because the children and parent can be computed.',
+  notes: ['Slide 63 says the root is at A[0] with children at A[1] and A[2]. That is the 0-based version, where left = 2k+1, right = 2k+2, parent = (k−1)/2. The slides\' pictures and formulas use 1-based numbering, as here.', 'For a tree that is not complete, the missing spots still take up array slots (try the "Gaps" preset). That is why this works best for complete trees like heaps.'],
+  codeTitle: 'Rules (slide 43)',
+  input: { fields: [treeField(SL44)], presets: [['Slide 44 tree', { tree: SL44 }], ['Slide 63 tree', { tree: '16 14 10 8 7 9 3 2 4 1' }], ['Gaps', { tree: '1 2 3 _ 4 _ 5' }]] },
+  code: `number the nodes level by level, left to right    @@num
+A[k] holds the data of node k                     @@store
+left child of node k:   A[2k]                     @@left
+right child of node k:  A[2k + 1]                 @@right
+parent of node k:       A[k / 2]  (integer division)   @@parent`,
+  run(s, v) {
+    const T0 = { nodes: {}, root: null, nid: 0 }; tFromLevel(T0, parseLevel(v.tree));
+    const idx = {}; const assign = (id, k) => { if (id === null) return; idx[id] = k; assign(T0.nodes[id].l, 2 * k); assign(T0.nodes[id].r, 2 * k + 1); }; assign(T0.root, 1);
+    const last = Math.max(...Object.values(idx)); if (last > 31) throw new InputError('This tree needs more than 31 array slots. Use a shallower or more complete tree.');
+    const full = Array(last).fill(null); Object.entries(idx).forEach(([id, k]) => { full[k - 1] = T0.nodes[id].v; });
+    const H = mkHeap(s, 'H', 'Tree and array A[1..n]', Array(last).fill(null), { idx: true, showIdx: true, noSize: true, arrLabel: 'The same tree as an array A[k] (A[0] is not used)' });
+    s.step(null, `${Object.keys(idx).length} nodes. The array has ${last} slots (A[0] is not used).`);
+    const order = Object.entries(idx).sort((a, b) => a[1] - b[1]);
+    order.forEach(([id, k], j) => {
+      H.arr[k] = T0.nodes[id].v; H.mark[k] = 'cur'; s.op('set', `A[${k}] = ${fv(T0.nodes[id].v)}`);
+      s.step(j ? 'store' : 'num', `${j ? '' : 'Number the nodes level by level, left to right. '}Node ${k} holds ${fv(T0.nodes[id].v)}, so A[${k}] = ${fv(T0.nodes[id].v)}.`);
+    });
+    const gaps = []; for (let k = 1; k <= last; k++) if (H.arr[k] === null) gaps.push(k);
+    if (gaps.length) { gaps.forEach(k => { H.mark[k] = 'bad'; }); s.step('store', `Slot${gaps.length > 1 ? 's' : ''} ${gaps.join(', ')} ${gaps.length > 1 ? 'stay' : 'stays'} empty: those positions have no node, but the space is still reserved.`); }
+    const has = k => k <= last && H.arr[k] !== null;
+    let k1 = 0; for (let k = 1; k <= last; k++) if (has(k) && (has(2 * k) || has(2 * k + 1))) k1 = k;
+    const demo = full.length === 11 && String(v.tree).trim() === SL44 ? [5] : (k1 ? [k1] : []);
+    demo.forEach(k => {
+      H.mark[k] = 'cur'; if (has(2 * k)) H.mark[2 * k] = 'cmp'; H.tags[k] = ['k = ' + k];
+      s.step('left', `Take node k = ${k} (${fv(H.arr[k])}). Its left child is A[2·${k}] = A[${2 * k}]${has(2 * k) ? ` = ${fv(H.arr[2 * k])}` : ', which is empty'}.`);
+      H.mark[k] = 'cur'; if (has(2 * k + 1)) H.mark[2 * k + 1] = 'cmp'; H.tags[k] = ['k = ' + k];
+      s.step('right', `Its right child is A[2·${k}+1] = A[${2 * k + 1}]${has(2 * k + 1) ? ` = ${fv(H.arr[2 * k + 1])}` : ', which is empty'}.`);
+    });
+    const pk = [];
+    if (demo[0] === 5) pk.push(4, 5); else { const lk = last; if (lk > 1) pk.push(lk); }
+    pk.forEach(k => { H.mark[k] = 'cur'; H.mark[k >> 1] = 'cmp'; H.tags[k] = ['k = ' + k]; s.step('parent', `Parent of node ${k} (${fv(H.arr[k])}) is A[${k}/2] = A[${k >> 1}] = ${fv(H.arr[k >> 1])}. Integer division drops the remainder.`); });
+    s.step(null, 'No pointers are stored, which saves memory, and node k is reached directly as A[k].');
+  } });
+
+/* ---------- 9. Heap check ---------- */
+P({ id: 'heapcheck', group: 'Heaps & priority queues', slides: 'Slides 54–61, 98', title: 'Heap or not a heap?',
+  desc: 'A heap needs two things: the shape of a complete binary tree, and the order rule (each parent ≤ its children in a min-heap, ≥ in a max-heap). Both are checked step by step.',
+  notes: ['Unlike a BST, a heap does not care about left versus right. It is only a partial order: each node is ≤ everything below it (slide 58).', 'Slide 98, as drawn: in both trees 7 has no right child while 20 has a child, so the shape is not complete. 20 is also above 8, which breaks the min-heap order.'],
+  codeTitle: 'Heap properties (slides 54–57)',
+  input: { fields: [treeField('10 20 80 40 60 85 99 50 700'), { k: 'mode', label: 'Kind', type: 'select', def: 'min', options: [['min', 'min-heap'], ['max', 'max-heap']] }],
+    presets: [['Slide 58 left', { tree: '10 20 80 30 15', mode: 'min' }], ['Slide 58 right', { tree: '10 20 80 40 60 85 99 50 700', mode: 'min' }], ['Slide 59', { tree: H71, mode: 'min' }], ['Slide 61 (a)', { tree: '9 8 4 6 2 3', mode: 'max' }], ['Slide 61 (b)', { tree: '9 8 4 6 _ 2 3', mode: 'max' }], ['Slide 61 (c)', { tree: '9 6 4 8 2 3', mode: 'max' }], ['Slide 98 top', { tree: '4 5 6 15 9 7 20 16 25 14 12 11 _ 8', mode: 'min' }]] },
+  code: v => `1) Structure: a complete binary tree?                 @@s
+   every level is full, except the last,
+   which is filled from left to right
+   → no empty spot before the last node              @@gap
+2) Order (${v.mode === 'max' ? 'max' : 'min'}-heap): every parent ${v.mode === 'max' ? '≥' : '≤'} its children   @@o
+Result                                                @@r`,
+  run(s, v) {
+    const mode = v.mode === 'max' ? 'max' : 'min', sym = mode === 'max' ? '≥' : '≤';
+    const toks = parseLevel(v.tree);
+    if (toks.some(t => t !== null && !isNum(t))) throw new InputError('Use numbers only for a heap.');
+    const T0 = { nodes: {}, root: null, nid: 0 }; tFromLevel(T0, toks);
+    const idx = {}; const assign = (id, k) => { if (id === null) return; idx[id] = k; assign(T0.nodes[id].l, 2 * k); assign(T0.nodes[id].r, 2 * k + 1); }; assign(T0.root, 1);
+    const last = Math.max(...Object.values(idx));
+    const arr = Array(last).fill(null); Object.entries(idx).forEach(([id, k]) => { arr[k - 1] = T0.nodes[id].v; });
+    const H = mkHeap(s, 'H', 'The tree (numbered level by level)', arr, { showIdx: true, noArray: last > 31 });
+    mkText(s, 'R1', 'Shape', '…'); mkText(s, 'R2', 'Order', '…');
+    s.step(null, `Check whether this is a ${mode}-heap.`);
+    const gaps = []; for (let k = 1; k < last; k++) if (H.arr[k] === null) gaps.push(k);
+    for (let k = 1; k <= last; k++) if (H.arr[k] !== null) H.keep[k] = 'path';
+    s.step('s', `Number the spots level by level. There are ${Object.keys(idx).length} nodes and the last one is in spot ${last}.`);
+    if (gaps.length) { gaps.forEach(k => { H.ph[k] = 1; }); s.text('R1', `Not complete: spot ${gaps[0]} is empty`, 'bad'); s.step('gap', `Spot${gaps.length > 1 ? 's' : ''} ${gaps.join(', ')} ${gaps.length > 1 ? 'are' : 'is'} empty, but there is a node after ${gaps.length > 1 ? 'them' : 'it'} (in spot ${last}). The last level is not filled from the left, so this is NOT a complete binary tree.`, { crash: true }); }
+    else { s.text('R1', 'Complete binary tree ✓', 'good'); s.step('gap', `Spots 1 to ${last} are all filled with no gaps: this is a complete binary tree.`); }
+    H.keep = {}; if (H.arr[1] !== null) H.keep[1] = 'done';
+    let bad = 0;
+    for (let k = 2; k <= last; k++) {
+      if (H.arr[k] === null || H.arr[k >> 1] === null) continue;
+      const p = k >> 1, ok = !better(mode, H.arr[k], H.arr[p]);
+      H.mark[p] = 'cmp'; H.mark[k] = ok ? 'cur' : 'bad';
+      if (ok) { H.keep[k] = 'done'; s.step('o', `Parent ${H.arr[p]} ${sym} child ${H.arr[k]} ✓`); }
+      else { bad++; H.keep[k] = 'bad'; H.keep[p] = 'bad'; s.step('o', `Parent ${H.arr[p]} ${sym} child ${H.arr[k]}? No! ${H.arr[k]} is ${MINW[mode]} than its parent, which breaks the ${mode}-heap order.`, { crash: true }); }
+    }
+    s.text('R2', bad ? `${bad} parent–child pair${bad > 1 ? 's' : ''} out of order` : `${mode}-heap order ✓`, bad ? 'bad' : 'good');
+    const ok = !gaps.length && !bad;
+    s.step('r', ok ? `Both properties hold: this IS a ${mode}-heap. The ${mode === 'min' ? 'smallest' : 'largest'} value, ${H.arr[1]}, is at the root.` : `NOT a ${mode}-heap: ${[gaps.length ? 'the shape is not complete' : '', bad ? 'the order rule is broken' : ''].filter(Boolean).join(' and ')}.`);
+  } });
+
+/* ---------- heap code helpers ---------- */
+function heapInput(s, str, max = 15) {
+  const a = String(str).trim() ? parseNums(str, 'numbers', max) : [];
+  return a;
+}
+function heapWarn(arr, mode = 'min') {
+  const v = heapViolation([null].concat(arr), arr.length, mode);
+  return v ? ` Careful: this array is NOT a valid ${mode}-heap (${arr[v[0] - 1]} is above ${arr[v[1] - 1]}), so the result may not be a heap either.` : '';
+}
+
+/* ---------- 10. Insert (percolate up) ---------- */
+P({ id: 'hinsert', group: 'Heaps & priority queues', slides: 'Slides 77–84', title: 'Heap insert: percolate up (code)',
+  desc: 'The optimized insert from slide 79. Instead of swapping, it opens a "hole" at the next free spot and slides bigger parents down into it until the new value fits.',
+  notes: ['Slide 79\'s while loop is missing its opening brace {. As written, only the first line would repeat and the closing } would not compile. It is fixed here.', 'The worst case climbs all the way to the root: O(log n). On average a new value only rises about 1.67 levels (slide 77).', 'Insert 90 into the slide 67 heap: no moves at all, even though 99 is larger, because 90 is only compared with its own parent.'],
+  input: { fields: [{ k: 'heap', label: 'Min-heap, as the array Heap[1..size]', def: H67, w: 'l' }, { k: 'val', label: 'Insert', def: '15', w: 's' }],
+    presets: [['Insert 15 (slide 78)', { heap: H67, val: '15' }], ['Insert 90 (slide 78)', { heap: H67, val: '90' }], ['Insert 7 (slide 78)', { heap: H67, val: '7' }], ['Insert 6 (slides 80–84)', { heap: H80, val: '6' }], ['Empty heap', { heap: '', val: '42' }]] },
+  code: v => `int Heap[CAPACITY + 1];   // Heap[0] is not used
+int size;                 // ${v.heap && String(v.heap).trim() ? 'heap: ' + String(v.heap).trim() : 'empty'}   @@g
+
+void insert(int o)                         @@i_sig
+{
+  assert(!isFull());                       @@i_assert
+  size++;                                  @@i_size
+  // percolating up to maintain the heap property
+  newPos = percolateUp(size, o);           @@i_call
+  Heap[newPos] = o;                        @@i_store
+}                                          @@i_end
+
+int percolateUp(int hole, int val)         @@p_sig
+{
+  while (hole > 1 &&
+         val < Heap[hole/2]) {   // '{' missing on slide   @@p_while
+    Heap[hole] = Heap[hole/2];             @@p_move
+    hole /= 2;                             @@p_up
+  }
+  return hole;                             @@p_ret
+}
+
+int main() {                               @@main
+  insert(${v.val});${' '.repeat(Math.max(1, 33 - String(v.val).length))}@@call
+}`,
+  run(s, v) {
+    const a = heapInput(s, v.heap, 14), o = parseNum(v.val, 'the value');
+    const H = mkHeap(s, 'H', 'Heap (tree and array)', a, { idx: true, showIdx: true });
+    s.gvar('size', a.length); s.step('g', `The heap holds ${a.length ? a.join(', ') : 'nothing'}; size = ${a.length}.${heapWarn(a)}`);
+    s.fn('main'); s.step('main', 'main() starts.'); s.step('call', `main calls insert(${o}).`);
+    s.fn('insert', `insert(o = ${o})`); s.var('o', o); s.step('i_sig', `insert(${o}) starts.`);
+    s.step('i_assert', 'The heap is not full, so continue.');
+    H.size++; H.arr[H.size] = null; s.set('size', H.size); H.hole = H.size; H.mark[H.size] = 'cur';
+    s.step('i_size', `size++ makes size = ${H.size}. Spot ${H.size} is the next free leaf; it is empty for now (the "hole").`);
+    s.step('i_call', `Call percolateUp(${H.size}, ${o}): find where ${o} should go, starting from the hole.`);
+    s.fn('percolateUp', `percolateUp(hole, val = ${o})`); s.var('hole', H.size, 'idx'); s.var('val', o);
+    s.step('p_sig', `hole = ${H.size}, val = ${o}.`);
+    let moves = 0;
+    for (;;) {
+      const h = s.get('hole'); H.hole = h;
+      if (h > 1) H.mark[h >> 1] = 'cmp';
+      if (h > 1 && o < H.arr[h >> 1]) {
+        s.step('p_while', `hole > 1 and ${o} < Heap[${h}/2] = Heap[${h >> 1}] = ${H.arr[h >> 1]}: the parent is bigger, so ${o} must go higher.`);
+        H.arr[h] = H.arr[h >> 1]; H.mark[h] = 'new'; H.mark[h >> 1] = 'cmp'; moves++; s.op('move', `Heap[${h}] = ${H.arr[h]} (parent moves down)`);
+        s.step('p_move', `Move the parent ${H.arr[h]} down into the hole: Heap[${h}] = ${H.arr[h]}.`);
+        s.set('hole', h >> 1); H.hole = h >> 1; H.mark[h >> 1] = 'cur';
+        s.step('p_up', `hole /= 2: the hole moves up to spot ${h >> 1}. (Its old value has already been copied down.)`);
+      } else {
+        s.step('p_while', h === 1 ? 'hole is 1: we reached the root, so stop.' : `${o} < ${H.arr[h >> 1]} is false: the parent is not bigger, so ${o} can go right here. Stop.`);
+        break;
+      }
+    }
+    const np = s.get('hole'); H.mark[np] = 'cur'; s.step('p_ret', `return hole = ${np}.`); s.ret();
+    s.var('newPos', np, 'idx'); H.mark[np] = 'cur'; s.step('i_call', `newPos = ${np}.`);
+    H.arr[np] = o; H.hole = null; H.mark[np] = 'new'; s.op('set', `Heap[${np}] = ${o}`);
+    s.step('i_store', `Heap[${np}] = ${o}. The heap order is restored with ${moves} move${moves === 1 ? '' : 's'} (a swap-based version would need ${moves} swaps).`);
+    s.ret(); s.step('i_end', 'insert returns.');
+    s.step('call', `Done. Heap: ${H.arr.slice(1, H.size + 1).join(', ')}.`);
+  } });
+
+/* ---------- 11. deleteMin (percolate down) ---------- */
+P({ id: 'hdelete', group: 'Heaps & priority queues', slides: 'Slides 68–76, 100–105', title: 'Heap deleteMin: percolate down (code)',
+  desc: 'The optimized deleteMin from slide 74. The root is saved, the last value is taken out, and a hole moves down the tree, pulling smaller children up, until that last value fits.',
+  notes: ['Slide 76 ends with Heap: [ , 10, 30, 15, 20] and says "20 is greater than 30, break". That is wrong: 20 < 30, so 20 moves up too. The correct result is [ , 10, 20, 15, 30]. Run the "Slide 76" preset to see it.', 'Slide 105\'s tree is not a valid min-heap to begin with (41 is above 32 and 15), so the result is not a heap either.', 'The value that was last stays in the array past size (faded). It is not part of the heap any more.'],
+  input: { fields: [{ k: 'heap', label: 'Min-heap, as the array Heap[1..size]', def: '5 10 15 20 30', w: 'l' }],
+    presets: [['Slide 76', { heap: '5 10 15 20 30' }], ['Slides 71–73', { heap: H71 }], ['Slide 70', { heap: H70 }], ['Slides 100–104', { heap: H100 }], ['Slide 105', { heap: '4 7 19 41 10 29 26 32 15 17 11' }]] },
+  code: v => `int Heap[CAPACITY + 1];   // Heap[0] is not used
+int size;                 // heap: ${String(v.heap).trim()}   @@g
+
+Object deleteMin()                          @@d_sig
+{
+  assert(!isEmpty());                       @@d_assert
+  returnVal = Heap[1];                      @@d_ret
+  size--;                                   @@d_size
+  newPos = percolateDown(1, Heap[size+1]);  @@d_call
+  Heap[newPos] = Heap[size + 1];            @@d_store
+  return returnVal;                         @@d_end
+}
+
+int percolateDown(int hole, Object val)     @@p_sig
+{
+  while (2*hole <= size)   // has children?   @@p_while
+  {
+    left = 2*hole;                          @@p_left
+    right = left + 1;                       @@p_right
+    if (right <= size &&
+        Heap[right] < Heap[left])           @@p_cmp
+      target = right;                       @@p_tr
+    else
+      target = left;                        @@p_tl
+    if (Heap[target] < val)                 @@p_if
+    {  Heap[hole] = Heap[target];           @@p_move
+       hole = target;                       @@p_hole
+    }
+    else
+      break;                                @@p_break
+  }
+  return hole;                              @@p_ret
+}
+
+int main() {                                @@main
+  int m = deleteMin();                      @@call
+}`,
+  run(s, v) {
+    const a = heapInput(s, v.heap, 15);
+    if (!a.length) throw new InputError('Type at least one number: deleteMin needs a non-empty heap.');
+    const H = mkHeap(s, 'H', 'Heap (tree and array)', a, { idx: true, showIdx: true });
+    s.gvar('size', a.length); s.step('g', `The heap holds ${a.join(', ')}; size = ${a.length}.${heapWarn(a)}`);
+    s.fn('main'); s.step('main', 'main() starts.'); s.step('call', 'main calls deleteMin().');
+    s.fn('deleteMin'); s.step('d_sig', 'deleteMin() starts.');
+    s.step('d_assert', 'The heap is not empty, so continue.');
+    const rv = H.arr[1]; s.var('returnVal', rv); H.mark[1] = 'cmp'; s.step('d_ret', `Save the minimum: returnVal = Heap[1] = ${rv}. In a min-heap the smallest value is always at the root.`);
+    H.size--; s.set('size', H.size); H.mark[H.size + 1] = 'bad'; H.hole = 1;
+    s.step('d_size', `size-- makes size = ${H.size}. The last value, ${H.arr[H.size + 1]} in spot ${H.size + 1}, is now outside the heap and must be put back somewhere. Spot 1 becomes the hole.`);
+    const val = H.arr[H.size + 1];
+    if (H.size === 0) { s.step('d_call', 'The heap is now empty; nothing to fix.'); H.hole = null; s.step('d_end', `return ${rv}.`); s.ret(); s.var('m', rv); s.step('call', `m = ${rv}. The heap is empty.`); return; }
+    s.step('d_call', `Call percolateDown(1, ${val}): move the hole down from the root until ${val} fits.`);
+    s.fn('percolateDown', `percolateDown(hole, val = ${val})`); s.var('hole', 1, 'idx'); s.var('val', val);
+    s.step('p_sig', `hole = 1, val = ${val}.`);
+    let moves = 0;
+    for (;;) {
+      const h = s.get('hole'); H.hole = h;
+      if (2 * h > H.size) { s.step('p_while', `2·${h} = ${2 * h} > size (${H.size}): spot ${h} has no children. Stop.`); break; }
+      s.step('p_while', `2·${h} = ${2 * h} ≤ size (${H.size}): spot ${h} has at least one child.`);
+      const L = 2 * h, Rr = L + 1;
+      s.var('left', L, 'idx'); s.step('p_left', `left = ${L}.`);
+      s.var('right', Rr, 'idx'); s.step('p_right', `right = ${Rr}.`);
+      H.mark[L] = 'cmp'; if (Rr <= H.size) H.mark[Rr] = 'cmp';
+      let t;
+      if (Rr <= H.size && H.arr[Rr] < H.arr[L]) { s.step('p_cmp', `Heap[right] = ${H.arr[Rr]} < Heap[left] = ${H.arr[L]}: the right child is the smaller one.`); t = Rr; s.var('target', t, 'idx'); H.mark[t] = 'cmp'; s.step('p_tr', `target = right = ${t}.`); }
+      else { s.step('p_cmp', Rr > H.size ? `right (${Rr}) > size: there is only a left child.` : `Heap[right] = ${H.arr[Rr]} < Heap[left] = ${H.arr[L]} is false: the left child is the smaller one.`); t = L; s.var('target', t, 'idx'); H.mark[t] = 'cmp'; s.step('p_tl', `target = left = ${t}.`); }
+      H.mark[t] = 'cmp';
+      if (H.arr[t] < val) {
+        s.step('p_if', `Heap[target] = ${H.arr[t]} < val (${val}): the smaller child must move up above ${val}.`);
+        H.arr[h] = H.arr[t]; H.mark[h] = 'new'; moves++; s.op('move', `Heap[${h}] = ${H.arr[h]} (child moves up)`);
+        s.step('p_move', `Heap[${h}] = ${H.arr[h]}: the child moves up into the hole.`);
+        s.set('hole', t); H.hole = t; H.mark[t] = 'cur'; s.step('p_hole', `hole = ${t}: the hole moves down.`);
+      } else { s.step('p_if', `Heap[target] = ${H.arr[t]} < ${val} is false: both children are at least ${val}, so ${val} fits in the hole.`); s.step('p_break', 'break out of the loop.'); break; }
+    }
+    const np = s.get('hole'); s.step('p_ret', `return hole = ${np}.`); s.ret();
+    s.var('newPos', np, 'idx'); s.step('d_call', `newPos = ${np}.`);
+    H.arr[np] = val; H.hole = null; H.mark[np] = 'new'; s.op('set', `Heap[${np}] = ${val}`);
+    s.step('d_store', `Heap[${np}] = Heap[size + 1] = ${val}. The heap is fixed with ${moves} move${moves === 1 ? '' : 's'}.`);
+    s.step('d_end', `return ${rv}.`); s.ret(); s.var('m', rv);
+    s.step('call', `m = ${rv}. Heap now: [ , ${H.arr.slice(1, H.size + 1).join(', ')}].`);
+  } });
+
+/* ---------- 12. Priority queue playground ---------- */
+function parsePQ(text, mode) {
+  const parts = String(text).split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+  if (!parts.length) throw new InputError('Type some operations, for example: insert 5, insert 2, deleteMin');
+  if (parts.length > 30) throw new InputError('Use 30 operations or fewer.');
+  return parts.map(p => {
+    const m = p.match(/^([A-Za-z]+)\s*\(?\s*(-?\d+(?:\.\d+)?)?\s*\)?$/);
+    if (!m) throw new InputError(`"${p}" is not an operation. Use insert x, ${mode === 'max' ? 'deleteMax, findMax' : 'deleteMin, findMin'}.`);
+    const w = m[1].toLowerCase();
+    if (w === 'insert' || w === 'enqueue' || w === 'push') { if (m[2] === undefined) throw new InputError(`"${p}" needs a value, like insert 7`); return { op: 'insert', x: +m[2] }; }
+    if (m[2] !== undefined) throw new InputError(`"${p}" does not take a value.`);
+    if (/^(delete|remove|extract|pop|dequeue)(min|max|top)?$/.test(w)) return { op: 'delete' };
+    if (/^(find|peek|top|get)(min|max)?$/.test(w)) return { op: 'peek' };
+    throw new InputError(`"${p}" is not an operation. Use insert x, ${mode === 'max' ? 'deleteMax, findMax' : 'deleteMin, findMin'}.`);
+  });
+}
+P({ id: 'pq', group: 'Heaps & priority queues', slides: 'Slides 47–53, 66–69, 77', title: 'Priority queue with a heap: insert and deleteMin',
+  desc: 'A priority queue lets the most important item jump the line. Each operation is shown with swaps (the "basic idea" on slides 69 and 77), next to what a normal FIFO queue would have done.',
+  notes: ['This uses swaps to keep it easy to follow. The code versions (percolate up / percolate down programs) move a hole instead, which does the same thing with fewer writes.', 'Both insert and delete are O(log n): they never do more swaps than the height of the tree.'],
+  codeTitle: 'Basic idea (slides 69, 77)',
+  input: { fields: [{ k: 'ops', label: 'Operations (comma separated)', def: 'insert 6, insert 15, insert 2, insert 23, insert 12, insert 18, deleteMin, deleteMin, deleteMin', w: 'l' }, { k: 'mode', label: 'Kind', type: 'select', def: 'min', options: [['min', 'min-heap (smallest first)'], ['max', 'max-heap (largest first)']] }],
+    presets: [['Line jumping (slide 48)', { ops: 'insert 6, insert 15, insert 2, insert 23, insert 12, insert 18, deleteMin, deleteMin, deleteMin', mode: 'min' }], ['Build slide 67 heap', { ops: 'insert 10, insert 20, insert 80, insert 40, insert 60, insert 85, insert 99, insert 50, insert 700, insert 65, insert 15', mode: 'min' }], ['Max-heap', { ops: 'insert 3, insert 9, insert 4, insert 8, insert 2, insert 6, deleteMax, deleteMax', mode: 'max' }]] },
+  code: v => {
+    const mx = v.mode === 'max', w = mx ? 'larger' : 'smaller', W = mx ? 'Max' : 'Min';
+    return `insert(x):
+    put x at the next free leaf (end of the array)     @@i_put
+    while x is ${w} than its parent:                 @@i_cmp
+        swap x with its parent                         @@i_swap
+delete${W}():
+    the answer is the root                             @@d_root
+    move the last leaf up to the root                  @@d_last
+    while it is ${mx ? 'smaller' : 'bigger'} than its ${w} child:          @@d_cmp
+        swap it with that child                        @@d_swap
+find${W}(): just read the root                          @@peek`;
+  },
+  run(s, v) {
+    const mode = v.mode === 'max' ? 'max' : 'min', ops = parsePQ(v.ops, mode), W = mode === 'max' ? 'Max' : 'Min', best = mode === 'max' ? 'largest' : 'smallest';
+    const H = mkHeap(s, 'H', `${mode === 'max' ? 'Max' : 'Min'}-heap (tree and array)`, [], { showIdx: true });
+    s.mk('Q', { type: 'text', title: 'Removed so far', value: 'heap: —', cls: '' });
+    s.mk('F', { type: 'text', title: 'A plain FIFO queue would have removed', value: '—', cls: '' });
+    const fifo = [], outH = [], outF = [];
+    s.step(null, `An empty ${mode}-heap. Every delete takes the ${best} value, no matter when it arrived.`);
+    ops.forEach(o => {
+      if (o.op === 'insert') {
+        if (H.size >= 15) throw new InputError('Keep the heap at 15 items or fewer so it fits on screen.');
+        fifo.push(o.x); H.size++; let i = H.size; H.arr[i] = o.x; H.mark[i] = 'new'; s.op('push', `${o.x} placed in spot ${i}`);
+        s.step('i_put', `insert(${o.x}): put it in the next free spot, ${i}${i > 1 ? `, as a child of ${H.arr[i >> 1]}` : ' (the root)'}. The shape stays complete.`);
+        let sw = 0;
+        while (i > 1) {
+          const p = i >> 1; H.mark[i] = 'cur'; H.mark[p] = 'cmp';
+          if (better(mode, H.arr[i], H.arr[p])) {
+            s.step('i_cmp', `${H.arr[i]} is ${MINW[mode]} than its parent ${H.arr[p]}: they are in the wrong order.`);
+            [H.arr[i], H.arr[p]] = [H.arr[p], H.arr[i]]; H.mark[p] = 'new'; H.mark[i] = 'cmp'; sw++; s.op('swap', `${H.arr[p]} ⇄ ${H.arr[i]}`);
+            s.step('i_swap', `Swap: ${H.arr[p]} moves up to spot ${p}.`); i = p;
+          } else { s.step('i_cmp', `${H.arr[i]} is not ${MINW[mode]} than its parent ${H.arr[p]}: stop. (${sw} swap${sw === 1 ? '' : 's'})`); break; }
+        }
+        if (i === 1 && H.size > 1) { H.mark[1] = 'new'; s.step('i_cmp', `${H.arr[1]} reached the root: stop. (${sw} swap${sw === 1 ? '' : 's'})`); }
+      } else if (o.op === 'peek') {
+        if (!H.size) { s.op('err', 'empty'); s.step('peek', `find${W}() on an empty heap: nothing there.`); return; }
+        H.mark[1] = 'cmp'; s.op('read', `root = ${H.arr[1]}`); s.step('peek', `find${W}() = ${H.arr[1]}: the root. Nothing changes.`);
+      } else {
+        if (!H.size) { s.op('err', 'empty'); s.step('d_root', `delete${W}() on an empty heap: nothing to remove.`); return; }
+        const top = H.arr[1]; outH.push(top); outF.push(fifo.shift());
+        H.mark[1] = 'del'; s.op('pop', `${top} removed`); s.text('Q', 'heap: ' + outH.join(', ')); s.text('F', outF.join(', '));
+        s.step('d_root', `delete${W}(): the answer is the root, ${top} (the ${best} value). A FIFO queue would have removed ${outF[outF.length - 1]} instead, because it arrived first.`);
+        const last = H.arr[H.size]; H.arr[1] = last; H.arr[H.size] = null; H.size--;
+        if (!H.size) { s.step('d_last', 'That was the only item: the heap is empty now.'); return; }
+        H.mark[1] = 'new'; s.op('set', `last leaf ${last} moved to the root`);
+        s.step('d_last', `Move the last leaf (${last}) to the root, so the shape stays complete. Now the order may be broken.`);
+        let i = 1, sw = 0;
+        for (;;) {
+          const L = 2 * i, Rr = L + 1;
+          if (L > H.size) { H.mark[i] = 'cur'; s.step('d_cmp', `${H.arr[i]} is now a leaf: stop. (${sw} swap${sw === 1 ? '' : 's'})`); break; }
+          const c = Rr <= H.size && better(mode, H.arr[Rr], H.arr[L]) ? Rr : L;
+          H.mark[i] = 'cur'; H.mark[L] = 'cmp'; if (Rr <= H.size) H.mark[Rr] = 'cmp';
+          if (better(mode, H.arr[c], H.arr[i])) {
+            s.step('d_cmp', `The ${MINW[mode]} child of ${H.arr[i]} is ${H.arr[c]}, and ${H.arr[c]} is ${MINW[mode]} than ${H.arr[i]}: wrong order.`);
+            [H.arr[i], H.arr[c]] = [H.arr[c], H.arr[i]]; H.mark[i] = 'new'; H.mark[c] = 'cur'; sw++; s.op('swap', `${H.arr[i]} ⇄ ${H.arr[c]}`);
+            s.step('d_swap', `Swap: ${H.arr[i]} moves up, ${H.arr[c]} moves down to spot ${c}.`); i = c;
+          } else { s.step('d_cmp', `${H.arr[i]}'s ${MINW[mode]} child (${H.arr[c]}) is not ${MINW[mode]}: the order is restored. Stop. (${sw} swap${sw === 1 ? '' : 's'})`); break; }
+        }
+      }
+    });
+    s.step(null, `Done. Heap removed: ${outH.join(', ') || 'nothing'}. A FIFO queue would have removed: ${outF.join(', ') || 'nothing'}.`);
+  } });
+
+/* ---------- 13. buildHeap ---------- */
+P({ id: 'buildheap', group: 'Heaps & priority queues', slides: 'Slides 85–94, 106', title: "buildHeap: Floyd's method (code)",
+  desc: 'Put the items in the array in any order, then fix the order from the bottom up: percolate down every non-leaf node, from spot size/2 back to the root. Red outline = still to fix, green = done (like the slides).',
+  notes: ['Leaves (the second half of the array) are already tiny heaps, which is why the loop starts at currentSize/2.', 'This takes O(n) in total — faster than inserting the items one by one, which is O(n log n) (slide 93).', 'percolateDown here is the same hole-moving idea as in deleteMin, written with one argument as on slide 87.'],
+  input: { fields: [{ k: 'arr', label: 'Array, in its starting order', def: '12 5 11 3 10 6 9 4 8 1 7 2', w: 'l' }, { k: 'mode', label: 'Kind', type: 'select', def: 'min', options: [['min', 'min-heap'], ['max', 'max-heap']] }],
+    presets: [['Slides 85–93 (min)', { arr: '12 5 11 3 10 6 9 4 8 1 7 2', mode: 'min' }], ['Slide 94 (max)', { arr: '4 1 3 2 16 9 10 14 8 7', mode: 'max' }], ['Slide 106 (min)', { arr: '11 54 10 2 9 5 8 3 9 0 6 1', mode: 'min' }], ['Slide 106 (max)', { arr: '11 54 10 2 9 5 8 3 9 0 6 1', mode: 'max' }]] },
+  code: v => {
+    const c = v.mode === 'max' ? '>' : '<';
+    return `void buildHeap()                                 @@b_sig
+{
+  // Start from the last non-leaf node and move upwards to the root
+  for (int i = currentSize/2; i > 0; i--)        @@b_for
+    percolateDown(i);                            @@b_call
+}                                                @@b_end
+
+void percolateDown(int hole)                     @@p_sig
+{
+  int tmp = Heap[hole];                          @@p_tmp
+  while (2*hole <= currentSize)                  @@p_while
+  {
+    int child = 2*hole;                          @@p_child
+    if (child != currentSize &&
+        Heap[child+1] ${c} Heap[child])              @@p_cmp
+      child++;                                   @@p_inc
+    if (Heap[child] ${c} tmp)                        @@p_if
+    {  Heap[hole] = Heap[child];                 @@p_move
+       hole = child;                             @@p_hole
+    }
+    else break;                                  @@p_break
+  }
+  Heap[hole] = tmp;                              @@p_store
+}                                                @@p_end`;
+  },
+  run(s, v) {
+    const mode = v.mode === 'max' ? 'max' : 'min', a = parseNums(v.arr, 'numbers', 15), bt = (x, y) => better(mode, x, y);
+    const H = mkHeap(s, 'H', 'Heap (tree and array)', a, { idx: true, showIdx: true });
+    const n = a.length; for (let k = 1; k <= n >> 1; k++) H.keep[k] = 'todo';
+    s.gvar('currentSize', n); s.step(null, `The items are placed in the array as given, so the shape is already a complete tree. The red-outlined nodes (spots 1–${n >> 1}) are the non-leaves that may be out of order.`);
+    s.fn('buildHeap'); s.step('b_sig', 'buildHeap() starts.');
+    for (let i = n >> 1; i >= 0; i--) {
+      if (i === n >> 1) s.var('i', i, 'idx'); else s.set('i', i);
+      if (i === 0) { s.step('b_for', 'i-- makes i = 0; i > 0 is false. Every non-leaf has been fixed.'); break; }
+      H.mark[i] = 'cur'; s.step('b_for', i === n >> 1 ? `i starts at currentSize/2 = ${i}: the last node that has a child.` : `i-- makes i = ${i}.`);
+      H.mark[i] = 'cur'; s.step('b_call', `percolateDown(${i}): push ${H.arr[i]} down until it is in order with its children.`);
+      s.fn('percolateDown', `percolateDown(hole = ${i})`); s.var('hole', i, 'idx'); H.mark[i] = 'cur'; s.step('p_sig', `hole = ${i}.`);
+      const tmp = H.arr[i]; s.var('tmp', tmp); H.hole = i; s.step('p_tmp', `tmp = Heap[${i}] = ${tmp}. Spot ${i} becomes the hole.`);
+      for (;;) {
+        const h = s.get('hole');
+        if (2 * h > n) { s.step('p_while', `2·${h} > ${n}: spot ${h} is a leaf. Stop.`); break; }
+        s.step('p_while', `2·${h} = ${2 * h} ≤ ${n}: spot ${h} has a child.`);
+        let c = 2 * h; s.var('child', c, 'idx'); H.mark[c] = 'cmp'; s.step('p_child', `child = ${c} (the left child, ${H.arr[c]}).`);
+        if (c !== n) H.mark[c + 1] = 'cmp'; H.mark[c] = 'cmp';
+        if (c !== n && bt(H.arr[c + 1], H.arr[c])) { s.step('p_cmp', `The right child ${H.arr[c + 1]} is ${MINW[mode]} than the left child ${H.arr[c]}.`); c++; s.set('child', c); H.mark[c] = 'cmp'; s.step('p_inc', `child++ → child = ${c}.`); }
+        else s.step('p_cmp', c === n ? 'There is no right child.' : `The left child ${H.arr[c]} is the ${MINW[mode]} one (or they are equal).`);
+        H.mark[c] = 'cmp';
+        if (bt(H.arr[c], tmp)) {
+          s.step('p_if', `${H.arr[c]} is ${MINW[mode]} than tmp (${tmp}): move it up.`);
+          H.arr[h] = H.arr[c]; H.mark[h] = 'new'; s.op('move', `Heap[${h}] = ${H.arr[h]}`); s.step('p_move', `Heap[${h}] = ${H.arr[h]}.`);
+          s.set('hole', c); H.hole = c; H.mark[c] = 'cur'; s.step('p_hole', `hole = ${c}: the hole moves down.`);
+        } else { s.step('p_if', `${H.arr[c]} is not ${MINW[mode]} than tmp (${tmp}).`); s.step('p_break', `break: ${tmp} fits in spot ${h}.`); break; }
+      }
+      const h = s.get('hole'); H.arr[h] = tmp; H.hole = null; H.mark[h] = 'new'; s.op('set', `Heap[${h}] = ${tmp}`);
+      s.step('p_store', `Heap[${h}] = tmp = ${tmp}.`);
+      H.keep[i] = 'done'; s.ret(); s.step('p_end', `Spot ${i}'s subtree is now a ${mode}-heap (green).`);
+    }
+    s.drop('i'); H.keep = {}; s.ret(); s.step('b_end', `Done: [ , ${H.arr.slice(1, n + 1).join(', ')}] is a ${mode}-heap. The ${mode === 'min' ? 'smallest' : 'largest'} item, ${H.arr[1]}, is at the root.`);
+  } });
+
+function mkTable(s, n, title, cols) { return s.mk(n, { type: 'table', title, cols, rows: [] }); }
+function mkText(s, n, title, value = '', cls = '') { return s.mk(n, { type: 'text', title, value, cls }); }
+Sim.prototype.row = function (n, cells) { const t = this.st[n]; t.rows.push(cells.map(fv)); t.hlRow = t.rows.length - 1; };
+Sim.prototype.text = function (n, v, cls) { const t = this.st[n]; if (t.value !== v) t.chg = 1; t.value = v; if (cls !== undefined) t.cls = cls; };
+
+function parseCode(src) {
+  const raw = String(src).replace(/\s+$/, '').split('\n'), lines = [], map = {};
+  raw.forEach((ln, i) => {
+    const m = ln.match(/^(.*?)\s*@@(\w+)\s*$/);
+    let text = ln;
+    if (m) { text = m[1]; (map[m[2]] = map[m[2]] || []).push(i); }
+    lines.push(text.replace(/\s+$/, ''));
+  });
+  return { lines, map };
+}
+function defaults(p) { const o = {}; ((p.input && p.input.fields) || []).forEach(f => { o[f.k] = f.def; }); return o; }
+function runProgram(p, vals) {
+  vals = Object.assign(defaults(p), vals || {});
+  const s = new Sim();
+  try { p.run(s, vals); } catch (e) { if (!(e instanceof Crash)) throw e; }
+  const code = typeof p.code === 'function' ? p.code(vals) : p.code;
+  let cap = 0; s.snaps.forEach(sn => { for (const k in sn.state.st) { const t = sn.state.st[k]; if (t.type === 'heap') cap = Math.max(cap, t.arr.length - 1); } });
+  s.snaps.forEach(sn => { for (const k in sn.state.st) { const t = sn.state.st[k]; if (t.type === 'heap') t.cap = cap; } });
+  return { snaps: s.snaps, code, vals };
+}
+/*ENGINE-END*/
+
+/* ======================= UI ======================= */
+const $ = q => document.querySelector(q);
+const el = { sel: $('#prog'), slides: $('#slides'), title: $('#ptitle'), desc: $('#pdesc'), notesWrap: $('#notesWrap'), notesSum: $('#notesSum'), notes: $('#notes'),
+  inWrap: $('#inWrap'), inFields: $('#inFields'), inRun: $('#inRun'), inPresets: $('#inPresets'), inErr: $('#inErr'),
+  structs: $('#structs'), stepNo: $('#stepNo'), note: $('#note'), diff: $('#diff'), codeH: $('#codeH'), code: $('#code'), codeWrap: $('#codeWrap'),
+  varsCard: $('#varsCard'), vars: $('#vars'), outCard: $('#outCard'), out: $('#out'), range: $('#range'), count: $('#count'),
+  bFirst: $('#bFirst'), bPrev: $('#bPrev'), bPlay: $('#bPlay'), bNext: $('#bNext'), bLast: $('#bLast'), bSpeed: $('#bSpeed') };
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let cur = { prog: null, parsed: null, snaps: [], i: 0, vals: {} };
+let timer = null, speed = 1;
+
+const KW = 'int|float|double|char|void|struct|class|public|return|new|delete|while|if|else|for|do|NULL|using|namespace|string|include|endl|cout|cin|std|const|bool|Object|private|assert|break';
+const TOK = new RegExp(`(\\/\\/.*$)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b(${KW})\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'g');
+function hl(line) {
+  let out = '', last = 0;
+  line.replace(TOK, (m, com, str, kw, num, off) => {
+    out += esc(line.slice(last, off));
+    out += `<span class="${com ? 'c-com' : str ? 'c-str' : kw ? 'c-kw' : 'c-num'}">${esc(m)}</span>`; last = off + m.length; return m;
+  });
+  return out + esc(line.slice(last));
+}
+function buildSelect() {
+  const groups = [];
+  PROGRAMS.forEach(p => { let g = groups.find(x => x.name === p.group); if (!g) { g = { name: p.group, items: [] }; groups.push(g); } g.items.push(p); });
+  el.sel.innerHTML = groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`).join('');
+}
+const sameVals = (a, b) => Object.keys(a).every(k => String(a[k]).trim() === String(b[k] === undefined ? '' : b[k]).trim());
+
+function readFields() { const o = {}; el.inFields.querySelectorAll('[data-k]').forEach(f => { o[f.dataset.k] = f.value; }); return o; }
+function drawFields(p, vals) {
+  el.inFields.innerHTML = p.input.fields.map(f => {
+    const id = 'f_' + f.k;
+    const ctl = f.type === 'select'
+      ? `<select id="${id}" data-k="${f.k}">${f.options.map(([v, l]) => `<option value="${esc(v)}"${String(vals[f.k]) === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`
+      : `<input id="${id}" data-k="${f.k}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(vals[f.k])}">`;
+    return `<label class="fld w-${f.type === 'select' ? 'm' : (f.w || 'm')}" for="${id}"><span>${esc(f.label)}</span>${ctl}</label>`;
+  }).join('');
+  el.inPresets.innerHTML = p.input.presets.map(([l, v], i) => `<button type="button" data-i="${i}" class="${sameVals(v, vals) ? 'on' : ''}">${esc(l)}</button>`).join('');
+}
+
+function load(id, vals) {
+  stop();
+  const p = PROGRAMS.find(x => x.id === id) || PROGRAMS[0];
+  el.sel.value = p.id;
+  let r;
+  try { r = runProgram(p, vals); }
+  catch (e) {
+    if (!(e instanceof InputError)) throw e;
+    if (cur.prog === p) { el.inErr.textContent = e.message; return; }
+    r = runProgram(p, {});
+  }
+  el.inErr.textContent = '';
+  const parsed = parseCode(r.code);
+  cur = { prog: p, parsed, snaps: r.snaps, i: 0, vals: r.vals };
+  el.slides.textContent = p.slides; el.title.textContent = p.title; el.desc.textContent = p.desc;
+  if (p.notes && p.notes.length) { el.notesWrap.hidden = false; el.notes.innerHTML = p.notes.map(n => `<li>${esc(n)}</li>`).join(''); el.notesSum.textContent = p.notes.length === 1 ? '1 note about this' : `${p.notes.length} notes about this`; }
+  else el.notesWrap.hidden = true;
+  if (p.input) { el.inWrap.hidden = false; drawFields(p, r.vals); } else el.inWrap.hidden = true;
+  el.codeH.textContent = p.codeTitle || 'Code';
+  el.code.innerHTML = parsed.lines.map((t, i) => `<div class="cl"><span class="ln">${i + 1}</span><span>${hl(t) || ' '}</span></div>`).join('');
+  el.codeWrap.scrollTop = 0;
+  el.varsCard.hidden = !cur.snaps.some(sn => sn.state.frames.some(f => Object.keys(f.vars).length));
+  el.outCard.hidden = !cur.snaps.some(sn => sn.state.out);
+  el.range.max = cur.snaps.length - 1;
+  try { localStorage.setItem('tr-sim-prog', p.id); } catch (e) {}
+  go(0);
+}
+function go(i) { cur.i = Math.max(0, Math.min(cur.snaps.length - 1, i)); render(); }
+
+const mainTree = st => { for (const k of st.order) if (st.st[k].type === 'tree') return st.st[k]; return null; };
+const mainHeap = st => { for (const k of st.order) if (st.st[k].type === 'heap') return st.st[k]; return null; };
+function fvv(o, st) {
+  if (o.t === 'ptr') { if (o.v === null) return 'NULL'; if (o.v === GARB) return '?'; const T = mainTree(st), n = T && T.nodes[o.v]; return n ? `node ${fv(n.v)}` : 'deleted node'; }
+  if (o.t === 'idx') { const H = mainHeap(st); return H && H.arr[o.v] !== null && H.arr[o.v] !== undefined && o.v >= 1 ? `${o.v}  (Heap[${o.v}] = ${fv(H.arr[o.v])})` : String(o.v); }
+  return o.v === GARB ? '?' : fv(o.v);
+}
+function computeDiff(ps, st, sn) {
+  const fItems = [], oItems = [], vars = new Set();
+  if (!ps) return { items: [], vars };
+  const L = Math.max(st.frames.length, ps.frames.length);
+  for (let fi = 0; fi < L; fi++) {
+    const a = ps.frames[fi], b = st.frames[fi], same = a && b && a.label === b.label;
+    if (a && !same) fItems.push(['ret', `${a.label} finished`]);
+    if (b && !same) { fItems.push(['call', `Entered ${b.label}`]); Object.entries(b.vars).forEach(([k, o]) => { vars.add(fi + ':' + k); fItems.push(['var', `${k} = ${fvv(o, st)}`]); }); continue; }
+    if (same) {
+      Object.entries(b.vars).forEach(([k, o]) => {
+        const ov = a.vars[k];
+        if (!ov) { vars.add(fi + ':' + k); fItems.push(['var', `${k} created = ${fvv(o, st)}`]); }
+        else if (ov.v !== o.v) { vars.add(fi + ':' + k); fItems.push(['var', `${k}: ${fvv(ov, ps)} → ${fvv(o, st)}`]); }
+      });
+      Object.keys(a.vars).forEach(k => { if (!(k in b.vars)) fItems.push(['var', `${k} goes out of scope`]); });
+    }
+  }
+  if (st.out.length > ps.out.length) oItems.push(['out', `Printed ${JSON.stringify(st.out.slice(ps.out.length))}`]);
+  return { items: fItems.concat(sn.ops || [], oItems), vars };
+}
+const BADGE = { var: 'variable', call: 'call', ret: 'return', out: 'output', new: 'new node', set: 'store', link: 'link', del: 'remove', move: 'move', swap: 'swap', push: 'insert', pop: 'remove', read: 'read', err: 'error' };
+
+function render() {
+  const snap = cur.snaps[cur.i], prev = cur.i > 0 ? cur.snaps[cur.i - 1] : null, st = snap.state;
+  const ch = computeDiff(prev && prev.state, st, snap);
+  const n = cur.snaps.length;
+  el.count.textContent = `Step ${cur.i + 1} of ${n}`;
+  el.stepNo.textContent = snap.label && cur.parsed.map[snap.label] ? `line ${cur.parsed.map[snap.label][0] + 1}` : (cur.i === 0 ? 'starting point' : '');
+  el.range.value = cur.i;
+  el.note.textContent = snap.note; el.note.className = 'note' + (snap.crash ? ' crash' : '');
+  el.diff.innerHTML = ch.items.length ? ch.items.map(([k, t]) => `<li><span class="badge b-${k}">${BADGE[k] || k}</span><span>${esc(t)}</span></li>`).join('')
+    : `<li class="nodiff">${cur.i === 0 ? 'This is the starting point. Press Next to run the first step.' : 'Nothing was stored or moved: this step compared values or checked a condition.'}</li>`;
+  el.code.querySelectorAll('.cl.cur').forEach(x => x.classList.remove('cur'));
+  const lines = snap.label ? (cur.parsed.map[snap.label] || []) : [];
+  lines.forEach(li => { const d = el.code.children[li]; if (d) d.classList.add('cur'); });
+  if (lines.length) {
+    const f = el.code.children[lines[0]], lastEl = el.code.children[lines[lines.length - 1]], w = el.codeWrap;
+    const top = f.offsetTop, bot = lastEl.offsetTop + lastEl.offsetHeight;
+    if (top < w.scrollTop + 20 || bot > w.scrollTop + w.clientHeight - 20) w.scrollTo({ top: Math.max(0, (top + bot) / 2 - w.clientHeight / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  renderStructs(st, ch);
+  if (!el.varsCard.hidden) renderVars(st, ch);
+  const prevOut = prev ? prev.state.out : '';
+  if (!st.out) el.out.innerHTML = '<span class="muted">Nothing printed yet.</span>';
+  else if (st.out.length > prevOut.length && st.out.startsWith(prevOut)) el.out.innerHTML = esc(prevOut) + `<span class="new">${esc(st.out.slice(prevOut.length))}</span>`;
+  else el.out.textContent = st.out;
+  el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
+  el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  if (cur.i === n - 1) stop();
+}
+function renderVars(st, ch) {
+  let h = '';
+  st.frames.forEach((f, fi) => {
+    const ents = Object.entries(f.vars); if (!ents.length) return;
+    const active = fi === st.frames.length - 1 && fi > 0;
+    h += `<div class="frame${active ? ' active' : ''}"><div class="fh"><span>${esc(f.label)}</span>${active ? '<span class="act">running now</span>' : ''}</div>`;
+    ents.forEach(([k, o]) => {
+      const v = o.v === null && o.t === 'ptr' ? '<span class="nul">NULL</span>' : o.v === GARB ? '<span class="garb">? (garbage)</span>' : esc(fvv(o, st));
+      h += `<div class="vr${ch.vars.has(fi + ':' + k) ? ' chg' : ''}"><span class="vn">${esc(k)}</span><span class="vv">${v}</span></div>`;
+    });
+    h += '</div>';
+  });
+  el.vars.innerHTML = h || '<div class="muted">No variables yet.</div>';
+}
+
+/* ---------- tree drawing ---------- */
+const PATHY = { path: 1, done: 1, cur: 1, cmp: 1, new: 1 };
+function drawTree(G, availW) {
+  const R = 17, DX = 46, DY = 64, PX = 26, PY = 22;
+  const pos = {}; let col = 0, maxD = -1;
+  const walk = (id, d) => { if (id === null || id === undefined || !G.nodes[id]) return; const n = G.nodes[id]; walk(n.l, d + 1); pos[id] = { c: col++, d }; maxD = Math.max(maxD, d); walk(n.r, d + 1); };
+  walk(G.root, 0);
+  const fl = (G.floating || []).filter(id => G.nodes[id] && !pos[id]);
+  const flY = maxD + 1 + (maxD >= 0 ? 0.35 : 0);
+  fl.forEach((id, k) => { pos[id] = { c: k, d: flY, fl: 1 }; });
+  const cols = Math.max(col, fl.length, 1), rows = (fl.length ? flY : maxD) + 1;
+  const W = Math.max(220, PX * 2 + (cols - 1) * DX + 40), Hh = PY + Math.max(0, rows - 1) * DY + R + 34 + (fl.length ? 6 : 0);
+  const X = id => PX + 20 + pos[id].c * DX, Y = id => PY + pos[id].d * DY + 4;
+  let g = '';
+  if (fl.length) g += `<text x="${PX}" y="${Y(fl[0]) - R - 9}" class="rowlbl">${esc(G.floatLabel || 'not linked into the tree')}</text>`;
+  if (G.root === null && !fl.length) g += `<text x="${PX}" y="${PY + 10}" class="rowlbl">The tree is empty (root is NULL).</text>`;
+  for (const id in pos) {
+    const n = G.nodes[id];
+    [n.l, n.r].forEach(c => {
+      if (c === null || c === undefined || !pos[c]) return;
+      const x1 = X(id), y1 = Y(id), x2 = X(c), y2 = Y(c), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+      const cls = G.edge[c] || ((PATHY[G.nodes[id].cls] && PATHY[G.nodes[c].cls] && G.nodes[c].cls !== 'done') ? 'path' : '');
+      g += `<line x1="${(x1 + dx / L * R).toFixed(1)}" y1="${(y1 + dy / L * R).toFixed(1)}" x2="${(x2 - dx / L * R).toFixed(1)}" y2="${(y2 - dy / L * R).toFixed(1)}" class="te ${cls}${G.nodes[c].ph ? ' ph' : ''}"/>`;
+    });
+  }
+  for (const id in pos) {
+    const n = G.nodes[id], x = X(id), y = Y(id), txt = n.ph ? '?' : fv(n.v), fs = txt.length > 3 ? 11 : 13.5;
+    g += `<g class="tn ${n.cls || ''}${n.ph ? ' ph' : ''}${n.hole ? ' hole' : ''}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y + fs / 2.8}" style="font-size:${fs}px">${esc(txt)}</text></g>`;
+    if (n.sub !== undefined && n.sub !== '') {
+      const [p] = G.parentOf ? G.parentOf(id) : [null];
+      const right = p === null || p === undefined || !G.nodes[p] || +G.nodes[p].r === +id;
+      g += `<text x="${x + (right ? R + 3 : -R - 3)}" y="${y - R + 6}" class="tsub" text-anchor="${right ? 'start' : 'end'}">${esc(n.sub)}</text>`;
+    }
+    if (n.tag) { const tw = n.tag.length * 6.6 + 10; g += `<g class="ttag"><rect x="${x - tw / 2}" y="${y + R + 4}" width="${tw}" height="16" rx="4"/><text x="${x}" y="${y + R + 15.5}">${esc(n.tag)}</text></g>`; }
+  }
+  return fitSvg(W, Hh, g, availW);
+}
+function fitSvg(W, H, g, availW) {
+  const sc = W > availW ? availW / W : 1, fit = sc >= 0.62;
+  const svg = `<svg width="${fit ? Math.floor(W * sc) : W}" height="${fit ? Math.ceil(H * sc) : H}" viewBox="0 0 ${W} ${H}" style="display:block">${g}</svg>`;
+  return `<div class="scroll">${svg}</div>${fit ? '' : '<div class="hint">Swipe sideways to see the whole tree.</div>'}`;
+}
+function autoTags(st, kind) {
+  const out = {}, top = st.frames.length - 1;
+  const names = {}; [0, top].forEach(fi => { if (fi < 0) return; Object.keys(st.frames[fi].vars).forEach(k => { names[k] = (names[k] || 0) + (fi === 0 || top === 0 ? 1 : 1); }); });
+  const frames = top > 0 ? [0, top] : [0];
+  frames.forEach(fi => {
+    const f = st.frames[fi];
+    Object.entries(f.vars).forEach(([k, o]) => {
+      if (o.t !== kind || typeof o.v !== 'number') return;
+      const label = fi > 0 && k in st.frames[0].vars ? `${k} (${f.name})` : k;
+      (out[o.v] = out[o.v] || []).push(label);
+    });
+  });
+  return out;
+}
+const R = {};
+R.tree = (t, st) => {
+  const auto = t.ptrs ? autoTags(st, 'ptr') : {};
+  const nodes = {};
+  for (const id in t.nodes) {
+    const n = t.nodes[id], tags = [].concat(auto[id] || [], t.tags[id] || []);
+    nodes[id] = { v: n.v, l: n.l, r: n.r, cls: t.mark[id] || t.keep[id] || '', sub: t.info[id] !== undefined ? t.info[id] : t.sub[id], tag: tags.join(', ') };
+  }
+  const reach = new Set(); const w = id => { if (id === null || !t.nodes[id]) return; reach.add(+id); w(t.nodes[id].l); w(t.nodes[id].r); }; w(t.root);
+  const floating = Object.keys(t.nodes).map(Number).filter(id => !reach.has(id));
+  const parentOf = id => { for (const k in t.nodes) { if (t.nodes[k].l === +id || t.nodes[k].r === +id) return [k]; } return [null]; };
+  return drawTree({ nodes, root: t.root, floating, edge: t.edge, parentOf }, availWidth());
+};
+R.heap = (t, st) => {
+  const auto = t.idx ? autoTags(st, 'idx') : {};
+  const last = Math.max(t.size, ...Object.keys(t.ph).map(Number), 0);
+  const exists = i => i >= 1 && i <= last && ((i <= t.size && t.arr[i] !== null && t.arr[i] !== undefined) || t.ph[i] || t.hole === i);
+  const nodes = {};
+  for (let i = 1; i <= last; i++) {
+    if (!exists(i)) continue;
+    const tags = [].concat(auto[i] || [], t.tags[i] || []);
+    if (t.hole === i && !tags.includes('hole')) tags.unshift('hole');
+    nodes[i] = { v: t.arr[i], l: exists(2 * i) ? 2 * i : null, r: exists(2 * i + 1) ? 2 * i + 1 : null, cls: t.mark[i] || t.keep[i] || '', sub: t.info[i] !== undefined ? t.info[i] : (t.showIdx ? String(i) : ''), tag: [...new Set(tags)].join(', '), ph: !!t.ph[i], hole: t.hole === i };
+  }
+  const parentOf = id => [+id > 1 ? (+id) >> 1 : null];
+  let h = drawTree({ nodes, root: exists(1) ? 1 : null, floating: [], edge: {}, parentOf }, availWidth());
+  if (t.noArray) return h;
+  const cap = Math.max(t.cap || 0, t.size, last), cw = 38, ch = 32, px = 4, W = px * 2 + (cap + 1) * cw + 70, H = ch + 44;
+  let g = '';
+  for (let i = 0; i <= cap; i++) {
+    const x = px + i * cw, inside = i >= 1 && i <= t.size, v = t.arr[i];
+    const cls = i === 0 ? 'unused' : t.hole === i ? 'hole' : (t.mark[i] || t.keep[i] || '') + (inside ? ' live' : ' out');
+    g += `<rect x="${x}" y="4" width="${cw}" height="${ch}" class="ac ${cls}"/>`;
+    if (i === 0) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av stale">–</text>`;
+    else if (v !== null && v !== undefined) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av${inside && t.hole !== i ? '' : ' stale'}">${esc(fv(v))}</text>`;
+    g += `<text x="${x + cw / 2}" y="${ch + 18}" class="idx" text-anchor="middle">${i}</text>`;
+  }
+  const sx = px + (t.size + 1) * cw;
+  if (!t.noSize) g += `<line x1="${sx}" y1="0" x2="${sx}" y2="${ch + 8}" class="szl"/><text x="${sx + 4}" y="${ch + 32}" class="szt">size = ${t.size}</text>`;
+  return h + `<div class="arrlbl">${esc(t.arrLabel || 'The same heap as an array (index 0 unused)')}</div><div class="scroll">${svgArr(W, H, g)}</div>`;
+};
+const svgArr = (w, h, g) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">${g}</svg>`;
+R.tape = t => `<div class="tape">${t.tokens.map((x, i) => {
+  const m = t.marks[i]; const c = i === t.pos ? (m === 'err' ? 'err' : 'cur') : m === 'err' ? 'err' : (i < t.pos ? 'done' : '');
+  return `<span class="tk ${c}">${esc(x)}</span>`; }).join('')}</div>`;
+R.table = t => `<div class="tbl"><table><thead><tr>${t.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+  t.rows.length ? t.rows.map((r, i) => `<tr class="${i === t.hlRow ? 'hl' : ''}">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${t.cols.length}" class="none">No rows yet.</td></tr>`
+}</tbody></table></div>`;
+R.text = t => `<div class="tv ${t.cls || ''}${t.chg ? ' chg' : ''}">${esc(t.value)}</div>`;
+const WIDE = { tree: 1, heap: 1, table: 1, tape: 1 };
+let _aw = 600; const availWidth = () => _aw;
+function renderStructs(st, ch) {
+  _aw = Math.max(240, el.structs.clientWidth - 26);
+  let h = '';
+  st.order.forEach(n => { const t = st.st[n]; h += `<div class="sc${WIDE[t.type] ? ' wide' : ''}"><h4>${esc(t.title)}</h4>${R[t.type](t, st, ch)}</div>`; });
+  el.structs.innerHTML = h;
+  el.structs.querySelectorAll('.tbl').forEach(d => { const r = d.querySelector('tr.hl'); d.scrollTop = r ? r.offsetTop - d.clientHeight + r.offsetHeight + 4 : d.scrollHeight; });
+}
+
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.bPlay.textContent = '▶ Play'; }
+function play() {
+  if (timer) { stop(); return; }
+  if (cur.i >= cur.snaps.length - 1) go(0);
+  el.bPlay.textContent = '❚❚ Pause';
+  timer = setInterval(() => { if (cur.i >= cur.snaps.length - 1) stop(); else go(cur.i + 1); }, 1100 / speed);
+}
+el.bFirst.onclick = () => { stop(); go(0); };
+el.bPrev.onclick = () => { stop(); go(cur.i - 1); };
+el.bNext.onclick = () => { stop(); go(cur.i + 1); };
+el.bLast.onclick = () => { stop(); go(cur.snaps.length - 1); };
+el.bPlay.onclick = play;
+el.bSpeed.onclick = () => { const sp = [1, 2, 4, 0.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; el.bSpeed.textContent = (speed === 0.5 ? '½' : speed) + '×'; if (timer) { stop(); play(); } };
+el.range.oninput = () => { stop(); go(+el.range.value); };
+el.sel.onchange = () => load(el.sel.value);
+el.inRun.onclick = () => load(cur.prog.id, readFields());
+el.inFields.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); load(cur.prog.id, readFields()); } });
+el.inFields.addEventListener('change', e => { if (e.target.matches('select')) load(cur.prog.id, readFields()); });
+el.inPresets.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const pr = cur.prog.input.presets[+b.dataset.i][1]; load(cur.prog.id, Object.assign(readFields(), pr)); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('select, input, textarea, button')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(cur.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(cur.i - 1); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => cur.prog && render(), 150); });
+
+buildSelect();
+let saved = null; try { saved = localStorage.getItem('tr-sim-prog'); } catch (e) {}
+load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'terms');
+
+</script>
+</body>
+</html>
