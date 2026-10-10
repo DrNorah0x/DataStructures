@@ -510,7 +510,7 @@ Binary tree: every node has 0, 1 or 2 children    @@bin`,
     s.step('height', `The longest path from the root down to a leaf is ${vlist(path.map(id => T.nodes[id].v))}. It has ${path.length - 1} edges, so the height of the tree is ${path.length - 1}.`);
     const subs = []; tWalk(T, p, id => subs.push(id)); subs.forEach(id => { T.mark[id] = id === p ? 'cur' : 'path'; if (id !== p) T.edge[id] = 'path'; });
     s.step('sub', `The subtree rooted at ${tV(T, p)} is ${tV(T, p)} together with everything below it: ${vlist(subs.map(id => T.nodes[id].v))}. A subtree is itself a tree.`);
-    all.forEach(([id]) => { T.info[id] = kids(id).length + (kids(id).length === 1 ? ' child' : ' kids'); });
+    all.forEach(([id]) => { T.info[id] = kids(id).length + (kids(id).length === 1 ? ' child' : ' children'); });
     s.step('bin', 'Every node has 0, 1 or 2 children, so this is a binary tree.');
   } });
 
@@ -1413,6 +1413,7 @@ function render() {
   else el.out.textContent = st.out;
   el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
   el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  growSvgs(document.querySelector('main'));
   if (cur.i === n - 1) stop();
 }
 function renderVars(st, ch) {
@@ -1575,6 +1576,23 @@ let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() 
 buildSelect();
 let saved = null; try { saved = localStorage.getItem('tr-sim-prog'); } catch (e) {}
 load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'terms');
+
+/* Grow every drawing's frame so labels near the edge are never clipped. */
+function growSvgs(root) {
+  root.querySelectorAll('svg[viewBox]').forEach(svg => {
+    let bb; try { bb = svg.getBBox(); } catch (e) { return; }
+    if (!bb || !bb.width) return;
+    const vb = svg.viewBox.baseVal, pad = 4;
+    const x0 = Math.min(vb.x, Math.floor(bb.x - pad)), y0 = Math.min(vb.y, Math.floor(bb.y - pad));
+    const x1 = Math.max(vb.x + vb.width, Math.ceil(bb.x + bb.width + pad)), y1 = Math.max(vb.y + vb.height, Math.ceil(bb.y + bb.height + pad));
+    if (x0 === vb.x && y0 === vb.y && x1 === vb.x + vb.width && y1 === vb.y + vb.height) return;
+    const w = parseFloat(svg.getAttribute('width')), h = parseFloat(svg.getAttribute('height'));
+    const sx = w / vb.width, sy = h / vb.height;
+    svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+    if (w) svg.setAttribute('width', ((x1 - x0) * sx).toFixed(1));
+    if (h) svg.setAttribute('height', ((y1 - y0) * sy).toFixed(1));
+  });
+}
 
 </script>
 </body>
