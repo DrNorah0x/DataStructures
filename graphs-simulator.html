@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Graphs Simulator – Lecture 11</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A; --live:#E6EEFF;
+  --head:#2D4FD8; --head-bg:#E3E9FF; --ptr:#0F6F6D; --ptr-bg:#DDF3F1;
+  --danger:#C8323A; --danger-bg:#FBE3E4; --node:#FFFFFF;
+  --codebg:#FBFCFE; --kw:#7B3FC4; --str:#0B7A47; --com:#8A94A6; --num:#B4561B;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+    --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+    --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+    --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+  --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+  --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+  --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45;background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;padding-bottom:128px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--head);outline-offset:2px}
+[hidden]{display:none!important}
+
+.top{max-width:1320px;margin:0 auto;padding:18px 16px 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.25rem,3.6vw,1.8rem);margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.mark{display:inline-flex;flex-direction:column-reverse;gap:2px;border:2px solid var(--ink);border-top:0;padding:2px 2px 2px;border-radius:0 0 3px 3px}
+.mark i{display:block;width:22px;height:5px;background:var(--ink);border-radius:1px}
+.mark i.on{background:var(--hl);outline:1.5px solid var(--hl-line)}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:min(100%,380px);flex:1 1 320px;max-width:540px}
+.pick span{font-size:.85rem;color:var(--muted)}
+.pick select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);font-family:var(--mono);font-size:.88rem;cursor:pointer}
+
+.layout{max-width:1320px;margin:0 auto;padding:8px 16px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"info" "viz" "change" "code" "vars" "out"}
+.info{grid-area:info}.viz{grid-area:viz}.change{grid-area:change}.code{grid-area:code}.vars{grid-area:vars}.out{grid-area:out}
+@media (min-width:980px){
+  .layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);grid-template-areas:"info info" "code viz" "code change" "code vars" "code out";align-items:start}
+  .code{position:sticky;top:12px}
+  .codewrap{max-height:max(320px,calc(100vh - 380px))!important}
+}
+.panel{background:var(--panel);border:1.5px solid var(--rule);border-radius:4px;padding:12px 14px;min-width:0}
+.panel h3{margin:0;font-size:1rem;font-weight:700}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.82rem}
+
+.info{border-left:6px solid var(--ink)}
+.info h2{margin:0;font-size:1.2rem;line-height:1.3}
+.slides{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:2px 7px;border:1.5px solid var(--ink);border-radius:3px;margin-bottom:6px}
+.info p{margin:6px 0 0;max-width:78ch}
+.info details{margin-top:8px}
+.info summary{cursor:pointer;font-weight:700;color:var(--head);font-size:.92rem}
+.info ul{margin:6px 0 0;padding-left:1.2em;max-width:78ch}
+.info li{margin:4px 0}
+.inwrap{margin-top:12px;padding-top:10px;border-top:1.5px dashed var(--rule)}
+.inwrap label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.inrow{display:flex;gap:8px}
+.inrow input{flex:1;min-width:0;padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem}
+.inrow button{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{border:1.5px solid var(--rule);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:.8rem;cursor:pointer}
+.presets button.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.inerr{color:var(--danger);font-weight:700;font-size:.88rem;margin:6px 0 0;min-height:0}
+
+.structs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sc{border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;background:var(--paper);min-width:0;max-width:100%}
+.sc.wide{flex:1 1 100%}
+.sc h4{margin:0 0 6px;font-size:.82rem;font-weight:700;color:var(--muted)}
+svg.fit{display:block;max-width:100%;height:auto}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:12px;border:1.5px solid var(--ink);display:inline-block;border-radius:2px}
+.sw.hl{background:var(--hl);border-color:var(--hl-line)}.sw.lv{background:var(--live)}
+.sw.rd{background:var(--ptr-bg);border-color:var(--ptr)}.sw.dl{background:var(--danger-bg);border-color:var(--danger);border-style:dashed}
+
+/* svg parts */
+.ac{fill:var(--node);stroke:var(--ink);stroke-width:1.4}
+.ac.live{fill:var(--live)}
+.hl-push{fill:var(--hl)!important;stroke:var(--hl-line)!important;stroke-width:2.2!important}
+.hl-read{fill:var(--ptr-bg)!important;stroke:var(--ptr)!important;stroke-width:2.2!important}
+.hl-pop{fill:var(--danger-bg)!important;stroke:var(--danger)!important;stroke-dasharray:4 3}
+.av{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+.av.stale{fill:var(--muted);font-weight:400;opacity:.65}
+.idx{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tp{stroke:var(--head);stroke-width:2;fill:none}
+.tp2{stroke:var(--ptr);stroke-width:2;fill:none}
+.tpl{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--head)}
+.tpl2{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--ptr)}
+.tplbg{fill:var(--hl);stroke:var(--hl-line)}
+.bk{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linejoin:round}
+.it{fill:var(--live);stroke:var(--ink);stroke-width:1.4}
+.gh{fill:var(--danger-bg);stroke:var(--danger);stroke-dasharray:4 3;stroke-width:1.5}
+.ght{font-family:var(--ui);font-size:11px;fill:var(--danger);font-style:italic}
+.lbl{font-family:var(--ui);font-size:12px;fill:var(--muted)}
+.lblb{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--head)}
+.empty{font-family:var(--ui);font-size:13px;fill:var(--muted);font-style:italic}
+.pipe{stroke:var(--ink);stroke-width:2.4}
+.cell{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.cell.chg{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.2}
+.nd.freed{opacity:.5}
+.nd.freed .cell{stroke-dasharray:4 3;fill:var(--danger-bg);stroke:var(--danger)}
+.dt{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.garbq{font-family:var(--mono);font-weight:700;font-size:15px;fill:var(--danger);text-anchor:middle}
+.adr{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.nullslash{stroke:var(--muted);stroke-width:1.5}
+.dot{fill:var(--ink)}
+.xmark{stroke:var(--danger);stroke-width:3;stroke-linecap:round}
+.ar{fill:none;stroke-width:1.8}
+.ar-ink{stroke:var(--ink)}.ar-acc{stroke:var(--hl-line);stroke-width:3}.ar-red{stroke:var(--danger);stroke-dasharray:5 4}.ar-mut{stroke:var(--muted)}.ar-head{stroke:var(--head);stroke-width:3}
+.mk-ink{fill:var(--ink)}.mk-acc{fill:var(--hl-line)}.mk-red{fill:var(--danger)}.mk-mut{fill:var(--muted)}.mk-head{fill:var(--head)}.mk-ptr{fill:var(--ptr)}
+.tag rect{stroke-width:1.5}
+.tag text{font-family:var(--mono);font-weight:600;font-size:12px;text-anchor:middle}
+.tag-ptr rect{fill:var(--ptr-bg);stroke:var(--ptr)}.tag-ptr text{fill:var(--ptr)}
+.tag-head rect{fill:var(--head-bg);stroke:var(--head)}.tag-head text{fill:var(--head)}
+.tag-acc rect{fill:var(--hl);stroke:var(--hl-line)}.tag-acc text{fill:var(--hl-ink)}
+.tag-red rect{fill:var(--danger-bg);stroke:var(--danger)}.tag-red text{fill:var(--danger)}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.gn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.gn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.6}
+.gn.dead circle{fill:var(--paper);stroke:var(--muted);stroke-dasharray:3 3}
+.gn.cur circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.gn text{font-family:var(--mono);font-weight:700;font-size:14px;text-anchor:middle;fill:var(--ink)}
+.gn.dead text{fill:var(--muted)}
+.gring{fill:none;stroke:var(--danger);stroke-width:1.6;stroke-dasharray:3 2}
+.gtag{font-family:var(--ui);font-size:10px;fill:var(--muted);text-anchor:middle}
+.ge{fill:none;stroke:var(--muted);stroke-width:1.5}
+.ge.path{stroke:var(--head);stroke-width:3}.ge.try{stroke:var(--hl-line);stroke-width:3.6}
+.peg{fill:var(--muted)}
+.disk{stroke:var(--ink);stroke-width:1.2}
+.disk.mv{stroke:var(--hl-line);stroke-width:3.5}
+.dkt{font-family:var(--mono);font-weight:700;font-size:11px;fill:#1B2A4A;text-anchor:middle}
+.pegl{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+
+.tape{display:flex;flex-wrap:wrap;gap:4px}
+.tk{font-family:var(--mono);font-size:.88rem;padding:3px 8px;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel);white-space:pre}
+.tk.done{opacity:.45}
+.tk.ok{border-color:var(--ptr)}
+.tk.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);font-weight:700;opacity:1}
+.tk.err{background:var(--danger-bg);border-color:var(--danger);color:var(--danger);font-weight:700;opacity:1}
+.tbl{max-height:250px;overflow:auto;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel)}
+.tbl table{border-collapse:collapse;font-family:var(--mono);font-size:.78rem;width:100%}
+.tbl th,.tbl td{border-bottom:1px solid var(--grid);padding:4px 8px;text-align:left;vertical-align:top}
+.tbl th{position:sticky;top:0;background:var(--paper);font-family:var(--ui);font-size:.78rem;border-bottom:1.5px solid var(--rule);white-space:nowrap}
+.tbl td{white-space:nowrap}
+.tbl td:last-child{white-space:normal;min-width:12em}
+.tbl tr.hl td{background:var(--hl);color:var(--hl-ink)}
+.tbl .none{color:var(--muted);font-family:var(--ui);font-style:italic}
+.tv{font-family:var(--mono);font-weight:700;font-size:1.02rem;padding:6px 10px;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);word-break:break-word;min-width:8em}
+.tv.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.tv.good{border-color:var(--ptr);color:var(--ptr)}
+.tv.good.chg{color:var(--hl-ink)}
+.tv.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.chip{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:5px;border:1.5px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr)}
+.chip.head{border-color:var(--head);background:var(--head-bg);color:var(--head)}
+.chip.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+
+.change{border-top:5px solid var(--hl-line)}
+.note{margin:0 0 8px;font-size:1rem;max-width:78ch}
+.note.crash{color:var(--danger);font-weight:700;background:var(--danger-bg);padding:8px 10px;border-radius:4px}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diff li{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:.8rem;line-height:1.35;word-break:break-word}
+.badge{flex:0 0 auto;font-family:var(--ui);font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:3px;border:1.5px solid var(--ink);min-width:58px;text-align:center}
+.b-push,.b-enq,.b-set,.b-add,.b-move,.b-new,.b-node{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-pop,.b-deq,.b-del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.b-err{background:var(--danger);border-color:var(--danger);color:#fff}
+.b-read,.b-var{background:var(--ptr-bg);border-color:var(--ptr);color:var(--ptr)}
+.b-call,.b-ret{background:var(--head-bg);border-color:var(--head);color:var(--head)}
+.b-out{background:var(--panel)}
+.nodiff{color:var(--muted);font-family:var(--ui)!important;font-size:.85rem!important}
+
+.codewrap{position:relative;max-height:46vh;overflow:auto;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:6px 0}
+#code{font-family:var(--mono);font-size:12.5px;line-height:1.6;min-width:max-content}
+.cl{display:flex;padding:0 12px 0 0;border-left:4px solid transparent;white-space:pre}
+.cl .ln{width:3.2em;flex:0 0 auto;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.cl.cur{background:var(--hl);border-left-color:var(--hl-line);color:var(--hl-ink)}
+.cl.cur .ln{color:var(--hl-ink);font-weight:700;opacity:1}
+.c-kw{color:var(--kw);font-weight:600}.c-str{color:var(--str)}.c-com{color:var(--com);font-style:italic}.c-num{color:var(--num)}
+.cl.cur .c-kw,.cl.cur .c-str,.cl.cur .c-num,.cl.cur .c-com{color:var(--hl-ink)}
+
+.frame{border:1.5px solid var(--rule);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.fh{font-family:var(--mono);font-size:.8rem;font-weight:700;padding:4px 8px;background:var(--paper);border-bottom:1.5px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.fh .act{font-family:var(--ui);font-weight:400;color:var(--head)}
+.vr{display:flex;gap:10px;padding:4px 8px;font-family:var(--mono);font-size:.82rem;border-top:1px solid var(--grid);align-items:baseline}
+.vr:first-of-type{border-top:0}
+.vr.chg{background:var(--hl);color:var(--hl-ink)}
+.vn{min-width:7.5em;font-weight:600}
+.vv{word-break:break-word}
+.nul{color:var(--muted)}.garb{color:var(--danger);font-weight:700}.dang{color:var(--danger);font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+#out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;min-height:2.4em;white-space:pre-wrap;word-break:break-word}
+#out .new{background:var(--hl);color:var(--hl-ink)}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.controls .in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:10px}
+.r1 input{flex:1;accent-color:var(--head);min-width:0;height:28px}
+#count{font-family:var(--mono);font-size:.85rem;white-space:nowrap;min-width:7.5em;text-align:right}
+.r2{display:flex;gap:6px;justify-content:center}
+.r2 button{border:2px solid var(--ink);background:var(--panel);border-radius:6px;padding:8px 10px;cursor:pointer;min-height:42px;font-weight:700;font-size:.92rem;white-space:nowrap}
+.r2 button:disabled{opacity:.35;cursor:default}
+.r2 button.primary{background:var(--ink);color:var(--panel);min-width:92px}
+.r2 .grow{flex:1 1 0;max-width:150px}
+@media (max-width:420px){#bFirst,#bLast{display:none}.r2 button.primary{min-width:84px}}
+@media (min-width:980px){.controls .in{flex-direction:row-reverse;align-items:center;gap:18px}.r1{flex:1}.r2{flex:0 0 auto}body{padding-bottom:84px}}
+@media (hover:hover){.r2 button:not(:disabled):hover,.presets button:not(.on):hover{background:var(--hl);color:var(--hl-ink);border-color:var(--hl-line)}}
+.back{display:inline-block;margin-bottom:6px;font-size:.88rem;color:var(--head);text-decoration:none;font-weight:700}.back:hover{text-decoration:underline}
+.tmark{display:inline-flex;color:var(--ink)}
+:root{--ok:#1E7A45;--ok-bg:#DCF3E4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ok:#6FD49A;--ok-bg:#12321F}}
+:root[data-theme="dark"]{--ok:#6FD49A;--ok-bg:#12321F}
+.flds{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld span{font-size:.85rem;color:var(--muted)}
+.fld input,.fld select{padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem;min-width:0;width:100%}
+.fld.w-l{flex:3 1 280px}.fld.w-m{flex:1 1 190px}.fld.w-s{flex:0 1 110px}
+.inwrap .runbtn{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:9px 16px;font-weight:700;cursor:pointer;white-space:nowrap;height:42px}
+.tn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.tn text{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.tn.cur circle,.tn.new circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.tn.cur text,.tn.new text{fill:var(--hl-ink)}
+.tn.cmp circle{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.6}
+.tn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.4}
+.tn.done circle{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2.4}
+.tn.bad circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.6}
+.tn.bad text{fill:var(--danger)}
+.tn.del circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.4;stroke-dasharray:4 3}
+.tn.del text{fill:var(--danger)}
+.tn.todo circle{stroke:var(--danger);stroke-width:2.6}
+.tn.hole circle{fill:var(--paper);stroke:var(--muted);stroke-width:2;stroke-dasharray:4 3}
+.tn.hole text{fill:var(--muted);font-weight:400;opacity:.6}
+.tn.ph circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2;stroke-dasharray:4 3}
+.tn.ph text{fill:var(--danger)}
+.te{stroke:var(--muted);stroke-width:1.6}
+.te.path{stroke:var(--head);stroke-width:3}
+.te.new{stroke:var(--hl-line);stroke-width:3.6}
+.te.ph{stroke:var(--danger);stroke-dasharray:4 3}
+.tsub{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.ttag rect{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:1.3}
+.ttag text{font-family:var(--mono);font-size:10.5px;font-weight:700;fill:var(--ptr);text-anchor:middle}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.ac.cur,.ac.new{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.4}
+.ac.cmp{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.2}
+.ac.done{fill:var(--ok-bg);stroke:var(--ok)}
+.ac.bad,.ac.del{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2}
+.ac.todo{stroke:var(--danger);stroke-width:2.2}
+.ac.hole{fill:var(--paper);stroke:var(--muted);stroke-dasharray:4 3}
+.ac.out{fill:var(--paper)}
+.ac.unused{fill:var(--grid);stroke:var(--rule)}
+.szl{stroke:var(--head);stroke-width:2.5}
+.szt{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--head)}
+.arrlbl{font-size:.78rem;color:var(--muted);margin:8px 0 2px}
+.tk.done{opacity:.45}
+.frame.active{border-color:var(--head)}
+.b-link,.b-move,.b-swap,.b-new,.b-push{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-del,.b-pop{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.sw.ok{background:var(--ok-bg);border-color:var(--ok)}
+.sw.pa{background:var(--head-bg);border-color:var(--head)}
+.sw.hole{background:var(--paper);border-style:dashed;border-color:var(--muted)}
+.ht{display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);min-width:230px;max-width:100%}
+.hrow{display:flex;align-items:center;gap:10px;padding:4px 10px;border-top:1px solid var(--grid);font-family:var(--mono);font-size:.86rem;min-height:30px}
+.hrow:first-child{border-top:0}
+.hrow .hi{min-width:4.2em;color:var(--muted);font-size:.8rem}
+.hrow .hk{font-weight:700;flex:1;word-break:break-all}
+.hrow .emp{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--ui);font-size:.82rem}
+.hrow.gap{background:var(--paper);color:var(--muted);min-height:22px;font-size:.78rem}
+.hrow.gap .hk{font-weight:400;font-style:italic;font-family:var(--ui)}
+.hrow .htag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:4px;border:1.3px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr);white-space:nowrap}
+.hrow.cur,.hrow.new{background:var(--hl);color:var(--hl-ink)}
+.hrow.cur .hi,.hrow.new .hi{color:var(--hl-ink)}
+.hrow.cmp{background:var(--ptr-bg)}
+.hrow.bad{background:var(--danger-bg);color:var(--danger)}
+.hrow.done{background:var(--ok-bg);color:var(--ok)}
+.hrow.del{background:var(--danger-bg)}
+.hrow.isdel .hk,.hrow.del .hk{color:var(--danger)}
+.hrow .dk{text-decoration:none;border:1.5px dashed var(--danger);border-radius:3px;padding:0 5px}
+.hrow .was{color:var(--muted);font-weight:400}
+.chs{display:flex;flex-direction:column;gap:5px;overflow-x:auto;padding-bottom:2px}
+.chr{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.85rem;white-space:nowrap}
+.chi{display:inline-block;min-width:2.4em;text-align:center;padding:4px 0;border:1.6px solid var(--ink);background:var(--panel);border-radius:3px;font-weight:700}
+.chn{display:inline-block;min-width:2.6em;text-align:center;padding:4px 6px;border:1.6px solid var(--ink);background:var(--live);border-radius:3px;font-weight:700}
+.chi.cur,.chn.new,.chn.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.chi.bad,.chn.del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.chn.del{border-style:dashed}
+.chn.cmp{background:var(--ptr-bg);border-color:var(--ptr)}
+.chn.done{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.charr{color:var(--muted)}
+.chnull{color:var(--muted);font-size:.75rem}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:minmax(4.5em,auto) 1fr minmax(7em,auto);gap:10px;align-items:center;font-family:var(--mono);font-size:.84rem}
+.bar .bl{font-weight:700}
+.bar .bt{height:16px;background:var(--grid);border-radius:3px;overflow:hidden}
+.bar .bf{display:block;height:100%;background:var(--head)}
+.bar.top .bf{background:var(--hl-line)}
+.bar.top .bl{background:var(--hl);color:var(--hl-ink);padding:0 4px;border-radius:3px}
+.bar .bv{text-align:right;word-break:break-all}
+.bar .bv em{font-style:normal;color:var(--muted)}
+svg.fitw{display:block;width:100%;max-width:640px;height:auto}
+.cbg{fill:var(--panel);stroke:var(--rule)}
+.cgrid{stroke:var(--grid);stroke-width:1}
+.ctk{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.ctk.chl{fill:var(--ink);font-weight:700}
+.chline{stroke:var(--hl-line);stroke-width:2;stroke-dasharray:4 3}
+.cmline{stroke:var(--danger);stroke-width:2;stroke-dasharray:6 4}
+.cmt{fill:var(--danger);font-weight:700}
+.cl2{fill:none;stroke-width:2.6;stroke-linejoin:round}
+.coff{font-size:14px;font-weight:700}
+:root{--c1:#2D4FD8;--c2:#0F7A6E;--c3:#7B3FC4;--c4:#B98300;--c5:#C8323A;--c6:#1B2A4A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#8DA6FF;--c2:#5FD0C8;--c3:#C9A2FF;--c4:#F2D24A;--c5:#FF6F72;--c6:#DCE5F4}}
+:root[data-theme="dark"]{--c1:#8DA6FF;--c2:#5FD0C8;--c3:#C9A2FF;--c4:#F2D24A;--c5:#FF6F72;--c6:#DCE5F4}
+.cl2.s1{stroke:var(--c1)}.cl2.s2{stroke:var(--c2)}.cl2.s3{stroke:var(--c3)}.cl2.s4{stroke:var(--c4)}.cl2.s5{stroke:var(--c5)}.cl2.s6{stroke:var(--c6)}
+.cdot.s1,.coff.s1{fill:var(--c1)}.cdot.s2,.coff.s2{fill:var(--c2)}.cdot.s3,.coff.s3{fill:var(--c3)}.cdot.s4,.coff.s4{fill:var(--c4)}.cdot.s5,.coff.s5{fill:var(--c5)}.cdot.s6,.coff.s6{fill:var(--c6)}
+.clg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:.8rem}
+.clg span{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono)}
+.csw{display:inline-block;width:16px;height:4px;border-radius:2px}
+.csw.s1{background:var(--c1)}.csw.s2{background:var(--c2)}.csw.s3{background:var(--c3)}.csw.s4{background:var(--c4)}.csw.s5{background:var(--c5)}.csw.s6{background:var(--c6)}
+.tk.ok{border-color:var(--ok);background:var(--ok-bg)}
+.arrw{overflow-x:auto;padding-bottom:4px}
+.arr{display:flex;gap:4px;min-width:max-content}
+.acell{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:44px}
+.acell .ai{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.acell .av{display:block;width:100%;text-align:center;padding:8px 5px;border:1.6px solid var(--ink);background:var(--live);font-family:var(--mono);font-weight:700;border-radius:3px}
+.acell.cur .av{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);border-width:2.4px}
+.acell.cmp .av{background:var(--ptr-bg);border-color:var(--ptr);border-width:2.4px}
+.acell.done .av{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);border-width:2.4px}
+.acell.bad .av{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.acell.out .av{background:var(--paper);color:var(--muted);border-color:var(--rule);opacity:.55}
+.acell .at{min-height:1.2em;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--ptr);white-space:nowrap}
+.rg-out{fill:var(--grid);stroke:var(--rule)}
+.rg-in{fill:var(--head-bg);stroke:var(--head);stroke-width:1.5}
+.rg-mid{stroke:var(--hl-line);stroke-width:3}
+.rg-hit{stroke:var(--ok);stroke-width:4}
+.rg-t{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--ink)}
+.rg-s{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+svg.gsvg{display:block;width:100%;height:auto;margin:0 auto}
+.gg-e line{stroke:var(--muted);stroke-width:1.6}
+.gg-e polygon{fill:var(--muted)}
+.gg-e .gg-w{font-family:var(--mono);font-size:13px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.gg-e.tree line{stroke:var(--ok);stroke-width:3.2}.gg-e.tree polygon{fill:var(--ok)}
+.gg-e.cmp line{stroke:var(--ptr);stroke-width:2.6;stroke-dasharray:6 4}.gg-e.cmp polygon{fill:var(--ptr)}
+.gg-e.cur line{stroke:var(--hl-line);stroke-width:4}.gg-e.cur polygon{fill:var(--hl-line)}
+.gg-v circle{fill:var(--node);stroke:var(--ink);stroke-width:1.8}
+.gg-v text{font-family:var(--mono);font-size:14px;font-weight:700;fill:var(--ink)}
+.gg-v .gg-n{font-size:11px;font-weight:700;fill:var(--ok)}
+.gg-v.vis circle{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2.4}
+.gg-v.k1 circle{fill:color-mix(in srgb,var(--c1) 22%,var(--node));stroke:var(--c1)}
+.gg-v.k2 circle{fill:color-mix(in srgb,var(--c3) 22%,var(--node));stroke:var(--c3)}
+.gg-v.k3 circle{fill:color-mix(in srgb,var(--c4) 26%,var(--node));stroke:var(--c4)}
+.gg-v.k4 circle{fill:color-mix(in srgb,var(--c2) 22%,var(--node));stroke:var(--c2)}
+.gg-v.k5 circle{fill:color-mix(in srgb,var(--c5) 22%,var(--node));stroke:var(--c5)}
+.gg-v.cmp circle{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.8}
+.gg-v.bad circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.8}.gg-v.bad text{fill:var(--danger)}
+.gg-v.cur circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}.gg-v.cur text{fill:var(--hl-ink)}
+.gg-v.cur .gg-n,.gg-v.bad .gg-n{fill:var(--ok)}
+.matw{max-height:none}
+.mat td,.mat th{text-align:center !important;min-width:2.3em}
+.mat td:last-child{min-width:2.3em !important}
+.mat td.z{color:var(--muted)}
+.mat td.cur{background:var(--hl);color:var(--hl-ink);font-weight:700;outline:2px solid var(--hl-line);outline-offset:-2px}
+.mat td.cmp{background:var(--ptr-bg)}
+.mat tbody th{position:static;text-align:left !important}
+.mi{display:block;font-family:var(--mono);font-size:.66rem;color:var(--muted);font-weight:400}
+.alw{overflow-x:auto;display:flex;flex-direction:column;gap:6px;padding-bottom:4px}
+.al-r{display:flex;align-items:center;gap:0;min-width:max-content}
+.al-h,.al-n{display:inline-flex;align-items:stretch;border:1.6px solid var(--ink);border-radius:3px;background:var(--live);font-family:var(--mono);font-size:.85rem}
+.al-h{background:var(--paper)}
+.al-h .mi{display:flex;align-items:center;padding:0 5px;border-right:1px solid var(--rule)}
+.al-h b,.al-n b,.al-n i{padding:4px 7px;font-style:normal}
+.al-n i{border-left:1px solid var(--rule);color:var(--muted);font-weight:700}
+.al-nx{display:flex;align-items:center;padding:0 6px;border-left:1px solid var(--rule);color:var(--muted)}
+.al-ar{padding:0 5px;color:var(--muted);font-family:var(--mono)}
+.al-r.cur .al-h{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.al-n.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);border-width:2.4px}
+.al-n.cur i,.al-n.cur .al-nx{color:var(--hl-ink)}
+.al-n.cmp{background:var(--ptr-bg);border-color:var(--ptr);border-width:2.4px}
+.seqw{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seq-e{font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.seq{display:flex;gap:4px;flex-wrap:wrap;min-height:2.3em;align-items:center;padding:4px;border:1.6px dashed var(--rule);border-radius:4px;min-width:6em}
+.sq{font-family:var(--mono);font-weight:700;padding:6px 11px;border:1.6px solid var(--ink);border-radius:3px;background:var(--live)}
+.sq.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.sq.cmp{background:var(--ptr-bg);border-color:var(--ptr)}
+.sq-empty{color:var(--muted);font-style:italic;font-size:.85rem;padding:0 6px}
+.gg-v .gg-n.gg-i,.gg-v.cur .gg-n.gg-i{fill:var(--muted);font-size:12px}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="back" href="index.html">← All lectures</a>
+    <h1><span class="tmark" aria-hidden="true"><svg width="30" height="26" viewBox="0 0 30 26"><circle cx="12" cy="11" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><line x1="17.5" y1="16.5" x2="27" y2="24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><rect x="8.5" y="7.5" width="7" height="7" fill="var(--hl)" stroke="currentColor" stroke-width="1.2"/></svg></span>Graphs simulator</h1>
+    <p>Every definition, data structure and traversal from Lecture 11: Graphs (Data Structures 501324-3), run one step at a time.</p>
+  </div>
+  <label class="pick"><span>Choose a program or topic from the slides</span><select id="prog"></select></label>
+</header>
+
+<main class="layout">
+  <section class="panel info">
+    <span class="slides" id="slides"></span>
+    <h2 id="ptitle"></h2>
+    <p id="pdesc"></p>
+    <details id="notesWrap"><summary id="notesSum"></summary><ul id="notes"></ul></details>
+    <div class="inwrap" id="inWrap" hidden>
+      <div class="flds"><div class="flds" id="inFields" style="flex:1 1 auto"></div><button id="inRun" class="runbtn">Run it</button></div>
+      <div class="presets" id="inPresets"></div>
+      <p class="inerr" id="inErr" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="panel viz">
+    <div class="ph"><h3>The graph right now</h3><span class="hint">yellow = changed or current</span></div>
+    <div class="structs" id="structs"></div>
+    <div class="legend">
+      <span><i class="sw hl"></i>current / just changed</span>
+      <span><i class="sw rd"></i>being checked</span>
+      <span><i class="sw ok"></i>visited / tree edge (n) = visit order</span>
+      <span><i class="sw dl"></i>not an edge / repeated / missing</span>
+    </div>
+  </section>
+
+  <section class="panel change">
+    <div class="ph"><h3>What this step did</h3><span class="hint" id="stepNo"></span></div>
+    <p id="note" class="note"></p>
+    <ul id="diff" class="diff"></ul>
+  </section>
+
+  <section class="panel code">
+    <div class="ph"><h3 id="codeH">Code</h3><span class="hint">yellow line = the one that just ran</span></div>
+    <div class="codewrap" id="codeWrap"><div id="code"></div></div>
+  </section>
+
+  <section class="panel vars" id="varsCard">
+    <div class="ph"><h3>Variables</h3><span class="hint">one box per function call that is running</span></div>
+    <div id="vars"></div>
+  </section>
+
+  <section class="panel out" id="outCard">
+    <div class="ph"><h3>Console output</h3></div>
+    <pre id="out"></pre>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Step controls">
+  <div class="in">
+    <div class="r1"><input type="range" id="range" min="0" max="0" value="0" aria-label="Step"><span id="count"></span></div>
+    <div class="r2">
+      <button id="bFirst" aria-label="Go to first step">⏮</button>
+      <button id="bPrev" class="grow">◀ Back</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <button id="bNext" class="grow">Next ▶</button>
+      <button id="bLast" aria-label="Go to last step">⏭</button>
+      <button id="bSpeed" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+/*ENGINE-START*/
+const GARB = '?';
+class Crash extends Error {}
+class InputError extends Error {}
+const fv = v => v === null || v === undefined ? '' : String(v);
+const T_OBJ = ['mark', 'tags', 'edge', 'info'];
+const T_VAL = ['chg', 'hlRow'];
+class Sim {
+  constructor() { this.frames = [{ name: 'global', label: 'Global variables', vars: {} }]; this.out = ''; this.snaps = []; this.st = {}; this.order = []; this.ops = []; }
+  fn(name, label) { this.frames.push({ name, label: label || name + '()', vars: {} }); }
+  ret() { this.frames.pop(); }
+  var(n, v, t = 'val') { this.frames[this.frames.length - 1].vars[n] = { t, v }; }
+  gvar(n, v, t = 'val') { this.frames[0].vars[n] = { t, v }; }
+  drop(n) { delete this.frames[this.frames.length - 1].vars[n]; }
+  find(n) { for (let i = this.frames.length - 1; i >= 0; i--) if (n in this.frames[i].vars) return this.frames[i].vars[n]; throw new Error('unknown variable ' + n); }
+  get(n) { return this.find(n).v; }
+  set(n, v) { this.find(n).v = v; }
+  print(x) { this.out += x; }
+  mk(name, o) { this.st[name] = o; if (!this.order.includes(name)) this.order.push(name); return o; }
+  op(k, t) { this.ops.push([k, t]); }
+  row(n, cells) { const t = this.st[n]; t.rows.push(cells.map(fv)); t.hlRow = t.rows.length - 1; }
+  text(n, v, cls) { const t = this.st[n]; if (t.value !== v) t.chg = 1; t.value = v; if (cls !== undefined) t.cls = cls; }
+  step(label, note, extra) {
+    if (this.snaps.length > 3000) throw new InputError('This input makes too many steps. Try a smaller one.');
+    this.snaps.push(Object.assign({ label, note, ops: this.ops, state: JSON.parse(JSON.stringify({ frames: this.frames, out: this.out, st: this.st, order: this.order })) }, extra || {}));
+    this.ops = [];
+    for (const k in this.st) { const t = this.st[k]; T_OBJ.forEach(f => { if (f in t) t[f] = {}; }); T_VAL.forEach(f => { delete t[f]; }); }
+  }
+}
+const mkTable = (s, n, title, cols) => s.mk(n, { type: 'table', title, cols, rows: [] });
+const mkText = (s, n, title, value = '', cls = '') => s.mk(n, { type: 'text', title, value, cls });
+const isNum = x => typeof x === 'number';
+const NUM = /^-?\d+(\.\d+)?$/;
+function parseNums(str, what, max = 20, maxLen = 4) {
+  const toks = String(str).trim().split(/[\s,]+/).filter(Boolean);
+  if (!toks.length) throw new InputError(`Type some ${what}, separated by spaces.`);
+  if (toks.length > max) throw new InputError(`Use ${max} ${what} or fewer.`);
+  return toks.map(t => { if (!/^-?\d+$/.test(t)) throw new InputError(`"${t}" is not a whole number.`); if (t.replace('-', '').length > maxLen) throw new InputError(`Keep numbers to ${maxLen} digits: "${t}"`); return +t; });
+}
+function parseInt1(str, what, lo, hi) {
+  const t = String(str).trim(); if (!/^\d+$/.test(t)) throw new InputError(`Type a whole number for ${what}.`);
+  const v = +t; if (v < lo || v > hi) throw new InputError(`${what[0].toUpperCase() + what.slice(1)} must be between ${lo} and ${hi}.`); return v;
+}
+function parseCode(src) {
+  const raw = String(src).replace(/\s+$/, '').split('\n'), lines = [], map = {};
+  raw.forEach((ln, i) => {
+    const m = ln.match(/^(.*?)\s*@@(\w+)\s*$/);
+    let text = ln;
+    if (m) { text = m[1]; (map[m[2]] = map[m[2]] || []).push(i); }
+    lines.push(text.replace(/\s+$/, ''));
+  });
+  return { lines, map };
+}
+const PROGRAMS = [];
+const P = o => PROGRAMS.push(o);
+function defaults(p) { const o = {}; ((p.input && p.input.fields) || []).forEach(f => { o[f.k] = f.def; }); return o; }
+function runProgram(p, vals) {
+  vals = Object.assign(defaults(p), vals || {});
+  const s = new Sim();
+  try { p.run(s, vals); } catch (e) { if (!(e instanceof Crash)) throw e; }
+  if (p.post) p.post(s.snaps, vals);
+  const code = typeof p.code === 'function' ? p.code(vals) : p.code;
+  return { snaps: s.snaps, code, vals };
+}
+const pad = (s, w) => s + ' '.repeat(Math.max(1, w - s.length));
+
+
+/* ======================= Lecture 11: Graphs ======================= */
+const cmpName = (a, b) => (/^\d+$/.test(a) && /^\d+$/.test(b)) ? a - b : (a < b ? -1 : a > b ? 1 : 0);
+/* vertex positions traced from the slide pictures */
+const GL = {
+  '1,2,3,4,5': { 1: [130, 560], 2: [305, 560], 3: [42, 660], 4: [217, 660], 5: [392, 660] },
+  'P,Q,R,S,T,W,X,Y,Z': { Z: [157, 557], Y: [157, 622], W: [157, 687], S: [222, 687], R: [92, 752], P: [157, 752], T: [222, 752], X: [92, 817], Q: [157, 817] },
+  'A,B,C,D': { A: [703, 661], B: [835, 672], C: [845, 783], D: [735, 783] },
+  'q,r,s,t,u,v,w,x': { v: [805, 579], u: [754, 654], w: [806, 654], x: [857, 654], q: [703, 729], t: [806, 729], r: [652, 804], s: [755, 804] },
+  'a,b,c,d,e': { a: [668, 705], b: [722, 734], c: [647, 783], d: [743, 793], e: [690, 832] }
+};
+function parseGraph(str, dir) {
+  const toks = String(str).trim().split(/[\s,]+/).filter(Boolean);
+  if (!toks.length) throw new InputError('Type the edges, like 1-2 1-3 2-5 (add :8 for a weight, like 1-2:8).');
+  const V = [], E = [], seen = new Set();
+  const addV = x => { if (!/^[A-Za-z0-9]{1,3}$/.test(x)) throw new InputError(`"${x}" is not a vertex name. Use up to 3 letters or digits.`); if (!V.includes(x)) V.push(x); };
+  let wc = 0;
+  toks.forEach(t => {
+    const m = t.match(/^([^-:]+)(?:-([^-:]+)(?::(-?\d+))?)?$/);
+    if (!m) throw new InputError(`Can't read "${t}". Write an edge as A-B (or A-B:8 with a weight), and a vertex with no edges as just A.`);
+    addV(m[1]); if (!m[2]) return;
+    addV(m[2]);
+    if (m[1] === m[2]) throw new InputError(`"${t}" joins a vertex to itself. The graphs in the slides have no such loops.`);
+    const k = dir ? m[1] + '>' + m[2] : [m[1], m[2]].sort(cmpName).join('|');
+    if (seen.has(k)) throw new InputError(`The edge ${m[1]}-${m[2]} is listed twice${dir ? '' : ' (in an undirected graph A-B and B-A are the same edge)'}.`);
+    seen.add(k);
+    if (m[3] !== undefined) { wc++; if (m[3].replace('-', '').length > 3) throw new InputError(`Keep weights to 3 digits: "${t}"`); }
+    E.push({ a: m[1], b: m[2], w: m[3] === undefined ? null : +m[3], k });
+  });
+  if (wc && wc !== E.length) throw new InputError('Give every edge a weight (like 1-2:8), or none of them.');
+  if (V.length > 14) throw new InputError('Use 14 vertices or fewer.');
+  if (E.length > 30) throw new InputError('Use 30 edges or fewer.');
+  V.sort(cmpName);
+  const adj = {}; V.forEach(x => { adj[x] = []; });
+  E.forEach(e => { adj[e.a].push({ to: e.b, w: e.w }); if (!dir) adj[e.b].push({ to: e.a, w: e.w }); });
+  return { V, E, adj, dir, weighted: wc > 0 };
+}
+const ek = (G, a, b) => G.dir ? a + '>' + b : [a, b].sort(cmpName).join('|');
+const nb = (G, x, ord) => { const l = G.adj[x].map(o => o.to); return ord === 'list' ? l : l.sort(cmpName); };
+const wTxt = w => w === null || w === undefined ? '' : `, weight ${w}`;
+function layout(G, root) {
+  const key = G.V.join(','); if (GL[key]) return GL[key];
+  const und = {}; G.V.forEach(x => { und[x] = new Set(); }); G.E.forEach(e => { und[e.a].add(e.b); und[e.b].add(e.a); });
+  const ue = G.V.reduce((n, x) => n + und[x].size, 0) / 2;
+  const r = root && G.V.includes(root) ? root : G.V[0], par = { [r]: null }, q = [r], kids = {};
+  G.V.forEach(x => { kids[x] = []; });
+  while (q.length) { const x = q.shift(); [...und[x]].sort(cmpName).forEach(y => { if (!(y in par)) { par[y] = x; kids[x].push(y); q.push(y); } }); }
+  const pos = {};
+  if (G.V.length > 2 && Object.keys(par).length === G.V.length && ue === G.V.length - 1) {
+    let leaf = 0;
+    const place = (x, d) => { if (!kids[x].length) pos[x] = [leaf++ * 56, d * 72]; else { kids[x].forEach(c => place(c, d + 1)); const xs = kids[x].map(c => pos[c][0]); pos[x] = [(Math.min(...xs) + Math.max(...xs)) / 2, d * 72]; } };
+    place(r, 0); return pos;
+  }
+  const n = G.V.length, R = Math.max(70, n * 17);
+  G.V.forEach((x, i) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n; pos[x] = [Math.round(R * Math.cos(a)), Math.round(R * Math.sin(a))]; });
+  return pos;
+}
+const mkGraph = (s, n, title, G, pos, o = {}) => s.mk(n, Object.assign({ type: 'graph', title, V: G.V, E: G.E.map(e => ({ a: e.a, b: e.b, w: e.w, k: e.k })), dir: G.dir, pos, mark: {}, edge: {}, vis: {}, tree: {}, num: {}, comp: {} }, o));
+const gTitle = G => `${G.weighted ? 'Weighted ' : ''}${G.dir ? 'directed' : 'undirected'} graph: ${G.V.length} vertices, ${G.E.length} edges`.replace(/^./, c => c.toUpperCase());
+function startV(G, v) { const x = String(v).trim(); if (!G.V.includes(x)) throw new InputError(`Start from one of the vertices: ${G.V.join(', ')}.`); return x; }
+const mkSeq = (s, n, title, kind) => s.mk(n, { type: 'seq', title, kind, items: [], mark: {} });
+
+const EF = (def, label = 'Edges: A-B, or A-B:8 with a weight') => ({ k: 'edges', label, def, w: 'l' });
+const DF = def => ({ k: 'dir', label: 'Graph type', type: 'select', def, options: [['und', 'undirected'], ['dir', 'directed']] });
+const OF = { k: 'ord', label: 'Visit the neighbours in', type: 'select', def: 'sorted', options: [['sorted', 'sorted order (as the slides suggest)'], ['list', 'the order the edges were typed']] };
+const SF = def => ({ k: 'start', label: 'Start vertex', def, w: 's' });
+const G4 = '1-2 1-3 1-4 2-5 3-4 4-5', G6 = '1-2 1-4 2-5 4-5 3-1 4-3';
+const G7u = '1-2:8 1-3:10 1-4:3 2-5:6 3-4:5 4-5:7', G7d = '1-2:8 3-1:10 1-4:3 2-5:6 4-3:5 4-5:7';
+const G10 = 'P-R P-W Q-X R-X S-T T-W W-S W-Y Y-R Y-Z', G11 = 'A-B:8 A-D:6 B-C:9';
+const G17 = 'v-u v-w v-x u-q u-t q-r q-s', G16 = 'A-B A-C A-D B-E B-F E-G E-H D-I D-J I-K I-L';
+const G5a = 'a-b b-c b-d c-e', G5b = 'a b-c b-d e', G5c = 'a-b a-c a-d a-e b-c b-d b-e c-d c-e d-e';
+const GDIS = '1-2 1-3 2-3 4-5 5-6';
+const TRAV = [['Slide 17 / 20', { edges: G17, dir: 'und', start: 'v', ord: 'sorted' }], ['Slides 16 / 19 tree', { edges: G16, dir: 'und', start: 'A', ord: 'sorted' }], ['Slide 4 graph', { edges: G4, dir: 'und', start: '1', ord: 'sorted' }], ['Slide 10 (directed)', { edges: G10, dir: 'dir', start: 'P', ord: 'sorted' }], ['Slide 6 (directed)', { edges: G6, dir: 'dir', start: '1', ord: 'sorted' }], ['Not connected', { edges: GDIS, dir: 'und', start: '1', ord: 'sorted' }]];
+function unreached(G, seen, st) {
+  const miss = G.V.filter(x => !seen.has(x));
+  if (!miss.length) return `Every vertex was reached from ${st}.`;
+  return `${miss.join(', ')} ${miss.length === 1 ? 'was' : 'were'} never reached: ${G.dir ? `no directed path leads there from ${st}` : `there is no path from ${st}, so the graph is not connected`}. The visited vertices are the part of the graph reachable from ${st}${G.dir ? '' : ' — its connected component (slide 15)'}.`;
+}
+
+/* ---------- 1. vocabulary ---------- */
+P({ id: 'terms', group: 'Graph basics', slides: 'Slides 2–6', title: 'Adjacent, path, simple path, cycle',
+  desc: 'Type a sequence of vertices. The simulator walks along it edge by edge and decides whether it is a path, a simple path, a cycle or a simple cycle, using the definitions on slide 3.',
+  notes: ['Slide 4 lists 12 pairs in E for 6 edges: in an undirected graph the edge (v, w) is also (w, v), so the grey pairs are the same 6 edges written the other way round.', 'In a directed graph the order matters: (1, 2) is an edge, so 2 is adjacent to 1, but 1 is not adjacent to 2 (slide 6). Try the "Slide 6: 2, 1" preset.', 'Many textbooks also say a cycle may not reuse an edge (so 1, 2, 1 would not count). The slides\' definition does not say this, so the simulator only points it out when an edge is used twice.'],
+  codeTitle: 'Definitions (slide 3)',
+  input: { fields: [EF(G4), DF('und'), { k: 'walk', label: 'Vertex sequence w1, w2, …, wN', def: '1 3 4 1 2 5', w: 'm' }],
+    presets: [['1, 2, 5', { edges: G4, dir: 'und', walk: '1 2 5' }], ['1, 3, 4, 1, 2, 5', { edges: G4, dir: 'und', walk: '1 3 4 1 2 5' }], ['1, 3, 4, 1', { edges: G4, dir: 'und', walk: '1 3 4 1' }], ['1, 3, 4, 1, 4, 1', { edges: G4, dir: 'und', walk: '1 3 4 1 4 1' }], ['Not a path: 1, 2, 4', { edges: G4, dir: 'und', walk: '1 2 4' }], ['Slide 6: 1, 4, 3, 1', { edges: G6, dir: 'dir', walk: '1 4 3 1' }], ['Slide 6: 2, 1', { edges: G6, dir: 'dir', walk: '2 1' }]] },
+  code: `w1, w2, …, wN is a path if (wi, wi+1) ∈ E for 1 ≤ i ≤ N-1    @@def
+for (i = 1; i <= N - 1; i++)
+    is (wi, wi+1) an edge in E?  (is wi+1 adjacent to wi?)       @@chk
+A simple path passes through a vertex only once.                @@simple
+A cycle is a path that begins and ends at the same vertex.      @@cycle
+A simple cycle is a cycle that does not pass through            @@scycle
+other vertices more than once.                                  @@scycle`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir');
+    const w = String(v.walk).trim().split(/[\s,]+/).filter(Boolean);
+    if (w.length < 2) throw new InputError('Type at least two vertices, like 1 2 5.');
+    if (w.length > 12) throw new InputError('Use 12 vertices or fewer in the sequence.');
+    w.forEach(x => { if (!G.V.includes(x)) throw new InputError(`${x} is not a vertex of this graph. The vertices are ${G.V.join(', ')}.`); });
+    const T = mkGraph(s, 'G', gTitle(G), G, layout(G)), seq = w.join(', ');
+    mkText(s, 'R', 'Verdict', '…');
+    s.step('def', `Is ${seq} a path? Check every consecutive pair against E.`);
+    const used = {}; let reused = null;
+    s.var('i', 1);
+    for (let i = 0; i < w.length - 1; i++) {
+      s.set('i', i + 1);
+      const a = w[i], b = w[i + 1], k = ek(G, a, b), ok = G.E.some(e => e.k === k);
+      T.mark[a] = 'cur'; T.mark[b] = ok ? 'cur' : 'bad';
+      if (!ok) {
+        s.text('R', 'not a path', 'bad');
+        const rev = G.dir && G.E.some(e => e.k === b + '>' + a);
+        s.step('chk', `i = ${i + 1}: (${a}, ${b}) is not in E${rev ? `. Only (${b}, ${a}) is, so ${a} is adjacent to ${b}, but ${b} is NOT adjacent to ${a}` : `: ${a} and ${b} are not adjacent`}. So ${seq} is not a path.`);
+        return;
+      }
+      if (used[k] && !reused) reused = `(${a}, ${b})`; used[k] = 1;
+      T.tree[k] = 'tree'; T.edge[k] = 'cur';
+      s.step('chk', `i = ${i + 1}: (${a}, ${b}) is in E, so ${b} is adjacent to ${a}. Follow it.`);
+    }
+    s.drop('i'); s.text('R', 'path');
+    s.step('def', `Every consecutive pair is an edge, so ${seq} is a path.`);
+    const cnt = {}; w.forEach(x => { cnt[x] = (cnt[x] || 0) + 1; });
+    const reps = Object.keys(cnt).filter(x => cnt[x] > 1).sort(cmpName);
+    reps.forEach(x => { T.mark[x] = 'bad'; });
+    const simple = !reps.length;
+    s.text('R', simple ? 'simple path' : 'path, not simple', simple ? 'good' : '');
+    s.step('simple', simple ? `No vertex appears twice: it is a simple path.` : `${reps.join(' and ')} ${reps.length === 1 ? 'appears' : 'appear'} more than once, so it is not a simple path.`);
+    const f = w[0], l = w[w.length - 1], cyc = f === l;
+    T.mark[f] = T.mark[l] = cyc ? 'cur' : 'bad';
+    if (cyc) s.text('R', 'cycle');
+    s.step('cycle', cyc ? `It begins and ends at ${f}, so it is a cycle.` : `It begins at ${f} but ends at ${l}, so it is not a cycle.`);
+    let verdict = simple ? 'simple path' : 'path (not simple)';
+    if (cyc) {
+      const inner = w.slice(0, -1), c2 = {}; inner.forEach(x => { c2[x] = (c2[x] || 0) + 1; });
+      const r2 = Object.keys(c2).filter(x => c2[x] > 1).sort(cmpName); r2.forEach(x => { T.mark[x] = 'bad'; });
+      verdict = r2.length ? 'cycle (not simple)' : 'simple cycle';
+      s.text('R', verdict, r2.length ? '' : 'good');
+      s.step('scycle', r2.length ? `Apart from returning to ${f} at the end, ${r2.join(' and ')} ${r2.length === 1 ? 'is' : 'are'} passed through more than once, so it is not a simple cycle.` : `Apart from coming back to ${f} at the end, no vertex is repeated: a simple cycle.`);
+    }
+    s.text('R', verdict, 'good');
+    s.step(null, `${seq}: ${verdict}.${reused ? ` Note: it uses the edge ${reused} more than once.` : ''}`);
+  } });
+
+/* ---------- 2. connected / complete ---------- */
+P({ id: 'connected', group: 'Graph basics', slides: 'Slides 5 and 15', title: 'Connected, disconnected, complete',
+  desc: 'Find the connected components: start a traversal from every vertex that has not been visited yet. One component means the graph is connected. Then check whether every pair of vertices is joined (complete).',
+  notes: ['Slide 15: a connected component is the set of vertices a traversal reaches from one start vertex.', 'A complete graph with n vertices has n(n − 1)/2 edges, the most possible. Every complete graph is connected, but a connected graph need not be complete (slide 5).', 'This program treats the graph as undirected.'],
+  codeTitle: 'Counting connected components',
+  input: { fields: [EF(G5b, 'Edges: A-B (a lone vertex: just A)')], presets: [['Slide 5: connected', { edges: G5a }], ['Slide 5: disconnected', { edges: G5b }], ['Slide 5: complete', { edges: G5c }], ['Slide 4 graph', { edges: G4 }], ['Two pieces', { edges: GDIS }]] },
+  code: `count = 0;                                                 @@init
+for (each vertex v in V) {                                 @@for
+    if (v is not visited) {                                @@if
+        count++;   // v starts a new connected component   @@new
+        dfs(v);    // visits everything reachable from v   @@dfs
+    }
+}
+connected = (count == 1);                                  @@conn
+complete  = (every pair of distinct vertices is adjacent);  @@comp`,
+  run(s, v) {
+    const G = parseGraph(v.edges, false), n = G.V.length, T = mkGraph(s, 'G', gTitle(G), G, layout(G));
+    mkText(s, 'N', 'count', '0'); mkText(s, 'C', 'Components', '—');
+    const seen = new Set(), comps = [];
+    s.var('count', 0); s.step('init', `count = 0. No vertex has been visited yet.`);
+    for (const x of G.V) {
+      s.var('v', x); T.mark[x] = 'cur';
+      if (seen.has(x)) { s.step('for', `v = ${x}: already visited (component ${T.comp[x]}). Skip it.`); continue; }
+      s.step('if', `v = ${x}: not visited yet.`);
+      comps.push([x]); const k = comps.length; s.set('count', k); s.text('N', String(k));
+      T.comp[x] = k; seen.add(x); T.vis[x] = 'vis'; T.mark[x] = 'cur';
+      s.step('new', `count = ${k}: ${x} starts component ${k}.`);
+      const st = [x];
+      while (st.length) {
+        const y = st[st.length - 1], u = nb(G, y, 'sorted').find(z => !seen.has(z));
+        if (u === undefined) { st.pop(); continue; }
+        seen.add(u); T.comp[u] = k; T.vis[u] = 'vis'; T.tree[ek(G, y, u)] = 'tree'; T.mark[u] = 'cur'; T.edge[ek(G, y, u)] = 'cur'; comps[k - 1].push(u); st.push(u);
+        s.text('C', comps.map((c, i) => `${i + 1}: {${c.join(', ')}}`).join(' · '));
+        s.step('dfs', `dfs(${x}) reaches ${u} (from ${y}). ${u} joins component ${k}.`);
+      }
+      s.text('C', comps.map((c, i) => `${i + 1}: {${c.join(', ')}}`).join(' · '));
+      comps[k - 1].forEach(z => { T.mark[z] = 'cur'; });
+      s.step('dfs', `dfs(${x}) is finished: nothing else is reachable. Component ${k} = {${comps[k - 1].join(', ')}}.`);
+    }
+    s.drop('v');
+    const conn = comps.length === 1;
+    s.text('N', String(comps.length), conn ? 'good' : 'bad');
+    s.step('conn', conn ? `count = 1: one traversal reached every vertex, so the graph is connected.` : `count = ${comps.length}: the graph falls into ${comps.length} pieces, so it is disconnected. There is no path between vertices in different components.`);
+    const need = n * (n - 1) / 2, miss = [];
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (!G.E.some(e => e.k === ek(G, G.V[i], G.V[j]))) miss.push([G.V[i], G.V[j]]);
+    if (miss.length) { T.mark[miss[0][0]] = T.mark[miss[0][1]] = 'bad'; }
+    s.step('comp', miss.length ? `Not complete: ${n} vertices need n(n − 1)/2 = ${need} edges, but there are ${G.E.length}. For example, ${miss[0][0]} and ${miss[0][1]} are not adjacent.` : `Complete: all ${need} pairs of distinct vertices are joined by an edge (n(n − 1)/2 = ${need}).`);
+    s.step(null, `${conn ? 'Connected' : 'Disconnected'}${miss.length ? '' : ' and complete'}. Components: ${comps.map(c => `{${c.join(', ')}}`).join(', ')}.`);
+  } });
+
+/* ---------- 3. adjacency matrix ---------- */
+const IMPL = [['Slide 10 (directed)', { edges: G10, dir: 'dir' }], ['Slide 11 (weighted)', { edges: G11, dir: 'und' }], ['Slide 4 graph', { edges: G4, dir: 'und' }], ['Slide 7 weighted', { edges: G7u, dir: 'und' }], ['Slide 7 weighted directed', { edges: G7d, dir: 'dir' }]];
+P({ id: 'matrix', group: 'Storing a graph', slides: 'Slides 8–11', title: 'Building an adjacency matrix',
+  desc: 'Number the vertices 0 … n−1 and fill an n × n array: matrix[i][j] holds 1 (or the weight) when there is an edge from vertex i to vertex j.',
+  notes: ['Slide 9: for a weighted graph, "no edge" is ∞ instead of 0, because 0 could be a real weight. Slide 11 also puts ∞ on the diagonal (no vertex has an edge to itself).', 'An undirected edge fills two cells, so the matrix is symmetrical: matrix[i][j] = matrix[j][i].', 'Space is n² cells however few edges there are: fine for dense graphs, wasteful for sparse ones.'],
+  codeTitle: 'Adjacency matrix (slide 9)',
+  input: { fields: [EF(G10), DF('dir')], presets: IMPL },
+  code: `// n vertices numbered 0, 1, …, n-1                        @@num
+for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+        matrix[i][j] = 0;    // ∞ if the graph is weighted     @@init
+for (each edge (v, w) in E) {
+    matrix[v][w] = 1;        // or the weight of the edge      @@set
+    if (undirected) matrix[w][v] = 1;   // symmetrical         @@sym
+}
+// edge from i to j?  look at matrix[i][j]: one step, O(1)      @@ask
+// space: n × n cells = O(|V|²)                                 @@space`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir'), n = G.V.length, T = mkGraph(s, 'G', gTitle(G), G, layout(G)), ix = x => G.V.indexOf(x);
+    const M = s.mk('M', { type: 'mat', title: 'matrix[i][j]', names: G.V, m: G.V.map(() => G.V.map(() => '')), mark: {}, info: {} });
+    G.V.forEach((x, i) => { T.num[x] = i; }); T.idx = true;
+    s.step('num', `Number the ${n} vertices: ${G.V.map((x, i) => `${x} = ${i}`).join(', ')}. (The small grey numbers next to the vertices.)`);
+    const none = G.weighted ? '∞' : '0';
+    M.m = G.V.map(() => G.V.map(() => none));
+    s.op('new', `${n} × ${n} array`); s.step('init', `Create an ${n} × ${n} array (${n * n} cells) and fill it with ${G.weighted ? '∞: "no edge" (the graph is weighted, so 0 could be a real weight)' : '0 (false): "no edge"'}.`);
+    s.var('v', ''); s.var('w', '');
+    G.E.forEach(e => {
+      const i = ix(e.a), j = ix(e.b), val = e.w === null ? '1' : String(e.w);
+      s.set('v', `${e.a} (${i})`); s.set('w', `${e.b} (${j})`);
+      M.m[i][j] = val; M.mark[i + ',' + j] = 'cur'; T.edge[e.k] = 'cur'; T.mark[e.a] = T.mark[e.b] = 'cur';
+      s.op('set', `matrix[${i}][${j}] = ${val}`);
+      s.step('set', `Edge (${e.a}, ${e.b})${wTxt(e.w)}: matrix[${i}][${j}] = ${val} — row ${e.a}, column ${e.b}.`);
+      if (!G.dir) {
+        M.m[j][i] = val; M.mark[j + ',' + i] = 'cur'; M.mark[i + ',' + j] = 'cmp'; T.edge[e.k] = 'cur';
+        s.op('set', `matrix[${j}][${i}] = ${val}`);
+        s.step('sym', `Undirected, so (${e.b}, ${e.a}) is the same edge: matrix[${j}][${i}] = ${val} too. The matrix stays symmetrical.`);
+      }
+      T.tree[e.k] = 'tree';
+    });
+    s.drop('v'); s.drop('w');
+    const e0 = G.E[0], i0 = ix(e0.a), j0 = ix(e0.b);
+    M.mark[i0 + ',' + j0] = 'cur'; T.edge[e0.k] = 'cur'; T.mark[e0.a] = T.mark[e0.b] = 'cur';
+    const x = G.V[0], deg = G.adj[x].length;
+    for (let j = 0; j < n; j++) if (M.mark[0 + ',' + j] !== 'cur') M.mark[0 + ',' + j] = 'cmp';
+    s.step('ask', `Is there an edge from ${e0.a} to ${e0.b}? Read matrix[${i0}][${j0}] = ${M.m[i0][j0]}: one look, O(1). But listing the neighbours of ${x} means reading all ${n} cells of row 0 (blue), even though ${x} has only ${deg}.`);
+    const used = M.m.flat().filter(c => c !== none).length;
+    s.step('space', `${n} × ${n} = ${n * n} cells, but only ${used} hold an edge (${Math.round(used / n / n * 100)}%). The matrix always needs O(|V|²) space, so it suits dense graphs.`);
+  } });
+
+/* ---------- 4. adjacency list ---------- */
+P({ id: 'alist', group: 'Storing a graph', slides: 'Slides 12–14', title: 'Building an adjacency list',
+  desc: 'Keep one linked list per vertex. List i has a node for vertex j exactly when there is an edge from i to j (for a weighted graph the node also stores the weight).',
+  notes: ['New nodes are added at the end of each list, so the lists come out in the same order as slides 13 and 14 when the edges are typed in that order.', 'In an undirected graph each edge (v, w) appears in two lists, so the number of nodes is doubled (slide 12).', 'Space is O(|V| + |E|): one head per vertex plus one node per edge, which is much less than |V|² for a sparse graph.'],
+  codeTitle: 'Adjacency list (slide 12)',
+  input: { fields: [EF(G10), DF('dir')], presets: IMPL },
+  code: `// n vertices numbered 0, 1, …, n-1                         @@num
+for (i = 0; i < n; i++) list[i] = NULL;   // n empty lists     @@init
+for (each edge (v, w) in E) {
+    add a node for w (and the weight) to the end of list[v];   @@add
+    if (undirected) add a node for v to the end of list[w];    @@sym
+}
+// neighbours of v: walk list[v] only                           @@ask
+// space: |V| heads + |E| nodes (2|E| if undirected) = O(|V| + |E|)   @@space`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir'), n = G.V.length, T = mkGraph(s, 'G', gTitle(G), G, layout(G)), ix = x => G.V.indexOf(x);
+    const A = s.mk('A', { type: 'alist', title: 'list[ ] (one linked list per vertex)', names: G.V, lists: G.V.map(() => []), mark: {} });
+    G.V.forEach((x, i) => { T.num[x] = i; }); T.idx = true;
+    s.step('num', `Number the ${n} vertices: ${G.V.map((x, i) => `${x} = ${i}`).join(', ')}.`);
+    s.op('new', `${n} head pointers`); s.step('init', `${n} lists, all empty: every head pointer is NULL (the slash).`);
+    G.E.forEach(e => {
+      const i = ix(e.a), j = ix(e.b);
+      A.lists[i].push({ v: e.b, w: e.w }); A.mark[i + ',' + (A.lists[i].length - 1)] = 'cur'; A.mark[i] = 'cur'; T.edge[e.k] = 'cur'; T.mark[e.a] = T.mark[e.b] = 'cur';
+      s.op('new', `node ${e.b}${e.w === null ? '' : ' ' + e.w} → list[${i}]`);
+      s.step('add', `Edge (${e.a}, ${e.b})${wTxt(e.w)}: add a node for ${e.b} to the end of list[${i}] (${e.a}).`);
+      if (!G.dir) {
+        A.lists[j].push({ v: e.a, w: e.w }); A.mark[j + ',' + (A.lists[j].length - 1)] = 'cur'; A.mark[j] = 'cur'; T.edge[e.k] = 'cur';
+        s.op('new', `node ${e.a}${e.w === null ? '' : ' ' + e.w} → list[${j}]`);
+        s.step('sym', `Undirected, so ${e.a} is also adjacent to ${e.b}: add a node for ${e.a} to the end of list[${j}] (${e.b}).`);
+      }
+      T.tree[e.k] = 'tree';
+    });
+    let bi = 0; G.V.forEach((x, i) => { if (A.lists[i].length > A.lists[bi].length) bi = i; });
+    const bx = G.V[bi]; A.mark[bi] = 'cur'; A.lists[bi].forEach((_, k) => { A.mark[bi + ',' + k] = 'cmp'; }); T.mark[bx] = 'cur'; A.lists[bi].forEach(o => { T.mark[o.v] = 'cmp'; });
+    s.step('ask', `Neighbours of ${bx}: walk list[${bi}] — ${A.lists[bi].map(o => o.v).join(', ')}. That is ${A.lists[bi].length} node${A.lists[bi].length === 1 ? '' : 's'}, instead of all ${n} cells of a matrix row.`);
+    const nodes = A.lists.reduce((t, l) => t + l.length, 0);
+    s.step('space', `${n} heads + ${nodes} nodes = ${n + nodes}${G.dir ? '' : ` (${G.E.length} edges, each stored twice)`}, against ${n * n} cells for an adjacency matrix. O(|V| + |E|): the better choice for sparse graphs.`);
+  } });
+
+/* ---------- 5. recursive DFS ---------- */
+P({ id: 'dfs', group: 'Traversals', slides: 'Slides 15–18', title: 'Depth-first search: dfs(v) (recursive)',
+  desc: 'Visit a vertex, then go to an unvisited neighbour and keep going as deep as possible. When a vertex has no unvisited neighbours left, back up to the previous one. The numbers (1), (2), … give the visit order; green edges form the DFS tree.',
+  notes: ['The order in which neighbours are tried is not fixed by the algorithm (slide 16). The slides use sorted order; you can switch to the order the edges were typed.', '"For each unvisited vertex u adjacent to v" is checked when the loop reaches u. A neighbour may have been visited by a deeper call in the meantime; then it is skipped.', 'Every vertex is marked when it is visited and never visited again, so cycles cannot cause an infinite loop (slide 15).', 'The waiting calls form a stack (see the Variables panel): this is why DFS can also be written with an explicit stack — see "DFS with a stack".'],
+  codeTitle: 'Recursive DFS (slide 18)',
+  input: { fields: [EF(G17), DF('und'), SF('v'), OF], presets: TRAV },
+  code: `dfs(in v:Vertex) {                                       @@call
+// Traverses a graph beginning at vertex v
+// by using depth-first strategy
+// Recursive Version
+    Mark v as visited;                                   @@mark
+    for (each unvisited vertex u adjacent to v)          @@for
+        dfs(u)                                           @@rec
+}                                                        @@ret`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir'), st = startV(G, v.start), ord = v.ord;
+    const T = mkGraph(s, 'G', gTitle(G), G, layout(G, st));
+    mkText(s, 'O', 'Visit order', '—'); mkText(s, 'C', 'Calls in progress (the call stack)', '—');
+    const seen = new Set(), order = [], calls = [];
+    const cs = () => s.text('C', calls.length ? calls.map(y => `dfs(${y})`).join(' → ') : '—');
+    s.step(null, `Depth-first search from ${st}. Neighbours are tried in ${ord === 'list' ? 'the order the edges were typed' : 'sorted order'}.`);
+    const dfs = (x, from) => {
+      calls.push(x); s.fn('dfs', `dfs(v = ${x})`); s.var('v', x); cs();
+      T.mark[x] = 'cur'; if (from) T.edge[ek(G, from, x)] = 'cur';
+      s.step('call', from ? `dfs(${x}) is called from dfs(${from}).` : `Call dfs(${st}).`);
+      seen.add(x); order.push(x); T.vis[x] = 'vis'; T.num[x] = order.length; T.mark[x] = 'cur'; s.text('O', order.join(', '));
+      s.op('set', `${x} visited`);
+      s.step('mark', `Mark ${x} as visited: it is number (${order.length}) in the visit order.`);
+      const ns = nb(G, x, ord);
+      if (!ns.length) { T.mark[x] = 'cur'; s.step('for', `${x} has no ${G.dir ? 'outgoing edges' : 'neighbours'}, so the loop does nothing.`); }
+      for (const u of ns) {
+        s.var('u', u); const k = ek(G, x, u); T.mark[x] = 'cur'; T.mark[u] = 'cmp'; T.edge[k] = 'cmp';
+        if (seen.has(u)) { s.step('for', `u = ${u}: adjacent to ${x}, but already visited. Skip it.`); continue; }
+        s.step('for', `u = ${u}: adjacent to ${x} and not visited yet.`);
+        T.tree[k] = 'tree'; T.edge[k] = 'cur'; T.mark[u] = 'cmp';
+        s.step('rec', `Go deeper: call dfs(${u}). dfs(${x}) waits at this line until that call returns.`);
+        dfs(u, x); cs();
+        T.mark[x] = 'cur'; T.edge[k] = 'cmp';
+        s.step('rec', `dfs(${u}) has returned: we have backed up to ${x}. Continue ${x}'s loop with its next neighbour.`);
+      }
+      T.mark[x] = 'cur';
+      s.step('ret', `No unvisited vertex is adjacent to ${x}: dfs(${x}) ends${calls.length > 1 ? ` and we back up to ${calls[calls.length - 2]}` : ''}.`);
+      calls.pop(); s.ret();
+    };
+    dfs(st, null); cs();
+    s.text('O', order.join(', '), 'good');
+    s.step(null, `DFS order: ${order.join(', ')}. ${unreached(G, seen, st)}`);
+  } });
+
+/* ---------- 6. DFS with a stack ---------- */
+P({ id: 'dfsstack', group: 'Traversals', slides: 'Slides 16–17 (+ Lecture 5)', title: 'DFS with a stack (non-recursive)',
+  desc: 'The same depth-first search without recursion: an explicit stack holds the path we came along. Look at the top vertex: go to an unvisited neighbour (push), or back up when there is none (pop).',
+  notes: ['This version is not on the slides. It is the standard iterative version and visits the vertices in exactly the same order as the recursive dfs on slide 18.', 'The stack plays the role of the waiting recursive calls. Popping is "backing up to the previous step" (slide 17).'],
+  codeTitle: 'Iterative DFS',
+  input: { fields: [EF(G17), DF('und'), SF('v'), OF], presets: TRAV },
+  code: `dfs(in v:Vertex) {      // iterative version
+    s.createStack();                                         @@create
+    s.push(v);  Mark v as visited;                           @@push0
+    while (!s.isEmpty()) {                                   @@while
+        if (no unvisited vertex is adjacent to the top vertex)   @@if
+            s.pop();        // back up                       @@pop
+        else {
+            u = an unvisited vertex adjacent to the top;     @@sel
+            s.push(u);  Mark u as visited;                   @@push
+        }
+    }
+}                                                            @@end`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir'), st = startV(G, v.start), ord = v.ord;
+    const T = mkGraph(s, 'G', gTitle(G), G, layout(G, st)), S = mkSeq(s, 'S', 'Stack s', 'stack');
+    mkText(s, 'O', 'Visit order', '—');
+    const seen = new Set(), order = [];
+    s.fn('dfs', `dfs(v = ${st})`); s.var('v', st);
+    s.op('new', 'empty stack'); s.step('create', 'Create an empty stack.');
+    const visit = (x, from) => { seen.add(x); order.push(x); T.vis[x] = 'vis'; T.num[x] = order.length; T.mark[x] = 'cur'; S.items.push(x); S.mark[S.items.length - 1] = 'cur'; s.text('O', order.join(', ')); s.op('push', `push ${x}`); if (from) { T.tree[ek(G, from, x)] = 'tree'; T.edge[ek(G, from, x)] = 'cur'; } };
+    visit(st, null); s.step('push0', `Push ${st} and mark it visited (1).`);
+    for (;;) {
+      if (!S.items.length) { s.step('while', 'The stack is empty: the traversal is over.'); break; }
+      const top = S.items[S.items.length - 1]; s.var('top', top); T.mark[top] = 'cur'; S.mark[S.items.length - 1] = 'cmp';
+      const u = nb(G, top, ord).find(z => !seen.has(z));
+      if (u === undefined) {
+        nb(G, top, ord).forEach(z => { T.mark[z] = 'cmp'; });
+        s.step('if', `Top = ${top}. ${G.adj[top].length ? `Its neighbours (${nb(G, top, ord).join(', ')}) are all visited.` : `It has no ${G.dir ? 'outgoing edges' : 'neighbours'}.`}`);
+        S.items.pop(); s.op('pop', `pop ${top}`); if (S.items.length) T.mark[S.items[S.items.length - 1]] = 'cur';
+        s.step('pop', `Pop ${top}: back up${S.items.length ? ` to ${S.items[S.items.length - 1]}` : ''}.`);
+      } else {
+        T.mark[u] = 'cmp'; T.edge[ek(G, top, u)] = 'cmp';
+        s.step('sel', `Top = ${top}. ${u} is adjacent to it and not visited: choose u = ${u}.`);
+        s.var('u', u); visit(u, top);
+        s.step('push', `Push ${u} and mark it visited (${order.length}).`);
+      }
+    }
+    s.drop('top'); s.drop('u'); s.ret(); s.text('O', order.join(', '), 'good');
+    s.step('end', `DFS order: ${order.join(', ')} — the same as the recursive version. ${unreached(G, seen, st)}`);
+  } });
+
+/* ---------- 7. BFS ---------- */
+P({ id: 'bfs', group: 'Traversals', slides: 'Slides 19–20', title: 'Breadth-first search: bfs(v) with a queue',
+  desc: 'Visit a vertex, then all of its unvisited neighbours, then their neighbours, and so on, level by level. A queue remembers which vertices still have to be expanded, in first-in first-out order.',
+  notes: ['The slides describe BFS but give no code. This is the standard queue version that goes with the dfs code on slide 18.', 'A vertex is marked when it is put in the queue, not when it comes out. That way no vertex can enter the queue twice.', 'The visit numbers match slide 20: v (1); its neighbours u, w, x (2–4); then u\'s unvisited neighbours q, t (5–6); then r, s (7–8).'],
+  codeTitle: 'BFS with a queue',
+  input: { fields: [EF(G17), DF('und'), SF('v'), OF], presets: TRAV },
+  code: `bfs(in v:Vertex) {
+    q.createQueue();                                      @@create
+    q.enqueue(v);  Mark v as visited;                     @@enq0
+    while (!q.isEmpty()) {                                @@while
+        q.dequeue(w);                                     @@deq
+        for (each unvisited vertex u adjacent to w) {     @@for
+            Mark u as visited;                            @@mark
+            q.enqueue(u);                                 @@enq
+        }
+    }
+}                                                         @@end`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir'), st = startV(G, v.start), ord = v.ord;
+    const T = mkGraph(s, 'G', gTitle(G), G, layout(G, st)), Q = mkSeq(s, 'Q', 'Queue q', 'queue');
+    mkText(s, 'O', 'Visit order', '—');
+    const seen = new Set(), order = [];
+    s.fn('bfs', `bfs(v = ${st})`); s.var('v', st);
+    s.op('new', 'empty queue'); s.step('create', 'Create an empty queue.');
+    const mark = x => { seen.add(x); order.push(x); T.vis[x] = 'vis'; T.num[x] = order.length; T.mark[x] = 'cur'; s.text('O', order.join(', ')); };
+    mark(st); Q.items.push(st); Q.mark[0] = 'cur'; s.op('push', `enqueue ${st}`);
+    s.step('enq0', `Enqueue ${st} and mark it visited (1).`);
+    for (;;) {
+      if (!Q.items.length) { s.step('while', 'The queue is empty: every reachable vertex has been visited.'); break; }
+      Q.mark[0] = 'cmp'; s.step('while', `The queue is not empty: ${Q.items.join(', ')}.`);
+      const w = Q.items.shift(); s.var('w', w); T.mark[w] = 'cur'; s.op('pop', `dequeue ${w}`);
+      s.step('deq', `Dequeue the front: w = ${w}. Now visit all of ${w}'s unvisited neighbours.`);
+      const ns = nb(G, w, ord);
+      if (!ns.length) { T.mark[w] = 'cur'; s.step('for', `${w} has no ${G.dir ? 'outgoing edges' : 'neighbours'}.`); }
+      for (const u of ns) {
+        s.var('u', u); const k = ek(G, w, u); T.mark[w] = 'cur'; T.mark[u] = 'cmp'; T.edge[k] = 'cmp';
+        if (seen.has(u)) { s.step('for', `u = ${u}: adjacent to ${w}, but already visited. Skip it.`); continue; }
+        s.step('for', `u = ${u}: adjacent to ${w} and not visited yet.`);
+        mark(u); T.tree[k] = 'tree'; T.edge[k] = 'cur'; T.mark[w] = 'cmp';
+        s.step('mark', `Mark ${u} as visited (${order.length}).`);
+        Q.items.push(u); Q.mark[Q.items.length - 1] = 'cur'; T.mark[u] = 'cur'; s.op('push', `enqueue ${u}`);
+        s.step('enq', `Enqueue ${u}: it waits behind ${Q.items.length > 1 ? Q.items.slice(0, -1).join(', ') : 'nobody'}.`);
+      }
+      s.drop('u');
+    }
+    s.drop('w'); s.ret(); s.text('O', order.join(', '), 'good');
+    s.step('end', `BFS order: ${order.join(', ')}. ${unreached(G, seen, st)}`);
+  } });
+
+/* ---------- 8. side by side ---------- */
+P({ id: 'versus', group: 'Traversals', slides: 'Slides 16–20', title: 'DFS and BFS side by side',
+  desc: 'The same graph, the same start vertex: watch the two traversals choose their next vertex one visit at a time. DFS dives down one branch; BFS spreads out level by level.',
+  notes: ['Both visit every vertex reachable from the start exactly once, in O(|V| + |E|) time with an adjacency list.', 'Slides 16 and 19 number the same tree both ways: try the "Slides 16 / 19 tree" preset.'],
+  codeTitle: 'The two strategies',
+  input: { fields: [EF(G16), DF('und'), SF('A'), OF], presets: TRAV },
+  code: `DFS: from the newest vertex, go deeper if you can, else back up    (a stack)   @@k
+BFS: finish all neighbours of the oldest vertex before moving on   (a queue)   @@k`,
+  run(s, v) {
+    const G = parseGraph(v.edges, v.dir === 'dir'), st = startV(G, v.start), ord = v.ord, pos = layout(G, st);
+    const D = mkGraph(s, 'D', 'Depth-first (DFS)', G, pos, { type: 'graph2' }), B = mkGraph(s, 'B', 'Breadth-first (BFS)', G, pos, { type: 'graph2' });
+    const dO = [], dP = {}, seen = new Set();
+    const dfs = (x, p) => { seen.add(x); dO.push(x); dP[x] = p; nb(G, x, ord).forEach(u => { if (!seen.has(u)) dfs(u, x); }); };
+    dfs(st, null);
+    const bO = [st], bP = { [st]: null }, bs = new Set([st]);
+    for (let i = 0; i < bO.length; i++) nb(G, bO[i], ord).forEach(u => { if (!bs.has(u)) { bs.add(u); bO.push(u); bP[u] = bO[i]; } });
+    mkText(s, 'DO', 'DFS order', '—'); mkText(s, 'BO', 'BFS order', '—');
+    s.step(null, `Both start at ${st}. Neighbours are tried in ${ord === 'list' ? 'the order the edges were typed' : 'sorted order'}.`);
+    for (let k = 0; k < dO.length; k++) {
+      const a = dO[k], b = bO[k];
+      D.vis[a] = 'vis'; D.num[a] = k + 1; D.mark[a] = 'cur'; if (dP[a] !== null) { D.tree[ek(G, dP[a], a)] = 'tree'; D.edge[ek(G, dP[a], a)] = 'cur'; }
+      B.vis[b] = 'vis'; B.num[b] = k + 1; B.mark[b] = 'cur'; if (bP[b] !== null) { B.tree[ek(G, bP[b], b)] = 'tree'; B.edge[ek(G, bP[b], b)] = 'cur'; }
+      s.text('DO', dO.slice(0, k + 1).join(', ')); s.text('BO', bO.slice(0, k + 1).join(', '));
+      s.step('k', k === 0 ? `Visit (1): both start at ${st}.` : `Visit (${k + 1}): DFS goes to ${a}${dP[a] ? ` (from ${dP[a]})` : ''}; BFS goes to ${b}${bP[b] ? ` (a neighbour of ${bP[b]})` : ''}.${a === b ? ' Same choice this time.' : ''}`);
+    }
+    s.text('DO', dO.join(', '), 'good'); s.text('BO', bO.join(', '), 'good');
+    s.step(null, `DFS: ${dO.join(', ')}. BFS: ${bO.join(', ')}. ${unreached(G, seen, st)}`);
+  } });
+
+/*ENGINE-END*/
+
+/* ======================= UI ======================= */
+const $ = q => document.querySelector(q);
+const el = { sel: $('#prog'), slides: $('#slides'), title: $('#ptitle'), desc: $('#pdesc'), notesWrap: $('#notesWrap'), notesSum: $('#notesSum'), notes: $('#notes'),
+  inWrap: $('#inWrap'), inFields: $('#inFields'), inRun: $('#inRun'), inPresets: $('#inPresets'), inErr: $('#inErr'),
+  structs: $('#structs'), stepNo: $('#stepNo'), note: $('#note'), diff: $('#diff'), codeH: $('#codeH'), code: $('#code'), codeWrap: $('#codeWrap'),
+  varsCard: $('#varsCard'), vars: $('#vars'), outCard: $('#outCard'), out: $('#out'), range: $('#range'), count: $('#count'),
+  bFirst: $('#bFirst'), bPrev: $('#bPrev'), bPlay: $('#bPlay'), bNext: $('#bNext'), bLast: $('#bLast'), bSpeed: $('#bSpeed') };
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let cur = { prog: null, parsed: null, snaps: [], i: 0, vals: {} };
+let timer = null, speed = 1;
+
+const KW = 'int|float|double|char|void|struct|class|public|return|new|delete|while|if|else|for|do|NULL|using|namespace|string|include|endl|cout|cin|std|const|bool|Object|private|assert|break';
+const TOK = new RegExp(`(\\/\\/.*$)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b(${KW})\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'g');
+function hl(line) {
+  let out = '', last = 0;
+  line.replace(TOK, (m, com, str, kw, num, off) => {
+    out += esc(line.slice(last, off));
+    out += `<span class="${com ? 'c-com' : str ? 'c-str' : kw ? 'c-kw' : 'c-num'}">${esc(m)}</span>`; last = off + m.length; return m;
+  });
+  return out + esc(line.slice(last));
+}
+function buildSelect() {
+  const groups = [];
+  PROGRAMS.forEach(p => { let g = groups.find(x => x.name === p.group); if (!g) { g = { name: p.group, items: [] }; groups.push(g); } g.items.push(p); });
+  el.sel.innerHTML = groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`).join('');
+}
+const sameVals = (a, b) => Object.keys(a).every(k => String(a[k]).trim() === String(b[k] === undefined ? '' : b[k]).trim());
+
+function readFields() { const o = {}; el.inFields.querySelectorAll('[data-k]').forEach(f => { o[f.dataset.k] = f.value; }); return o; }
+function drawFields(p, vals) {
+  el.inFields.innerHTML = p.input.fields.map(f => {
+    const id = 'f_' + f.k;
+    const ctl = f.type === 'select'
+      ? `<select id="${id}" data-k="${f.k}">${f.options.map(([v, l]) => `<option value="${esc(v)}"${String(vals[f.k]) === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`
+      : `<input id="${id}" data-k="${f.k}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(vals[f.k])}">`;
+    return `<label class="fld w-${f.type === 'select' ? 'm' : (f.w || 'm')}" for="${id}"><span>${esc(f.label)}</span>${ctl}</label>`;
+  }).join('');
+  el.inPresets.innerHTML = p.input.presets.map(([l, v], i) => `<button type="button" data-i="${i}" class="${sameVals(v, vals) ? 'on' : ''}">${esc(l)}</button>`).join('');
+}
+
+function load(id, vals) {
+  stop();
+  const p = PROGRAMS.find(x => x.id === id) || PROGRAMS[0];
+  el.sel.value = p.id;
+  let r;
+  try { r = runProgram(p, vals); }
+  catch (e) {
+    if (!(e instanceof InputError)) throw e;
+    if (cur.prog === p) { el.inErr.textContent = e.message; return; }
+    r = runProgram(p, {});
+  }
+  el.inErr.textContent = '';
+  const parsed = parseCode(r.code);
+  cur = { prog: p, parsed, snaps: r.snaps, i: 0, vals: r.vals };
+  el.slides.textContent = p.slides; el.title.textContent = p.title; el.desc.textContent = p.desc;
+  if (p.notes && p.notes.length) { el.notesWrap.hidden = false; el.notes.innerHTML = p.notes.map(n => `<li>${esc(n)}</li>`).join(''); el.notesSum.textContent = p.notes.length === 1 ? '1 note about this' : `${p.notes.length} notes about this`; }
+  else el.notesWrap.hidden = true;
+  if (p.input) { el.inWrap.hidden = false; drawFields(p, r.vals); } else el.inWrap.hidden = true;
+  el.codeH.textContent = p.codeTitle || 'Code';
+  el.code.innerHTML = parsed.lines.map((t, i) => `<div class="cl"><span class="ln">${i + 1}</span><span>${hl(t) || ' '}</span></div>`).join('');
+  el.codeWrap.scrollTop = 0;
+  el.varsCard.hidden = !cur.snaps.some(sn => sn.state.frames.some(f => Object.keys(f.vars).length));
+  el.outCard.hidden = !cur.snaps.some(sn => sn.state.out);
+  el.range.max = cur.snaps.length - 1;
+  try { localStorage.setItem('graph-sim-prog', p.id); } catch (e) {}
+  go(0);
+}
+function go(i) { cur.i = Math.max(0, Math.min(cur.snaps.length - 1, i)); render(); }
+
+const mainTree = st => { for (const k of st.order) if (st.st[k].type === 'tree') return st.st[k]; return null; };
+const mainHeap = st => { for (const k of st.order) if (st.st[k].type === 'heap') return st.st[k]; return null; };
+function fvv(o, st) {
+  if (o.t === 'ptr') { if (o.v === null) return 'NULL'; if (o.v === GARB) return '?'; const T = mainTree(st), n = T && T.nodes[o.v]; return n ? `node ${fv(n.v)}` : 'deleted node'; }
+  if (o.t === 'idx') { const H = mainHeap(st); return H && H.arr[o.v] !== null && H.arr[o.v] !== undefined && o.v >= 1 ? `${o.v}  (Heap[${o.v}] = ${fv(H.arr[o.v])})` : String(o.v); }
+  return o.v === GARB ? '?' : fv(o.v);
+}
+function computeDiff(ps, st, sn) {
+  const fItems = [], oItems = [], vars = new Set();
+  if (!ps) return { items: [], vars };
+  const L = Math.max(st.frames.length, ps.frames.length);
+  for (let fi = 0; fi < L; fi++) {
+    const a = ps.frames[fi], b = st.frames[fi], same = a && b && a.label === b.label;
+    if (a && !same) fItems.push(['ret', `${a.label} finished`]);
+    if (b && !same) { fItems.push(['call', `Entered ${b.label}`]); Object.entries(b.vars).forEach(([k, o]) => { vars.add(fi + ':' + k); fItems.push(['var', `${k} = ${fvv(o, st)}`]); }); continue; }
+    if (same) {
+      Object.entries(b.vars).forEach(([k, o]) => {
+        const ov = a.vars[k];
+        if (!ov) { vars.add(fi + ':' + k); fItems.push(['var', `${k} created = ${fvv(o, st)}`]); }
+        else if (ov.v !== o.v) { vars.add(fi + ':' + k); fItems.push(['var', `${k}: ${fvv(ov, ps)} → ${fvv(o, st)}`]); }
+      });
+      Object.keys(a.vars).forEach(k => { if (!(k in b.vars)) fItems.push(['var', `${k} goes out of scope`]); });
+    }
+  }
+  if (st.out.length > ps.out.length) oItems.push(['out', `Printed ${JSON.stringify(st.out.slice(ps.out.length))}`]);
+  return { items: fItems.concat(sn.ops || [], oItems), vars };
+}
+const BADGE = { count: 'count', var: 'variable', call: 'call', ret: 'return', out: 'output', new: 'new node', set: 'store', link: 'link', del: 'remove', move: 'move', swap: 'swap', push: 'insert', pop: 'remove', read: 'read', err: 'error' };
+
+function render() {
+  const snap = cur.snaps[cur.i], prev = cur.i > 0 ? cur.snaps[cur.i - 1] : null, st = snap.state;
+  const ch = computeDiff(prev && prev.state, st, snap);
+  const n = cur.snaps.length;
+  el.count.textContent = `Step ${cur.i + 1} of ${n}`;
+  el.stepNo.textContent = snap.label && cur.parsed.map[snap.label] ? `line ${cur.parsed.map[snap.label][0] + 1}` : (cur.i === 0 ? 'starting point' : '');
+  el.range.value = cur.i;
+  el.note.textContent = snap.note; el.note.className = 'note' + (snap.crash ? ' crash' : '');
+  el.diff.innerHTML = ch.items.length ? ch.items.map(([k, t]) => `<li><span class="badge b-${k}">${BADGE[k] || k}</span><span>${esc(t)}</span></li>`).join('')
+    : `<li class="nodiff">${cur.i === 0 ? 'This is the starting point. Press Next to run the first step.' : 'Nothing was stored or moved: this step compared values or checked a condition.'}</li>`;
+  el.code.querySelectorAll('.cl.cur').forEach(x => x.classList.remove('cur'));
+  const lines = snap.label ? (cur.parsed.map[snap.label] || []) : [];
+  lines.forEach(li => { const d = el.code.children[li]; if (d) d.classList.add('cur'); });
+  if (lines.length) {
+    const f = el.code.children[lines[0]], lastEl = el.code.children[lines[lines.length - 1]], w = el.codeWrap;
+    const top = f.offsetTop, bot = lastEl.offsetTop + lastEl.offsetHeight;
+    if (top < w.scrollTop + 20 || bot > w.scrollTop + w.clientHeight - 20) w.scrollTo({ top: Math.max(0, (top + bot) / 2 - w.clientHeight / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  renderStructs(st, ch);
+  if (!el.varsCard.hidden) renderVars(st, ch);
+  const prevOut = prev ? prev.state.out : '';
+  if (!st.out) el.out.innerHTML = '<span class="muted">Nothing printed yet.</span>';
+  else if (st.out.length > prevOut.length && st.out.startsWith(prevOut)) el.out.innerHTML = esc(prevOut) + `<span class="new">${esc(st.out.slice(prevOut.length))}</span>`;
+  else el.out.textContent = st.out;
+  el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
+  el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  growSvgs(document.querySelector('main'));
+  if (cur.i === n - 1) stop();
+}
+function renderVars(st, ch) {
+  let h = '';
+  st.frames.forEach((f, fi) => {
+    const ents = Object.entries(f.vars); if (!ents.length) return;
+    const active = fi === st.frames.length - 1 && fi > 0;
+    h += `<div class="frame${active ? ' active' : ''}"><div class="fh"><span>${esc(f.label)}</span>${active ? '<span class="act">running now</span>' : ''}</div>`;
+    ents.forEach(([k, o]) => {
+      const v = o.v === null && o.t === 'ptr' ? '<span class="nul">NULL</span>' : o.v === GARB ? '<span class="garb">? (garbage)</span>' : esc(fvv(o, st));
+      h += `<div class="vr${ch.vars.has(fi + ':' + k) ? ' chg' : ''}"><span class="vn">${esc(k)}</span><span class="vv">${v}</span></div>`;
+    });
+    h += '</div>';
+  });
+  el.vars.innerHTML = h || '<div class="muted">No variables yet.</div>';
+}
+
+/* ---------- tree drawing ---------- */
+const PATHY = { path: 1, done: 1, cur: 1, cmp: 1, new: 1 };
+function drawTree(G, availW) {
+  const R = 17, DX = 46, DY = 64, PX = 26, PY = 22;
+  const pos = {}; let col = 0, maxD = -1;
+  const walk = (id, d) => { if (id === null || id === undefined || !G.nodes[id]) return; const n = G.nodes[id]; walk(n.l, d + 1); pos[id] = { c: col++, d }; maxD = Math.max(maxD, d); walk(n.r, d + 1); };
+  walk(G.root, 0);
+  const fl = (G.floating || []).filter(id => G.nodes[id] && !pos[id]);
+  const flY = maxD + 1 + (maxD >= 0 ? 0.35 : 0);
+  fl.forEach((id, k) => { pos[id] = { c: k, d: flY, fl: 1 }; });
+  const cols = Math.max(col, fl.length, 1), rows = (fl.length ? flY : maxD) + 1;
+  const W = Math.max(220, PX * 2 + (cols - 1) * DX + 40), Hh = PY + Math.max(0, rows - 1) * DY + R + 34 + (fl.length ? 6 : 0);
+  const X = id => PX + 20 + pos[id].c * DX, Y = id => PY + pos[id].d * DY + 4;
+  let g = '';
+  if (fl.length) g += `<text x="${PX}" y="${Y(fl[0]) - R - 9}" class="rowlbl">${esc(G.floatLabel || 'not linked into the tree')}</text>`;
+  if (G.root === null && !fl.length) g += `<text x="${PX}" y="${PY + 10}" class="rowlbl">The tree is empty (root is NULL).</text>`;
+  for (const id in pos) {
+    const n = G.nodes[id];
+    [n.l, n.r].forEach(c => {
+      if (c === null || c === undefined || !pos[c]) return;
+      const x1 = X(id), y1 = Y(id), x2 = X(c), y2 = Y(c), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+      const cls = G.edge[c] || ((PATHY[G.nodes[id].cls] && PATHY[G.nodes[c].cls] && G.nodes[c].cls !== 'done') ? 'path' : '');
+      g += `<line x1="${(x1 + dx / L * R).toFixed(1)}" y1="${(y1 + dy / L * R).toFixed(1)}" x2="${(x2 - dx / L * R).toFixed(1)}" y2="${(y2 - dy / L * R).toFixed(1)}" class="te ${cls}${G.nodes[c].ph ? ' ph' : ''}"/>`;
+    });
+  }
+  for (const id in pos) {
+    const n = G.nodes[id], x = X(id), y = Y(id), txt = n.ph ? '?' : fv(n.v), fs = txt.length > 3 ? 11 : 13.5;
+    g += `<g class="tn ${n.cls || ''}${n.ph ? ' ph' : ''}${n.hole ? ' hole' : ''}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y + fs / 2.8}" style="font-size:${fs}px">${esc(txt)}</text></g>`;
+    if (n.sub !== undefined && n.sub !== '') {
+      const [p] = G.parentOf ? G.parentOf(id) : [null];
+      const right = p === null || p === undefined || !G.nodes[p] || +G.nodes[p].r === +id;
+      g += `<text x="${x + (right ? R + 3 : -R - 3)}" y="${y - R + 6}" class="tsub" text-anchor="${right ? 'start' : 'end'}">${esc(n.sub)}</text>`;
+    }
+    if (n.tag) { const tw = n.tag.length * 6.6 + 10; g += `<g class="ttag"><rect x="${x - tw / 2}" y="${y + R + 4}" width="${tw}" height="16" rx="4"/><text x="${x}" y="${y + R + 15.5}">${esc(n.tag)}</text></g>`; }
+  }
+  return fitSvg(W, Hh, g, availW);
+}
+function fitSvg(W, H, g, availW) {
+  const sc = W > availW ? availW / W : 1, fit = sc >= 0.62;
+  const svg = `<svg width="${fit ? Math.floor(W * sc) : W}" height="${fit ? Math.ceil(H * sc) : H}" viewBox="0 0 ${W} ${H}" style="display:block">${g}</svg>`;
+  return `<div class="scroll">${svg}</div>${fit ? '' : '<div class="hint">Swipe sideways to see the whole tree.</div>'}`;
+}
+function autoTags(st, kind) {
+  const out = {}, top = st.frames.length - 1;
+  const names = {}; [0, top].forEach(fi => { if (fi < 0) return; Object.keys(st.frames[fi].vars).forEach(k => { names[k] = (names[k] || 0) + (fi === 0 || top === 0 ? 1 : 1); }); });
+  const frames = top > 0 ? [0, top] : [0];
+  frames.forEach(fi => {
+    const f = st.frames[fi];
+    Object.entries(f.vars).forEach(([k, o]) => {
+      if (o.t !== kind || typeof o.v !== 'number') return;
+      const label = fi > 0 && k in st.frames[0].vars ? `${k} (${f.name})` : k;
+      (out[o.v] = out[o.v] || []).push(label);
+    });
+  });
+  return out;
+}
+const R = {};
+R.tree = (t, st) => {
+  const auto = t.ptrs ? autoTags(st, 'ptr') : {};
+  const nodes = {};
+  for (const id in t.nodes) {
+    const n = t.nodes[id], tags = [].concat(auto[id] || [], t.tags[id] || []);
+    nodes[id] = { v: n.v, l: n.l, r: n.r, cls: t.mark[id] || t.keep[id] || '', sub: t.info[id] !== undefined ? t.info[id] : t.sub[id], tag: tags.join(', ') };
+  }
+  const reach = new Set(); const w = id => { if (id === null || !t.nodes[id]) return; reach.add(+id); w(t.nodes[id].l); w(t.nodes[id].r); }; w(t.root);
+  const floating = Object.keys(t.nodes).map(Number).filter(id => !reach.has(id));
+  const parentOf = id => { for (const k in t.nodes) { if (t.nodes[k].l === +id || t.nodes[k].r === +id) return [k]; } return [null]; };
+  return drawTree({ nodes, root: t.root, floating, edge: t.edge, parentOf }, availWidth());
+};
+R.heap = (t, st) => {
+  const auto = t.idx ? autoTags(st, 'idx') : {};
+  const last = Math.max(t.size, ...Object.keys(t.ph).map(Number), 0);
+  const exists = i => i >= 1 && i <= last && ((i <= t.size && t.arr[i] !== null && t.arr[i] !== undefined) || t.ph[i] || t.hole === i);
+  const nodes = {};
+  for (let i = 1; i <= last; i++) {
+    if (!exists(i)) continue;
+    const tags = [].concat(auto[i] || [], t.tags[i] || []);
+    if (t.hole === i && !tags.includes('hole')) tags.unshift('hole');
+    nodes[i] = { v: t.arr[i], l: exists(2 * i) ? 2 * i : null, r: exists(2 * i + 1) ? 2 * i + 1 : null, cls: t.mark[i] || t.keep[i] || '', sub: t.info[i] !== undefined ? t.info[i] : (t.showIdx ? String(i) : ''), tag: [...new Set(tags)].join(', '), ph: !!t.ph[i], hole: t.hole === i };
+  }
+  const parentOf = id => [+id > 1 ? (+id) >> 1 : null];
+  let h = drawTree({ nodes, root: exists(1) ? 1 : null, floating: [], edge: {}, parentOf }, availWidth());
+  if (t.noArray) return h;
+  const cap = Math.max(t.cap || 0, t.size, last), cw = 38, ch = 32, px = 4, W = px * 2 + (cap + 1) * cw + 70, H = ch + 44;
+  let g = '';
+  for (let i = 0; i <= cap; i++) {
+    const x = px + i * cw, inside = i >= 1 && i <= t.size, v = t.arr[i];
+    const cls = i === 0 ? 'unused' : t.hole === i ? 'hole' : (t.mark[i] || t.keep[i] || '') + (inside ? ' live' : ' out');
+    g += `<rect x="${x}" y="4" width="${cw}" height="${ch}" class="ac ${cls}"/>`;
+    if (i === 0) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av stale">–</text>`;
+    else if (v !== null && v !== undefined) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av${inside && t.hole !== i ? '' : ' stale'}">${esc(fv(v))}</text>`;
+    g += `<text x="${x + cw / 2}" y="${ch + 18}" class="idx" text-anchor="middle">${i}</text>`;
+  }
+  const sx = px + (t.size + 1) * cw;
+  if (!t.noSize) g += `<line x1="${sx}" y1="0" x2="${sx}" y2="${ch + 8}" class="szl"/><text x="${sx + 4}" y="${ch + 32}" class="szt">size = ${t.size}</text>`;
+  return h + `<div class="arrlbl">${esc(t.arrLabel || 'The same heap as an array (index 0 unused)')}</div><div class="scroll">${svgArr(W, H, g)}</div>`;
+};
+const svgArr = (w, h, g) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">${g}</svg>`;
+R.tape = t => `<div class="tape">${t.tokens.map((x, i) => {
+  const m = t.marks[i]; const c = i === t.pos ? (m === 'err' ? 'err' : 'cur') : m === 'err' ? 'err' : (i < t.pos ? 'done' : '');
+  return `<span class="tk ${c}">${esc(x)}</span>`; }).join('')}</div>`;
+R.table = t => `<div class="tbl"><table><thead><tr>${t.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+  t.rows.length ? t.rows.map((r, i) => `<tr class="${i === t.hlRow ? 'hl' : ''}">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${t.cols.length}" class="none">No rows yet.</td></tr>`
+}</tbody></table></div>`;
+R.text = t => `<div class="tv ${t.cls || ''}${t.chg ? ' chg' : ''}">${esc(t.value)}</div>`;
+const WIDE = { tree: 1, heap: 1, table: 1, tape: 1 };
+let _aw = 600; const availWidth = () => _aw;
+function renderStructs(st, ch) {
+  _aw = Math.max(240, el.structs.clientWidth - 26);
+  let h = '';
+  st.order.forEach(n => { const t = st.st[n]; h += `<div class="sc${WIDE[t.type] ? ' wide' : ''}"><h4>${esc(t.title)}</h4>${R[t.type](t, st, ch)}</div>`; });
+  el.structs.innerHTML = h;
+  el.structs.querySelectorAll('.tbl').forEach(d => { const r = d.querySelector('tr.hl'); d.scrollTop = r ? r.offsetTop - d.clientHeight + r.offsetHeight + 4 : d.scrollHeight; });
+}
+
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.bPlay.textContent = '▶ Play'; }
+function play() {
+  if (timer) { stop(); return; }
+  if (cur.i >= cur.snaps.length - 1) go(0);
+  el.bPlay.textContent = '❚❚ Pause';
+  timer = setInterval(() => { if (cur.i >= cur.snaps.length - 1) stop(); else go(cur.i + 1); }, 1100 / speed);
+}
+el.bFirst.onclick = () => { stop(); go(0); };
+el.bPrev.onclick = () => { stop(); go(cur.i - 1); };
+el.bNext.onclick = () => { stop(); go(cur.i + 1); };
+el.bLast.onclick = () => { stop(); go(cur.snaps.length - 1); };
+el.bPlay.onclick = play;
+el.bSpeed.onclick = () => { const sp = [1, 2, 4, 0.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; el.bSpeed.textContent = (speed === 0.5 ? '½' : speed) + '×'; if (timer) { stop(); play(); } };
+el.range.oninput = () => { stop(); go(+el.range.value); };
+el.sel.onchange = () => load(el.sel.value);
+el.inRun.onclick = () => load(cur.prog.id, readFields());
+el.inFields.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); load(cur.prog.id, readFields()); } });
+el.inFields.addEventListener('change', e => { if (e.target.matches('select')) load(cur.prog.id, readFields()); });
+el.inPresets.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const pr = cur.prog.input.presets[+b.dataset.i][1]; load(cur.prog.id, Object.assign(readFields(), pr)); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('select, input, textarea, button')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(cur.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(cur.i - 1); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => cur.prog && render(), 150); });
+
+
+/* ---------- renderers for hashing and growth ---------- */
+R.htable = t => {
+  const idx = t.show || Array.from({ length: t.size }, (_, i) => i);
+  let h = '<div class="ht">', prev = null;
+  idx.forEach(i => {
+    if (prev !== null && i > prev + 1) h += `<div class="hrow gap"><span class="hi">…</span><span class="hk">${i - prev - 1} empty slot${i - prev - 1 > 1 ? 's' : ''}</span></div>`;
+    const c = t.cells[i], cls = t.mark[i] || '', tag = (t.tags[i] || []).join(', ');
+    const body = !c ? '<span class="emp">empty</span>' : c.del ? `<span class="dk">deleted</span> <span class="was">(was ${esc(c.k)})</span>` : esc(c.k);
+    h += `<div class="hrow ${cls}${c && c.del ? ' isdel' : ''}"><span class="hi">[${i}]</span><span class="hk">${body}</span>${tag ? `<span class="htag">${esc(tag)}</span>` : ''}</div>`;
+    prev = i;
+  });
+  return h + '</div>';
+};
+R.chains = t => {
+  let h = '<div class="chs">';
+  t.lists.forEach((L, i) => {
+    h += `<div class="chr"><span class="chi ${t.mark[i] || ''}">${i}</span><span class="charr">→</span>`;
+    if (!L.length) h += '<span class="chnull">NULL</span>';
+    L.forEach((k, j) => { h += `<span class="chn ${t.mark[i + ':' + j] || ''}">${esc(k)}</span>${j < L.length - 1 ? '<span class="charr">→</span>' : '<span class="charr">→</span><span class="chnull">NULL</span>'}`; });
+    h += '</div>';
+  });
+  return h + '</div>';
+};
+R.bars = t => `<div class="bars">${t.rows.map(r => `<div class="bar ${r.cls || ''}"><span class="bl">${esc(r.label)}</span><span class="bt"><span class="bf" style="width:${Math.max(0.5, r.frac * 100).toFixed(1)}%"></span></span><span class="bv">${esc(r.value)} <em>${Math.round(r.frac * 100)}%</em></span></div>`).join('')}</div>`;
+const supD = k => String(k).replace('-', '⁻').split('').map(d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d] || d).join('');
+const yTick = (v, log) => {
+  if (log) { const k = Math.round(v); return k <= 3 ? String(Math.pow(10, k)) : k <= 5 ? (Math.pow(10, k) / 1000) + 'k' : '10' + supD(k); }
+  const a = Math.abs(v); return a >= 1e6 ? (v / 1e6) + 'M' : a >= 1e4 ? (v / 1e3) + 'k' : String(+v.toFixed(2));
+};
+R.chart = t => {
+  const W = 640, H = 300, L = 58, Rr = 14, T = 12, B = 38, pw = W - L - Rr, ph = H - T - B, n = t.xs.length;
+  const all = t.series.flatMap(s => s.ys).filter(isFinite);
+  let lo, hi, ticks = [];
+  if (t.ylog) { lo = Math.floor(Math.min(0, ...all)); hi = Math.ceil(Math.min(t.cap || 1e9, Math.max(...all))); if (hi <= lo) hi = lo + 1; const st = Math.max(1, Math.ceil((hi - lo) / 8)); for (let k = lo; k <= hi; k += st) ticks.push(k); }
+  else {
+    const mx = Math.max(...all, 0), mn = Math.min(...all, 0), span = mx - mn || 1, raw = span / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))), stp = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= raw);
+    lo = Math.floor(mn / stp) * stp; hi = Math.ceil(mx / stp) * stp; for (let v = lo; v <= hi + 1e-9; v += stp) ticks.push(+v.toFixed(6));
+  }
+  const X = i => L + (n === 1 ? pw / 2 : i * pw / (n - 1)), Y = v => T + ph - (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo) * ph;
+  let g = `<rect x="${L}" y="${T}" width="${pw}" height="${ph}" class="cbg"/>`;
+  ticks.forEach(k => { g += `<line x1="${L}" y1="${Y(k)}" x2="${L + pw}" y2="${Y(k)}" class="cgrid"/><text x="${L - 6}" y="${Y(k) + 4}" class="ctk" text-anchor="end">${yTick(k, t.ylog)}</text>`; });
+  const every = Math.max(1, Math.ceil(n / 12));
+  t.xs.forEach((x, i) => { if (i % every === 0 || i === n - 1) g += `<text x="${X(i)}" y="${T + ph + 16}" class="ctk${i === t.hl ? ' chl' : ''}" text-anchor="middle">${esc(x)}</text>`; });
+  g += `<text x="${L + pw / 2}" y="${H - 4}" class="ctk" text-anchor="middle">n</text>`;
+  if (t.hl >= 0 && t.hl !== undefined) g += `<line x1="${X(t.hl)}" y1="${T}" x2="${X(t.hl)}" y2="${T + ph}" class="chline"/>`;
+  if (t.mline) { const i = t.mline - 1; if (i >= 0 && i < n) g += `<line x1="${X(i)}" y1="${T}" x2="${X(i)}" y2="${T + ph}" class="cmline"/><text x="${X(i) + 4}" y="${T + 14}" class="ctk cmt">m = ${t.mline}</text>`; }
+  t.series.forEach(s => {
+    const pts = []; for (let i = 0; i <= Math.min(t.upto, n - 1); i++) pts.push([X(i), Y(s.ys[i]), s.ys[i] > hi]);
+    if (pts.length > 1) g += `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" class="cl2 ${s.cls}"/>`;
+    pts.forEach((p, i) => { if (n <= 40 || i === pts.length - 1) g += p[2] ? `<text x="${p[0]}" y="${T + 10}" class="coff ${s.cls}" text-anchor="middle">↑</text>` : `<circle cx="${p[0]}" cy="${p[1]}" r="${i === t.hl ? 4.5 : 3}" class="cdot ${s.cls}"/>`; });
+  });
+  const legend = `<div class="clg">${t.series.map(s => `<span><i class="csw ${s.cls}"></i>${esc(s.name)}</span>`).join('')}${t.ylog && t.cap ? '<span class="muted">↑ = off the top of the chart</span>' : ''}</div>`;
+  return `<svg class="fitw" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>${legend}`;
+};
+WIDE.htable = 0; WIDE.chains = 1; WIDE.chart = 1; WIDE.bars = 1;
+
+/* ---------- renderers for search ---------- */
+R.arr = (t, st) => {
+  const auto = t.idx ? autoTags(st, 'idx') : {};
+  const cells = t.a.map((v, i) => {
+    const cls = t.mark[i] || t.keep[i] || '', tags = [].concat(auto[i] || [], t.tags[i] || []);
+    return `<div class="acell ${cls}"><span class="ai">[${i}]</span><span class="av">${esc(v)}</span><span class="at">${esc([...new Set(tags)].join(', '))}</span></div>`;
+  }).join('');
+  return `<div class="arrw"><div class="arr">${cells}</div></div>`;
+};
+R.range = t => {
+  const W = 640, H = 92, L = 16, Rr = 16, bw = W - L - Rr, y = 30, bh = 22, n = t.n;
+  const X = i => L + (i / n) * bw, fmt = x => x.toLocaleString('en-US');
+  let g = `<rect x="${L}" y="${y}" width="${bw}" height="${bh}" class="rg-out"/>`;
+  if (t.hi >= t.lo) g += `<rect x="${X(t.lo)}" y="${y}" width="${Math.max(2, X(t.hi + 1) - X(t.lo))}" height="${bh}" class="rg-in"/>`;
+  if (t.mid !== null && t.mid !== undefined) { const mx = X(t.mid + 0.5); g += `<line x1="${mx}" y1="${y - 8}" x2="${mx}" y2="${y + bh + 8}" class="${t.hit !== null && t.hit !== undefined ? 'rg-hit' : 'rg-mid'}"/><text x="${mx}" y="${y - 12}" class="rg-t" text-anchor="middle">mid ${fmt(t.mid)}</text>`; }
+  g += `<text x="${L}" y="${y + bh + 18}" class="rg-s">0</text><text x="${L + bw}" y="${y + bh + 18}" class="rg-s" text-anchor="end">${fmt(n - 1)}</text>`;
+  const share = t.hi >= t.lo ? (t.hi - t.lo + 1) / n : 0;
+  g += `<text x="${W / 2}" y="${y + bh + 18}" class="rg-s" text-anchor="middle">${t.hi >= t.lo ? `still to search: ${fmt(t.hi - t.lo + 1)} (${share >= 0.01 ? Math.round(share * 100) + '%' : share > 0 ? '< 1%' : '0%'})` : 'nothing left'}</text>`;
+  return `<svg class="fitw" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+};
+WIDE.arr = 1; WIDE.range = 1;
+
+/* ---------- renderers for graphs ---------- */
+R.graph = t => {
+  const ps = Object.values(t.pos), xs = ps.map(p => p[0]), ys = ps.map(p => p[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), dx = Math.max(...xs) - x0, dy = Math.max(...ys) - y0;
+  const half = t.type === 'graph2', sc = Math.min((half ? 215 : 520) / (dx || 1), (half ? 215 : 280) / (dy || 1), 1.9);
+  const r = 17, pad = 34, W = Math.round(dx * sc + 2 * pad), H = Math.round(dy * sc + 2 * pad);
+  const P = v => [pad + (t.pos[v][0] - x0) * sc, pad + (t.pos[v][1] - y0) * sc], f = n => n.toFixed(1);
+  const has = new Set(t.E.map(e => e.a + '>' + e.b));
+  let g = '';
+  t.E.forEach(e => {
+    const [ax, ay] = P(e.a), [bx, by] = P(e.b), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+    const off = t.dir && has.has(e.b + '>' + e.a) ? 5 : 0, nx = -uy * off, ny = ux * off, tip = r + (t.dir ? 1 : 0);
+    const sx = ax + ux * r + nx, sy = ay + uy * r + ny, ex = bx - ux * tip + nx, ey = by - uy * tip + ny;
+    const cls = t.edge[e.k] || t.tree[e.k] || '';
+    g += `<g class="gg-e ${cls}"><line x1="${f(sx)}" y1="${f(sy)}" x2="${f(ex)}" y2="${f(ey)}"/>`;
+    if (t.dir) { const hx = ex - ux * 11, hy = ey - uy * 11; g += `<polygon points="${f(ex)},${f(ey)} ${f(hx - uy * 5)},${f(hy + ux * 5)} ${f(hx + uy * 5)},${f(hy - ux * 5)}"/>`; }
+    if (e.w !== null) g += `<text x="${f((sx + ex) / 2 - uy * 11)}" y="${f((sy + ey) / 2 + ux * 11 + 4)}" class="gg-w" text-anchor="middle">${esc(e.w)}</text>`;
+    g += '</g>';
+  });
+  t.V.forEach(v => {
+    const [x, y] = P(v), cls = t.mark[v] || t.vis[v] || '', cc = t.comp[v] ? ' k' + ((t.comp[v] - 1) % 5 + 1) : '';
+    g += `<g class="gg-v ${cls}${cc}"><circle cx="${f(x)}" cy="${f(y)}" r="${r}"/><text x="${f(x)}" y="${f(y + 5)}" text-anchor="middle">${esc(v)}</text>${t.num[v] !== undefined ? `<text class="gg-n${t.idx ? ' gg-i' : ''}" x="${f(x - r + 1)}" y="${f(y - r - 2)}" text-anchor="end">${t.idx ? t.num[v] : '(' + t.num[v] + ')'}</text>` : ''}</g>`;
+  });
+  return `<svg class="gsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:${W}px">${g}</svg>`;
+};
+R.graph2 = R.graph;
+R.mat = t => `<div class="tbl matw"><table class="mat"><thead><tr><th></th>${t.names.map((n, j) => `<th><span class="mi">${j}</span>${esc(n)}</th>`).join('')}</tr></thead><tbody>${t.m.map((row, i) => `<tr><th><span class="mi">${i}</span>${esc(t.names[i])}</th>${row.map((c, j) => `<td class="${t.mark[i + ',' + j] || ''}${c === '0' || c === '∞' ? ' z' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+R.alist = t => `<div class="alw">${t.names.map((n, i) => {
+  const L = t.lists[i];
+  const nodes = L.map((x, k) => `<span class="al-ar">→</span><span class="al-n ${t.mark[i + ',' + k] || ''}"><b>${esc(x.v)}</b>${x.w !== null && x.w !== undefined ? `<i>${esc(x.w)}</i>` : ''}<span class="al-nx">${k === L.length - 1 ? '/' : '•'}</span></span>`).join('');
+  return `<div class="al-r ${t.mark[i] || ''}"><span class="al-h"><span class="mi">${i}</span><b>${esc(n)}</b><span class="al-nx">${L.length ? '•' : '/'}</span></span>${nodes}</div>`;
+}).join('')}</div>`;
+R.seq = t => `<div class="seqw"><span class="seq-e">${t.kind === 'queue' ? 'front' : 'bottom'}</span><div class="seq">${t.items.length ? t.items.map((x, i) => `<span class="sq ${t.mark[i] || ''}">${esc(x)}</span>`).join('') : '<span class="sq-empty">empty</span>'}</div><span class="seq-e">${t.kind === 'queue' ? 'rear' : 'top'}</span></div>`;
+WIDE.graph = 1; WIDE.mat = 1; WIDE.alist = 1; WIDE.seq = 1; WIDE.graph2 = 0;
+
+buildSelect();
+let saved = null; try { saved = localStorage.getItem('graph-sim-prog'); } catch (e) {}
+load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'terms');
+
+/* Grow every drawing's frame so labels near the edge are never clipped. */
+function growSvgs(root) {
+  root.querySelectorAll('svg[viewBox]').forEach(svg => {
+    let bb; try { bb = svg.getBBox(); } catch (e) { return; }
+    if (!bb || !bb.width) return;
+    const vb = svg.viewBox.baseVal, pad = 4;
+    const x0 = Math.min(vb.x, Math.floor(bb.x - pad)), y0 = Math.min(vb.y, Math.floor(bb.y - pad));
+    const x1 = Math.max(vb.x + vb.width, Math.ceil(bb.x + bb.width + pad)), y1 = Math.max(vb.y + vb.height, Math.ceil(bb.y + bb.height + pad));
+    if (x0 === vb.x && y0 === vb.y && x1 === vb.x + vb.width && y1 === vb.y + vb.height) return;
+    const w = parseFloat(svg.getAttribute('width')), h = parseFloat(svg.getAttribute('height'));
+    const sx = w / vb.width, sy = h / vb.height;
+    svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+    if (w) svg.setAttribute('width', ((x1 - x0) * sx).toFixed(1));
+    if (h) svg.setAttribute('height', ((y1 - y0) * sy).toFixed(1));
+  });
+}
+
+</script>
+</body>
+</html>
