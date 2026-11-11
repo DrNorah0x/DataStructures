@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sort Algorithms Simulator – Lecture 10</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A; --live:#E6EEFF;
+  --head:#2D4FD8; --head-bg:#E3E9FF; --ptr:#0F6F6D; --ptr-bg:#DDF3F1;
+  --danger:#C8323A; --danger-bg:#FBE3E4; --node:#FFFFFF;
+  --codebg:#FBFCFE; --kw:#7B3FC4; --str:#0B7A47; --com:#8A94A6; --num:#B4561B;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+    --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+    --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+    --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+  --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+  --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+  --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45;background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;padding-bottom:128px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--head);outline-offset:2px}
+[hidden]{display:none!important}
+
+.top{max-width:1320px;margin:0 auto;padding:18px 16px 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.25rem,3.6vw,1.8rem);margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.mark{display:inline-flex;flex-direction:column-reverse;gap:2px;border:2px solid var(--ink);border-top:0;padding:2px 2px 2px;border-radius:0 0 3px 3px}
+.mark i{display:block;width:22px;height:5px;background:var(--ink);border-radius:1px}
+.mark i.on{background:var(--hl);outline:1.5px solid var(--hl-line)}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:min(100%,380px);flex:1 1 320px;max-width:540px}
+.pick span{font-size:.85rem;color:var(--muted)}
+.pick select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);font-family:var(--mono);font-size:.88rem;cursor:pointer}
+
+.layout{max-width:1320px;margin:0 auto;padding:8px 16px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"info" "viz" "change" "code" "vars" "out"}
+.info{grid-area:info}.viz{grid-area:viz}.change{grid-area:change}.code{grid-area:code}.vars{grid-area:vars}.out{grid-area:out}
+@media (min-width:980px){
+  .layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);grid-template-areas:"info info" "code viz" "code change" "code vars" "code out";align-items:start}
+  .code{position:sticky;top:12px}
+  .codewrap{max-height:max(320px,calc(100vh - 380px))!important}
+}
+.panel{background:var(--panel);border:1.5px solid var(--rule);border-radius:4px;padding:12px 14px;min-width:0}
+.panel h3{margin:0;font-size:1rem;font-weight:700}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.82rem}
+
+.info{border-left:6px solid var(--ink)}
+.info h2{margin:0;font-size:1.2rem;line-height:1.3}
+.slides{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:2px 7px;border:1.5px solid var(--ink);border-radius:3px;margin-bottom:6px}
+.info p{margin:6px 0 0;max-width:78ch}
+.info details{margin-top:8px}
+.info summary{cursor:pointer;font-weight:700;color:var(--head);font-size:.92rem}
+.info ul{margin:6px 0 0;padding-left:1.2em;max-width:78ch}
+.info li{margin:4px 0}
+.inwrap{margin-top:12px;padding-top:10px;border-top:1.5px dashed var(--rule)}
+.inwrap label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.inrow{display:flex;gap:8px}
+.inrow input{flex:1;min-width:0;padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem}
+.inrow button{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{border:1.5px solid var(--rule);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:.8rem;cursor:pointer}
+.presets button.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.inerr{color:var(--danger);font-weight:700;font-size:.88rem;margin:6px 0 0;min-height:0}
+
+.structs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sc{border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;background:var(--paper);min-width:0;max-width:100%}
+.sc.wide{flex:1 1 100%}
+.sc h4{margin:0 0 6px;font-size:.82rem;font-weight:700;color:var(--muted)}
+svg.fit{display:block;max-width:100%;height:auto}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:12px;border:1.5px solid var(--ink);display:inline-block;border-radius:2px}
+.sw.hl{background:var(--hl);border-color:var(--hl-line)}.sw.lv{background:var(--live)}
+.sw.rd{background:var(--ptr-bg);border-color:var(--ptr)}.sw.dl{background:var(--danger-bg);border-color:var(--danger);border-style:dashed}
+
+/* svg parts */
+.ac{fill:var(--node);stroke:var(--ink);stroke-width:1.4}
+.ac.live{fill:var(--live)}
+.hl-push{fill:var(--hl)!important;stroke:var(--hl-line)!important;stroke-width:2.2!important}
+.hl-read{fill:var(--ptr-bg)!important;stroke:var(--ptr)!important;stroke-width:2.2!important}
+.hl-pop{fill:var(--danger-bg)!important;stroke:var(--danger)!important;stroke-dasharray:4 3}
+.av{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+.av.stale{fill:var(--muted);font-weight:400;opacity:.65}
+.idx{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tp{stroke:var(--head);stroke-width:2;fill:none}
+.tp2{stroke:var(--ptr);stroke-width:2;fill:none}
+.tpl{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--head)}
+.tpl2{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--ptr)}
+.tplbg{fill:var(--hl);stroke:var(--hl-line)}
+.bk{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linejoin:round}
+.it{fill:var(--live);stroke:var(--ink);stroke-width:1.4}
+.gh{fill:var(--danger-bg);stroke:var(--danger);stroke-dasharray:4 3;stroke-width:1.5}
+.ght{font-family:var(--ui);font-size:11px;fill:var(--danger);font-style:italic}
+.lbl{font-family:var(--ui);font-size:12px;fill:var(--muted)}
+.lblb{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--head)}
+.empty{font-family:var(--ui);font-size:13px;fill:var(--muted);font-style:italic}
+.pipe{stroke:var(--ink);stroke-width:2.4}
+.cell{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.cell.chg{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.2}
+.nd.freed{opacity:.5}
+.nd.freed .cell{stroke-dasharray:4 3;fill:var(--danger-bg);stroke:var(--danger)}
+.dt{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.garbq{font-family:var(--mono);font-weight:700;font-size:15px;fill:var(--danger);text-anchor:middle}
+.adr{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.nullslash{stroke:var(--muted);stroke-width:1.5}
+.dot{fill:var(--ink)}
+.xmark{stroke:var(--danger);stroke-width:3;stroke-linecap:round}
+.ar{fill:none;stroke-width:1.8}
+.ar-ink{stroke:var(--ink)}.ar-acc{stroke:var(--hl-line);stroke-width:3}.ar-red{stroke:var(--danger);stroke-dasharray:5 4}.ar-mut{stroke:var(--muted)}.ar-head{stroke:var(--head);stroke-width:3}
+.mk-ink{fill:var(--ink)}.mk-acc{fill:var(--hl-line)}.mk-red{fill:var(--danger)}.mk-mut{fill:var(--muted)}.mk-head{fill:var(--head)}.mk-ptr{fill:var(--ptr)}
+.tag rect{stroke-width:1.5}
+.tag text{font-family:var(--mono);font-weight:600;font-size:12px;text-anchor:middle}
+.tag-ptr rect{fill:var(--ptr-bg);stroke:var(--ptr)}.tag-ptr text{fill:var(--ptr)}
+.tag-head rect{fill:var(--head-bg);stroke:var(--head)}.tag-head text{fill:var(--head)}
+.tag-acc rect{fill:var(--hl);stroke:var(--hl-line)}.tag-acc text{fill:var(--hl-ink)}
+.tag-red rect{fill:var(--danger-bg);stroke:var(--danger)}.tag-red text{fill:var(--danger)}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.gn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.gn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.6}
+.gn.dead circle{fill:var(--paper);stroke:var(--muted);stroke-dasharray:3 3}
+.gn.cur circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.gn text{font-family:var(--mono);font-weight:700;font-size:14px;text-anchor:middle;fill:var(--ink)}
+.gn.dead text{fill:var(--muted)}
+.gring{fill:none;stroke:var(--danger);stroke-width:1.6;stroke-dasharray:3 2}
+.gtag{font-family:var(--ui);font-size:10px;fill:var(--muted);text-anchor:middle}
+.ge{fill:none;stroke:var(--muted);stroke-width:1.5}
+.ge.path{stroke:var(--head);stroke-width:3}.ge.try{stroke:var(--hl-line);stroke-width:3.6}
+.peg{fill:var(--muted)}
+.disk{stroke:var(--ink);stroke-width:1.2}
+.disk.mv{stroke:var(--hl-line);stroke-width:3.5}
+.dkt{font-family:var(--mono);font-weight:700;font-size:11px;fill:#1B2A4A;text-anchor:middle}
+.pegl{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+
+.tape{display:flex;flex-wrap:wrap;gap:4px}
+.tk{font-family:var(--mono);font-size:.88rem;padding:3px 8px;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel);white-space:pre}
+.tk.done{opacity:.45}
+.tk.ok{border-color:var(--ptr)}
+.tk.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);font-weight:700;opacity:1}
+.tk.err{background:var(--danger-bg);border-color:var(--danger);color:var(--danger);font-weight:700;opacity:1}
+.tbl{max-height:250px;overflow:auto;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel)}
+.tbl table{border-collapse:collapse;font-family:var(--mono);font-size:.78rem;width:100%}
+.tbl th,.tbl td{border-bottom:1px solid var(--grid);padding:4px 8px;text-align:left;vertical-align:top}
+.tbl th{position:sticky;top:0;background:var(--paper);font-family:var(--ui);font-size:.78rem;border-bottom:1.5px solid var(--rule);white-space:nowrap}
+.tbl td{white-space:nowrap}
+.tbl td:last-child{white-space:normal;min-width:12em}
+.tbl tr.hl td{background:var(--hl);color:var(--hl-ink)}
+.tbl .none{color:var(--muted);font-family:var(--ui);font-style:italic}
+.tv{font-family:var(--mono);font-weight:700;font-size:1.02rem;padding:6px 10px;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);word-break:break-word;min-width:8em}
+.tv.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.tv.good{border-color:var(--ptr);color:var(--ptr)}
+.tv.good.chg{color:var(--hl-ink)}
+.tv.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.chip{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:5px;border:1.5px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr)}
+.chip.head{border-color:var(--head);background:var(--head-bg);color:var(--head)}
+.chip.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+
+.change{border-top:5px solid var(--hl-line)}
+.note{margin:0 0 8px;font-size:1rem;max-width:78ch}
+.note.crash{color:var(--danger);font-weight:700;background:var(--danger-bg);padding:8px 10px;border-radius:4px}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diff li{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:.8rem;line-height:1.35;word-break:break-word}
+.badge{flex:0 0 auto;font-family:var(--ui);font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:3px;border:1.5px solid var(--ink);min-width:58px;text-align:center}
+.b-push,.b-enq,.b-set,.b-add,.b-move,.b-new,.b-node{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-pop,.b-deq,.b-del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.b-err{background:var(--danger);border-color:var(--danger);color:#fff}
+.b-read,.b-var{background:var(--ptr-bg);border-color:var(--ptr);color:var(--ptr)}
+.b-call,.b-ret{background:var(--head-bg);border-color:var(--head);color:var(--head)}
+.b-out{background:var(--panel)}
+.nodiff{color:var(--muted);font-family:var(--ui)!important;font-size:.85rem!important}
+
+.codewrap{position:relative;max-height:46vh;overflow:auto;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:6px 0}
+#code{font-family:var(--mono);font-size:12.5px;line-height:1.6;min-width:max-content}
+.cl{display:flex;padding:0 12px 0 0;border-left:4px solid transparent;white-space:pre}
+.cl .ln{width:3.2em;flex:0 0 auto;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.cl.cur{background:var(--hl);border-left-color:var(--hl-line);color:var(--hl-ink)}
+.cl.cur .ln{color:var(--hl-ink);font-weight:700;opacity:1}
+.c-kw{color:var(--kw);font-weight:600}.c-str{color:var(--str)}.c-com{color:var(--com);font-style:italic}.c-num{color:var(--num)}
+.cl.cur .c-kw,.cl.cur .c-str,.cl.cur .c-num,.cl.cur .c-com{color:var(--hl-ink)}
+
+.frame{border:1.5px solid var(--rule);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.fh{font-family:var(--mono);font-size:.8rem;font-weight:700;padding:4px 8px;background:var(--paper);border-bottom:1.5px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.fh .act{font-family:var(--ui);font-weight:400;color:var(--head)}
+.vr{display:flex;gap:10px;padding:4px 8px;font-family:var(--mono);font-size:.82rem;border-top:1px solid var(--grid);align-items:baseline}
+.vr:first-of-type{border-top:0}
+.vr.chg{background:var(--hl);color:var(--hl-ink)}
+.vn{min-width:7.5em;font-weight:600}
+.vv{word-break:break-word}
+.nul{color:var(--muted)}.garb{color:var(--danger);font-weight:700}.dang{color:var(--danger);font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+#out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;min-height:2.4em;white-space:pre-wrap;word-break:break-word}
+#out .new{background:var(--hl);color:var(--hl-ink)}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.controls .in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:10px}
+.r1 input{flex:1;accent-color:var(--head);min-width:0;height:28px}
+#count{font-family:var(--mono);font-size:.85rem;white-space:nowrap;min-width:7.5em;text-align:right}
+.r2{display:flex;gap:6px;justify-content:center}
+.r2 button{border:2px solid var(--ink);background:var(--panel);border-radius:6px;padding:8px 10px;cursor:pointer;min-height:42px;font-weight:700;font-size:.92rem;white-space:nowrap}
+.r2 button:disabled{opacity:.35;cursor:default}
+.r2 button.primary{background:var(--ink);color:var(--panel);min-width:92px}
+.r2 .grow{flex:1 1 0;max-width:150px}
+@media (max-width:420px){#bFirst,#bLast{display:none}.r2 button.primary{min-width:84px}}
+@media (min-width:980px){.controls .in{flex-direction:row-reverse;align-items:center;gap:18px}.r1{flex:1}.r2{flex:0 0 auto}body{padding-bottom:84px}}
+@media (hover:hover){.r2 button:not(:disabled):hover,.presets button:not(.on):hover{background:var(--hl);color:var(--hl-ink);border-color:var(--hl-line)}}
+.back{display:inline-block;margin-bottom:6px;font-size:.88rem;color:var(--head);text-decoration:none;font-weight:700}.back:hover{text-decoration:underline}
+.tmark{display:inline-flex;color:var(--ink)}
+:root{--ok:#1E7A45;--ok-bg:#DCF3E4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ok:#6FD49A;--ok-bg:#12321F}}
+:root[data-theme="dark"]{--ok:#6FD49A;--ok-bg:#12321F}
+.flds{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld span{font-size:.85rem;color:var(--muted)}
+.fld input,.fld select{padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem;min-width:0;width:100%}
+.fld.w-l{flex:3 1 280px}.fld.w-m{flex:1 1 190px}.fld.w-s{flex:0 1 110px}
+.inwrap .runbtn{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:9px 16px;font-weight:700;cursor:pointer;white-space:nowrap;height:42px}
+.tn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.tn text{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.tn.cur circle,.tn.new circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.tn.cur text,.tn.new text{fill:var(--hl-ink)}
+.tn.cmp circle{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.6}
+.tn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.4}
+.tn.done circle{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2.4}
+.tn.bad circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.6}
+.tn.bad text{fill:var(--danger)}
+.tn.del circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.4;stroke-dasharray:4 3}
+.tn.del text{fill:var(--danger)}
+.tn.todo circle{stroke:var(--danger);stroke-width:2.6}
+.tn.hole circle{fill:var(--paper);stroke:var(--muted);stroke-width:2;stroke-dasharray:4 3}
+.tn.hole text{fill:var(--muted);font-weight:400;opacity:.6}
+.tn.ph circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2;stroke-dasharray:4 3}
+.tn.ph text{fill:var(--danger)}
+.te{stroke:var(--muted);stroke-width:1.6}
+.te.path{stroke:var(--head);stroke-width:3}
+.te.new{stroke:var(--hl-line);stroke-width:3.6}
+.te.ph{stroke:var(--danger);stroke-dasharray:4 3}
+.tsub{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.ttag rect{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:1.3}
+.ttag text{font-family:var(--mono);font-size:10.5px;font-weight:700;fill:var(--ptr);text-anchor:middle}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.ac.cur,.ac.new{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.4}
+.ac.cmp{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.2}
+.ac.done{fill:var(--ok-bg);stroke:var(--ok)}
+.ac.bad,.ac.del{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2}
+.ac.todo{stroke:var(--danger);stroke-width:2.2}
+.ac.hole{fill:var(--paper);stroke:var(--muted);stroke-dasharray:4 3}
+.ac.out{fill:var(--paper)}
+.ac.unused{fill:var(--grid);stroke:var(--rule)}
+.szl{stroke:var(--head);stroke-width:2.5}
+.szt{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--head)}
+.arrlbl{font-size:.78rem;color:var(--muted);margin:8px 0 2px}
+.tk.done{opacity:.45}
+.frame.active{border-color:var(--head)}
+.b-link,.b-move,.b-swap,.b-new,.b-push{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-del,.b-pop{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.sw.ok{background:var(--ok-bg);border-color:var(--ok)}
+.sw.pa{background:var(--head-bg);border-color:var(--head)}
+.sw.hole{background:var(--paper);border-style:dashed;border-color:var(--muted)}
+.ht{display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);min-width:230px;max-width:100%}
+.hrow{display:flex;align-items:center;gap:10px;padding:4px 10px;border-top:1px solid var(--grid);font-family:var(--mono);font-size:.86rem;min-height:30px}
+.hrow:first-child{border-top:0}
+.hrow .hi{min-width:4.2em;color:var(--muted);font-size:.8rem}
+.hrow .hk{font-weight:700;flex:1;word-break:break-all}
+.hrow .emp{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--ui);font-size:.82rem}
+.hrow.gap{background:var(--paper);color:var(--muted);min-height:22px;font-size:.78rem}
+.hrow.gap .hk{font-weight:400;font-style:italic;font-family:var(--ui)}
+.hrow .htag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:4px;border:1.3px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr);white-space:nowrap}
+.hrow.cur,.hrow.new{background:var(--hl);color:var(--hl-ink)}
+.hrow.cur .hi,.hrow.new .hi{color:var(--hl-ink)}
+.hrow.cmp{background:var(--ptr-bg)}
+.hrow.bad{background:var(--danger-bg);color:var(--danger)}
+.hrow.done{background:var(--ok-bg);color:var(--ok)}
+.hrow.del{background:var(--danger-bg)}
+.hrow.isdel .hk,.hrow.del .hk{color:var(--danger)}
+.hrow .dk{text-decoration:none;border:1.5px dashed var(--danger);border-radius:3px;padding:0 5px}
+.hrow .was{color:var(--muted);font-weight:400}
+.chs{display:flex;flex-direction:column;gap:5px;overflow-x:auto;padding-bottom:2px}
+.chr{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.85rem;white-space:nowrap}
+.chi{display:inline-block;min-width:2.4em;text-align:center;padding:4px 0;border:1.6px solid var(--ink);background:var(--panel);border-radius:3px;font-weight:700}
+.chn{display:inline-block;min-width:2.6em;text-align:center;padding:4px 6px;border:1.6px solid var(--ink);background:var(--live);border-radius:3px;font-weight:700}
+.chi.cur,.chn.new,.chn.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.chi.bad,.chn.del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.chn.del{border-style:dashed}
+.chn.cmp{background:var(--ptr-bg);border-color:var(--ptr)}
+.chn.done{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.charr{color:var(--muted)}
+.chnull{color:var(--muted);font-size:.75rem}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:minmax(4.5em,auto) 1fr minmax(7em,auto);gap:10px;align-items:center;font-family:var(--mono);font-size:.84rem}
+.bar .bl{font-weight:700}
+.bar .bt{height:16px;background:var(--grid);border-radius:3px;overflow:hidden}
+.bar .bf{display:block;height:100%;background:var(--head)}
+.bar.top .bf{background:var(--hl-line)}
+.bar.top .bl{background:var(--hl);color:var(--hl-ink);padding:0 4px;border-radius:3px}
+.bar .bv{text-align:right;word-break:break-all}
+.bar .bv em{font-style:normal;color:var(--muted)}
+svg.fitw{display:block;width:100%;max-width:640px;height:auto}
+.cbg{fill:var(--panel);stroke:var(--rule)}
+.cgrid{stroke:var(--grid);stroke-width:1}
+.ctk{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.ctk.chl{fill:var(--ink);font-weight:700}
+.chline{stroke:var(--hl-line);stroke-width:2;stroke-dasharray:4 3}
+.cmline{stroke:var(--danger);stroke-width:2;stroke-dasharray:6 4}
+.cmt{fill:var(--danger);font-weight:700}
+.cl2{fill:none;stroke-width:2.6;stroke-linejoin:round}
+.coff{font-size:14px;font-weight:700}
+:root{--c1:#2D4FD8;--c2:#0F7A6E;--c3:#7B3FC4;--c4:#B98300;--c5:#C8323A;--c6:#1B2A4A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#8DA6FF;--c2:#5FD0C8;--c3:#C9A2FF;--c4:#F2D24A;--c5:#FF6F72;--c6:#DCE5F4}}
+:root[data-theme="dark"]{--c1:#8DA6FF;--c2:#5FD0C8;--c3:#C9A2FF;--c4:#F2D24A;--c5:#FF6F72;--c6:#DCE5F4}
+.cl2.s1{stroke:var(--c1)}.cl2.s2{stroke:var(--c2)}.cl2.s3{stroke:var(--c3)}.cl2.s4{stroke:var(--c4)}.cl2.s5{stroke:var(--c5)}.cl2.s6{stroke:var(--c6)}
+.cdot.s1,.coff.s1{fill:var(--c1)}.cdot.s2,.coff.s2{fill:var(--c2)}.cdot.s3,.coff.s3{fill:var(--c3)}.cdot.s4,.coff.s4{fill:var(--c4)}.cdot.s5,.coff.s5{fill:var(--c5)}.cdot.s6,.coff.s6{fill:var(--c6)}
+.clg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:.8rem}
+.clg span{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono)}
+.csw{display:inline-block;width:16px;height:4px;border-radius:2px}
+.csw.s1{background:var(--c1)}.csw.s2{background:var(--c2)}.csw.s3{background:var(--c3)}.csw.s4{background:var(--c4)}.csw.s5{background:var(--c5)}.csw.s6{background:var(--c6)}
+.tk.ok{border-color:var(--ok);background:var(--ok-bg)}
+.arrw{overflow-x:auto;padding-bottom:4px}
+.arr{display:flex;gap:4px;min-width:max-content}
+.acell{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:44px}
+.acell .ai{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.acell .av{display:block;width:100%;text-align:center;padding:8px 5px;border:1.6px solid var(--ink);background:var(--live);font-family:var(--mono);font-weight:700;border-radius:3px}
+.acell.cur .av{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);border-width:2.4px}
+.acell.cmp .av{background:var(--ptr-bg);border-color:var(--ptr);border-width:2.4px}
+.acell.done .av{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);border-width:2.4px}
+.acell.bad .av{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.acell.out .av{background:var(--paper);color:var(--muted);border-color:var(--rule);opacity:.55}
+.acell .at{min-height:1.2em;font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--ptr);white-space:nowrap}
+.rg-out{fill:var(--grid);stroke:var(--rule)}
+.rg-in{fill:var(--head-bg);stroke:var(--head);stroke-width:1.5}
+.rg-mid{stroke:var(--hl-line);stroke-width:3}
+.rg-hit{stroke:var(--ok);stroke-width:4}
+.rg-t{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--ink)}
+.rg-s{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.acell.new .av{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);border-width:2.4px}
+.acell.srt .av{background:var(--ok-bg);border-color:var(--ok)}
+.mtw{overflow-x:auto;padding:4px 0 6px}
+.mt-n{display:flex;flex-direction:column;align-items:center;gap:14px;flex:1 1 0;min-width:max-content;position:relative}
+.mt-k{display:flex;gap:8px;justify-content:center;width:100%;position:relative;padding-top:2px}
+.mt-k::before{content:"";position:absolute;top:-9px;left:25%;right:25%;border-top:1.6px solid var(--rule)}
+.mt-b{display:flex;flex-direction:column;align-items:center;border:1.6px solid var(--ink);border-radius:6px;background:var(--live);font-family:var(--mono);font-size:.8rem;padding:4px 7px;min-width:2.4em;white-space:nowrap}
+.mt-b .mt-in{font-weight:700}
+.mt-b .mt-out{border-top:1px dashed var(--rule);margin-top:3px;padding-top:2px;color:var(--ok);font-weight:700;width:100%;text-align:center}
+.mt-b.todo{border-style:dashed;border-color:var(--rule);color:var(--muted);background:var(--paper)}
+.mt-b.todo .mt-out{border-top-color:transparent}
+.mt-b.fin{border-color:var(--ok);background:var(--ok-bg)}
+.mt-b.cur,.mt-b.new{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);border-width:2.4px}
+.mt-b.cur .mt-out,.mt-b.new .mt-out{color:var(--hl-ink)}
+.mt-b.cmp{background:var(--ptr-bg);border-color:var(--ptr);border-width:2.4px}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="back" href="index.html">← All lectures</a>
+    <h1><span class="tmark" aria-hidden="true"><svg width="30" height="26" viewBox="0 0 30 26"><circle cx="12" cy="11" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><line x1="17.5" y1="16.5" x2="27" y2="24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><rect x="8.5" y="7.5" width="7" height="7" fill="var(--hl)" stroke="currentColor" stroke-width="1.2"/></svg></span>Sort algorithms simulator</h1>
+    <p>Every sorting algorithm and example from Lecture 10 (Data Structures 501324-3), run one step at a time.</p>
+  </div>
+  <label class="pick"><span>Choose a program or topic from the slides</span><select id="prog"></select></label>
+</header>
+
+<main class="layout">
+  <section class="panel info">
+    <span class="slides" id="slides"></span>
+    <h2 id="ptitle"></h2>
+    <p id="pdesc"></p>
+    <details id="notesWrap"><summary id="notesSum"></summary><ul id="notes"></ul></details>
+    <div class="inwrap" id="inWrap" hidden>
+      <div class="flds"><div class="flds" id="inFields" style="flex:1 1 auto"></div><button id="inRun" class="runbtn">Run it</button></div>
+      <div class="presets" id="inPresets"></div>
+      <p class="inerr" id="inErr" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="panel viz">
+    <div class="ph"><h3>The data right now</h3><span class="hint">yellow = changed or current</span></div>
+    <div class="structs" id="structs"></div>
+    <div class="legend">
+      <span><i class="sw hl"></i>current / just changed</span>
+      <span><i class="sw rd"></i>being compared</span>
+      <span><i class="sw ok"></i>in its final place / sorted</span>
+      <span><i class="sw hole"></i>not part of this step</span>
+    </div>
+  </section>
+
+  <section class="panel change">
+    <div class="ph"><h3>What this step did</h3><span class="hint" id="stepNo"></span></div>
+    <p id="note" class="note"></p>
+    <ul id="diff" class="diff"></ul>
+  </section>
+
+  <section class="panel code">
+    <div class="ph"><h3 id="codeH">Code</h3><span class="hint">yellow line = the one that just ran</span></div>
+    <div class="codewrap" id="codeWrap"><div id="code"></div></div>
+  </section>
+
+  <section class="panel vars" id="varsCard">
+    <div class="ph"><h3>Variables</h3><span class="hint">one box per function call that is running</span></div>
+    <div id="vars"></div>
+  </section>
+
+  <section class="panel out" id="outCard">
+    <div class="ph"><h3>Console output</h3></div>
+    <pre id="out"></pre>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Step controls">
+  <div class="in">
+    <div class="r1"><input type="range" id="range" min="0" max="0" value="0" aria-label="Step"><span id="count"></span></div>
+    <div class="r2">
+      <button id="bFirst" aria-label="Go to first step">⏮</button>
+      <button id="bPrev" class="grow">◀ Back</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <button id="bNext" class="grow">Next ▶</button>
+      <button id="bLast" aria-label="Go to last step">⏭</button>
+      <button id="bSpeed" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+/*ENGINE-START*/
+const GARB = '?';
+class Crash extends Error {}
+class InputError extends Error {}
+const fv = v => v === null || v === undefined ? '' : String(v);
+const T_OBJ = ['mark', 'tags', 'edge', 'info'];
+const T_VAL = ['chg', 'hlRow'];
+class Sim {
+  constructor() { this.frames = [{ name: 'global', label: 'Global variables', vars: {} }]; this.out = ''; this.snaps = []; this.st = {}; this.order = []; this.ops = []; }
+  fn(name, label) { this.frames.push({ name, label: label || name + '()', vars: {} }); }
+  ret() { this.frames.pop(); }
+  var(n, v, t = 'val') { this.frames[this.frames.length - 1].vars[n] = { t, v }; }
+  gvar(n, v, t = 'val') { this.frames[0].vars[n] = { t, v }; }
+  drop(n) { delete this.frames[this.frames.length - 1].vars[n]; }
+  find(n) { for (let i = this.frames.length - 1; i >= 0; i--) if (n in this.frames[i].vars) return this.frames[i].vars[n]; throw new Error('unknown variable ' + n); }
+  get(n) { return this.find(n).v; }
+  set(n, v) { this.find(n).v = v; }
+  print(x) { this.out += x; }
+  mk(name, o) { this.st[name] = o; if (!this.order.includes(name)) this.order.push(name); return o; }
+  op(k, t) { this.ops.push([k, t]); }
+  row(n, cells) { const t = this.st[n]; t.rows.push(cells.map(fv)); t.hlRow = t.rows.length - 1; }
+  text(n, v, cls) { const t = this.st[n]; if (t.value !== v) t.chg = 1; t.value = v; if (cls !== undefined) t.cls = cls; }
+  step(label, note, extra) {
+    if (this.snaps.length > 3000) throw new InputError('This input makes too many steps. Try a smaller one.');
+    this.snaps.push(Object.assign({ label, note, ops: this.ops, state: JSON.parse(JSON.stringify({ frames: this.frames, out: this.out, st: this.st, order: this.order })) }, extra || {}));
+    this.ops = [];
+    for (const k in this.st) { const t = this.st[k]; T_OBJ.forEach(f => { if (f in t) t[f] = {}; }); T_VAL.forEach(f => { delete t[f]; }); }
+  }
+}
+const mkTable = (s, n, title, cols) => s.mk(n, { type: 'table', title, cols, rows: [] });
+const mkText = (s, n, title, value = '', cls = '') => s.mk(n, { type: 'text', title, value, cls });
+const isNum = x => typeof x === 'number';
+const NUM = /^-?\d+(\.\d+)?$/;
+function parseNums(str, what, max = 20, maxLen = 4) {
+  const toks = String(str).trim().split(/[\s,]+/).filter(Boolean);
+  if (!toks.length) throw new InputError(`Type some ${what}, separated by spaces.`);
+  if (toks.length > max) throw new InputError(`Use ${max} ${what} or fewer.`);
+  return toks.map(t => { if (!/^-?\d+$/.test(t)) throw new InputError(`"${t}" is not a whole number.`); if (t.replace('-', '').length > maxLen) throw new InputError(`Keep numbers to ${maxLen} digits: "${t}"`); return +t; });
+}
+function parseInt1(str, what, lo, hi) {
+  const t = String(str).trim(); if (!/^\d+$/.test(t)) throw new InputError(`Type a whole number for ${what}.`);
+  const v = +t; if (v < lo || v > hi) throw new InputError(`${what[0].toUpperCase() + what.slice(1)} must be between ${lo} and ${hi}.`); return v;
+}
+function parseCode(src) {
+  const raw = String(src).replace(/\s+$/, '').split('\n'), lines = [], map = {};
+  raw.forEach((ln, i) => {
+    const m = ln.match(/^(.*?)\s*@@(\w+)\s*$/);
+    let text = ln;
+    if (m) { text = m[1]; (map[m[2]] = map[m[2]] || []).push(i); }
+    lines.push(text.replace(/\s+$/, ''));
+  });
+  return { lines, map };
+}
+const PROGRAMS = [];
+const P = o => PROGRAMS.push(o);
+function defaults(p) { const o = {}; ((p.input && p.input.fields) || []).forEach(f => { o[f.k] = f.def; }); return o; }
+function runProgram(p, vals) {
+  vals = Object.assign(defaults(p), vals || {});
+  const s = new Sim();
+  try { p.run(s, vals); } catch (e) { if (!(e instanceof Crash)) throw e; }
+  if (p.post) p.post(s.snaps, vals);
+  const code = typeof p.code === 'function' ? p.code(vals) : p.code;
+  return { snaps: s.snaps, code, vals };
+}
+const pad = (s, w) => s + ' '.repeat(Math.max(1, w - s.length));
+
+
+/* ======================= Lecture 10: Sort Algorithms ======================= */
+const mkArr = (s, n, title, a, o = {}) => s.mk(n, Object.assign({ type: 'arr', title, a, mark: {}, keep: {}, tags: {}, idx: true }, o));
+const SB = '7 2 8 5 4';
+const arrF = (def, label = 'Array to sort (numbers separated by spaces)') => ({ k: 'arr', label, def, w: 'l' });
+const readArr = (v, max = 10) => parseNums(v.arr, 'numbers', max);
+const jv = a => a.join(', ');
+const srtFrom = (A, from, to) => { for (let k = from; k <= to; k++) A.keep[k] = 'srt'; };
+function counters(s, c) { s.text('K', `comparisons ${c.cmp} · ${c.swapWord || 'swaps'} ${c.sw}`); }
+
+/* ---------- 1. bubble sort ---------- */
+P({ id: 'bubble', group: 'Simple sorts: O(n²)', slides: 'Slides 7–10', title: 'Bubble sort: bubbleSort()',
+  desc: 'Walk through the array comparing neighbours and swap any pair that is out of order. After each pass the largest remaining value has "bubbled" to the end (green).',
+  notes: ['The slide declares the method as "void static". Java requires "static void" (modifiers before the return type), so that line does not compile as written. It is fixed here.', 'The code is Java (a.length). In C++ the size would be passed as a separate parameter.', 'Slide 9\'s 4th iteration makes no swaps: the array was already sorted. This code still does that pass. A common improvement stops as soon as a pass makes no swaps.', 'Slide 10: about n passes × n/2 comparisons = O(n²).'],
+  input: { fields: [arrF(SB)], presets: [['Slides 8–9', { arr: SB }], ['Already sorted', { arr: '2 4 5 7 8' }], ['Reversed (worst case)', { arr: '8 7 5 4 2' }], ['Longer', { arr: '29 10 14 37 13 5 22 18' }]] },
+  code: `static void bubbleSort(int a[]) {   // slide: "void static"     @@sig
+    // Outer loop using 'i', iterates from the end of the array
+    for (int i = a.length - 1; i > 0; i--) { // Counting down        @@outer
+        // Inner loop using 'j', iterates from the beginning up to 'i'
+        for (int j = 0; j < i; j++) { // Bubbling up                 @@inner
+            if (a[j] > a[j + 1]) { // If out of order...             @@if
+                int temp = a[j];   // ...then swap                   @@t
+                a[j] = a[j + 1];                                     @@s1
+                a[j + 1] = temp;                                     @@s2
+            }
+        }
+    }
+}                                                                    @@end`,
+  run(s, v) {
+    const a = readArr(v), n = a.length, A = mkArr(s, 'A', 'The array a[ ]', a); const c = { cmp: 0, sw: 0 };
+    mkText(s, 'K', 'Count', 'comparisons 0 · swaps 0');
+    s.fn('bubbleSort', `bubbleSort(a = {${jv(a)}})`); s.step('sig', `Sort ${n} numbers.`);
+    for (let i = n - 1; i >= 0; i--) {
+      if (i === n - 1) s.var('i', i, 'idx'); else s.set('i', i);
+      if (i === 0) { s.step('outer', 'i-- makes i = 0; i > 0 is false. Done.'); break; }
+      s.step('outer', i === n - 1 ? `Pass 1: i = a.length − 1 = ${i}. This pass will carry the largest value to a[${i}].` : `Pass ${n - i}: i = ${i}. a[${i + 1}] … a[${n - 1}] are already in place.`);
+      let swapped = 0;
+      for (let j = 0; j <= i; j++) {
+        if (j === 0) s.var('j', 0, 'idx'); else s.set('j', j);
+        if (j === i) { s.step('inner', `j = ${j}: j < i is false. End of pass ${n - i}${swapped ? '' : ' (no swaps in this pass)'}.`); break; }
+        A.mark[j] = A.mark[j + 1] = 'cmp'; c.cmp++; counters(s, c);
+        s.step('inner', `j = ${j}: compare the neighbours a[${j}] = ${a[j]} and a[${j + 1}] = ${a[j + 1]}.`);
+        A.mark[j] = A.mark[j + 1] = 'cmp';
+        if (a[j] > a[j + 1]) {
+          s.step('if', `${a[j]} > ${a[j + 1]}: out of order, swap them.`);
+          s.var('temp', a[j]); A.mark[j] = 'cur'; s.step('t', `temp = a[${j}] = ${a[j]}.`);
+          a[j] = a[j + 1]; A.mark[j] = 'cur'; s.op('set', `a[${j}] = ${a[j]}`); s.step('s1', `a[${j}] = a[${j + 1}] = ${a[j]}. (For a moment ${a[j]} is in both cells.)`);
+          a[j + 1] = s.get('temp'); A.mark[j + 1] = 'cur'; c.sw++; swapped++; counters(s, c); s.op('set', `a[${j + 1}] = ${a[j + 1]}`); s.step('s2', `a[${j + 1}] = temp = ${a[j + 1]}. Swapped.`); s.drop('temp');
+        } else s.step('if', `${a[j]} > ${a[j + 1]} is false: already in order, no swap.`);
+      }
+      s.drop('j'); A.keep[i] = 'done';
+      s.step('outer', `After pass ${n - i}: ${a[i]} is in its final place, a[${i}].`);
+    }
+    A.keep = {}; for (let k = 0; k < n; k++) A.keep[k] = 'done'; s.text('K', `comparisons ${c.cmp} · swaps ${c.sw}`, 'good');
+    s.ret(); s.step('end', `Sorted: ${jv(a)}. ${c.cmp} comparisons — always n(n−1)/2 = ${n * (n - 1) / 2} for this code — and ${c.sw} swaps.`);
+  } });
+
+/* ---------- 2. selection sort ---------- */
+P({ id: 'selection', group: 'Simple sorts: O(n²)', slides: 'Slides 11–15', title: 'Selection sort: selectionSort()',
+  desc: 'Find the smallest value in the unsorted part and swap it to the front of that part. The sorted part (green) grows by one element each time.',
+  notes: ['Slide 14: an element may be swapped with itself (when it is already the smallest). That is harmless, and checking for it is not worth it.', 'Selection sort always makes n(n−1)/2 comparisons, whatever the input, but at most n − 1 swaps.'],
+  input: { fields: [arrF(SB)], presets: [['Slide 14', { arr: SB }], ['Already sorted', { arr: '2 4 5 7 8' }], ['Reversed', { arr: '8 7 5 4 2' }], ['Longer', { arr: '29 10 14 37 13 5 22 18' }]] },
+  code: `public static void selectionSort(int[] a) {                    @@sig
+    int min;
+    // Outer loop counts up, not down
+    for (int i = 0; i < a.length - 1; i++) {                     @@outer
+        min = i; // Assume the current position is the minimum   @@min0
+        for (int j = i + 1; j < a.length; j++) {                 @@inner
+            // Find the minimum element in the remaining array
+            if (a[j] < a[min]) {                                 @@if
+                min = j;                                         @@min
+            }
+        }
+        // a[min] is the least among a[i]..a[a.length - 1]
+        // Swap the found minimum element with the element at the 'i' position
+        int temp = a[i];                                         @@t
+        a[i] = a[min];                                           @@s1
+        a[min] = temp;                                           @@s2
+    }
+}                                                                @@end`,
+  run(s, v) {
+    const a = readArr(v), n = a.length, A = mkArr(s, 'A', 'The array a[ ]', a); const c = { cmp: 0, sw: 0 };
+    mkText(s, 'K', 'Count', 'comparisons 0 · swaps 0');
+    s.fn('selectionSort', `selectionSort(a = {${jv(a)}})`); s.step('sig', `Sort ${n} numbers.`);
+    for (let i = 0; i <= n - 1; i++) {
+      if (i === 0) s.var('i', 0, 'idx'); else s.set('i', i);
+      if (i === n - 1) { s.step('outer', `i = ${i}: i < a.length − 1 is false. The last element is automatically the largest.`); break; }
+      s.step('outer', `Pass ${i + 1}: find the smallest of a[${i}] … a[${n - 1}] and put it in a[${i}].`);
+      let min = i; s.var('min', i, 'idx'); A.mark[i] = 'cur'; s.step('min0', `min = ${i}: assume a[${i}] = ${a[i]} is the smallest for now.`);
+      for (let j = i + 1; j <= n; j++) {
+        if (j === i + 1) s.var('j', j, 'idx'); else s.set('j', j);
+        if (j === n) { A.mark[min] = 'cur'; s.step('inner', `j = ${n}: the search is over. The smallest is a[${min}] = ${a[min]}.`); break; }
+        A.mark[j] = 'cmp'; A.mark[min] = 'cur'; c.cmp++; counters(s, c);
+        s.step('inner', `j = ${j}: look at a[${j}] = ${a[j]}.`);
+        A.mark[j] = 'cmp'; A.mark[min] = 'cur';
+        if (a[j] < a[min]) { s.step('if', `${a[j]} < a[min] = ${a[min]}: a new smallest.`); min = j; s.set('min', j); A.mark[j] = 'cur'; s.step('min', `min = ${j}.`); }
+        else s.step('if', `${a[j]} < ${a[min]} is false.`);
+      }
+      s.drop('j');
+      s.var('temp', a[i]); A.mark[i] = 'cur'; A.mark[min] = 'cmp'; s.step('t', min === i ? `temp = a[${i}] = ${a[i]}. (min = i, so this "swap" puts ${a[i]} back where it is — harmless.)` : `temp = a[${i}] = ${a[i]}.`);
+      a[i] = a[min]; A.mark[i] = 'cur'; s.op('set', `a[${i}] = ${a[i]}`); s.step('s1', `a[${i}] = a[${min}] = ${a[i]}.`);
+      a[min] = s.get('temp'); A.mark[min] = 'cur'; c.sw++; counters(s, c); s.op('set', `a[${min}] = ${a[min]}`); s.drop('temp'); A.keep[i] = 'done';
+      s.step('s2', `a[${min}] = temp = ${a[min]}. Now a[0] … a[${i}] are sorted and final.`);
+      s.drop('min');
+    }
+    for (let k = 0; k < n; k++) A.keep[k] = 'done'; s.text('K', `comparisons ${c.cmp} · swaps ${c.sw}`, 'good');
+    s.ret(); s.step('end', `Sorted: ${jv(a)}. ${c.cmp} comparisons (n(n−1)/2 = ${n * (n - 1) / 2}) but only ${c.sw} swaps.`);
+  } });
+
+/* ---------- 3. insertion sort ---------- */
+P({ id: 'insertion', group: 'Simple sorts: O(n²)', slides: 'Slides 16–25', title: 'Insertion sort: insertionSort()',
+  desc: 'Like sorting playing cards in your hand: take the next element (temp), shift the bigger sorted elements one place right, and drop temp into the gap. Light green = the sorted part.',
+  notes: ['The code is on slide 19, which is hidden in the slide show (marked FYI), so students may not have seen it.', 'Shifting copies a value one place to the right, so for a moment it appears twice (slides 20–23 show the same).', 'Best case: an already sorted array needs only n − 1 comparisons and no shifts, so insertion sort is fast on nearly sorted data. Worst case (reversed) is O(n²).'],
+  input: { fields: [arrF('20 8 5 10 7')], presets: [['Slides 20–23', { arr: '20 8 5 10 7' }], ['Slide 18', { arr: '3 4 7 12 14 14 20 21 33 38 10 55 9 23 28 16' }], ['Already sorted (best)', { arr: '5 7 8 10 20' }], ['Reversed (worst)', { arr: '20 10 8 7 5' }]] },
+  code: `public static void insertionSort(int[] a) {                     @@sig
+    for (int i = 1; i < a.length; i++) { // Start from the second element   @@outer
+        int temp = a[i]; // The element to be inserted              @@t
+        int j = i - 1;                                              @@j
+        // Move elements of a[0..i-1], that are greater than key,
+        // to one position ahead of their current position
+        while (j >= 0 && a[j] > temp) {                             @@while
+            a[j + 1] = a[j];                                        @@shift
+            j--;                                                    @@dec
+        }
+        a[j + 1] = temp; // Insert the key at the correct position  @@put
+    }
+}                                                                   @@end`,
+  run(s, v) {
+    const a = readArr(v, 16), n = a.length, A = mkArr(s, 'A', 'The array a[ ]', a); const c = { cmp: 0, sw: 0, swapWord: 'shifts' };
+    mkText(s, 'TMP', 'temp', '—'); mkText(s, 'K', 'Count', 'comparisons 0 · shifts 0');
+    s.fn('insertionSort', `insertionSort(a = {${jv(a)}})`); A.keep[0] = 'srt'; s.step('sig', `Sort ${n} numbers. a[0] on its own counts as a sorted part.`);
+    for (let i = 1; i <= n; i++) {
+      if (i === 1) s.var('i', 1, 'idx'); else s.set('i', i);
+      if (i === n) { s.step('outer', `i = ${n}: i < a.length is false. Every element has been inserted.`); break; }
+      A.mark[i] = 'cur'; s.step('outer', `i = ${i}: insert a[${i}] = ${a[i]} into the sorted part a[0] … a[${i - 1}].`);
+      const temp = a[i]; s.var('temp', temp); s.text('TMP', String(temp)); A.mark[i] = 'cur'; s.step('t', `temp = ${temp}. Its cell is now free to be overwritten.`);
+      let j = i - 1; s.var('j', j, 'idx'); s.step('j', `j = ${j}: start comparing with the element just before it.`);
+      for (;;) {
+        if (j < 0) { s.step('while', 'j = −1: we reached the front of the array. Stop.'); break; }
+        A.mark[j] = 'cmp'; c.cmp++; counters(s, c);
+        if (a[j] > temp) {
+          s.step('while', `j = ${j} ≥ 0 and a[${j}] = ${a[j]} > temp (${temp}): ${a[j]} must move right.`);
+          a[j + 1] = a[j]; A.mark[j + 1] = 'cur'; c.sw++; counters(s, c); s.op('set', `a[${j + 1}] = ${a[j]}`);
+          s.step('shift', `a[${j + 1}] = a[${j}] = ${a[j]}: shift it one place right.`);
+          j--; s.set('j', j); s.step('dec', `j-- → j = ${j}.`);
+        } else { A.mark[j] = 'cmp'; s.step('while', `a[${j}] = ${a[j]} > temp (${temp}) is false: stop here.`); break; }
+      }
+      a[j + 1] = temp; srtFrom(A, 0, i); A.mark[j + 1] = 'done'; s.op('set', `a[${j + 1}] = ${temp}`); s.text('TMP', '—');
+      s.step('put', `a[${j + 1}] = temp = ${temp}. a[0] … a[${i}] are now sorted.`); s.drop('temp'); s.drop('j');
+    }
+    for (let k = 0; k < n; k++) A.keep[k] = 'done'; s.text('K', `comparisons ${c.cmp} · shifts ${c.sw}`, 'good');
+    s.ret(); s.step('end', `Sorted: ${jv(a)}. ${c.cmp} comparisons and ${c.sw} shifts (worst case would be ${n * (n - 1) / 2} each).`);
+  } });
+
+/* ---------- 4. merging two sorted arrays ---------- */
+P({ id: 'merge', group: 'Divide and conquer: O(n log n)', slides: 'Slides 30–40', title: 'Merging two sorted arrays (L and R into A)',
+  desc: 'The "conquer" step of merge sort. Copy both sorted halves into temporary arrays L and R, then repeatedly move the smaller front element into A.',
+  notes: ['Each step makes one comparison and places one element, so merging n elements takes at most n − 1 comparisons: O(n).', 'Using ≤ (not <) takes from L first when the two are equal. That keeps equal values in their original order (a "stable" sort).'],
+  codeTitle: 'Merge (slides 30–40)',
+  input: { fields: [{ k: 'L', label: 'Left half (sorted)', def: '2 3 7 8', w: 'm' }, { k: 'R', label: 'Right half (sorted)', def: '1 4 5 6', w: 'm' }],
+    presets: [['Slides 31–40', { L: '2 3 7 8', R: '1 4 5 6' }], ['One side runs out early', { L: '1 2 3', R: '7 8 9 10' }], ['Unequal sizes', { L: '5 9', R: '1 3 4 8 12' }]] },
+  code: `merge(A, L, R):
+    copy the two sorted halves of A into L and R     @@copy
+    i = 0; j = 0; k = 0                              @@init
+    while (i < L.length && j < R.length) {           @@while
+        if (L[i] <= R[j]) { A[k] = L[i]; i++; }      @@takeL
+        else              { A[k] = R[j]; j++; }      @@takeR
+        k++;                                         @@k
+    }
+    copy what is left of L, then of R, into A        @@rest`,
+  run(s, v) {
+    const L0 = parseNums(v.L, 'numbers', 8), R0 = parseNums(v.R, 'numbers', 8);
+    [L0, R0].forEach((x, q) => { for (let t = 1; t < x.length; t++) if (x[t] < x[t - 1]) throw new InputError(`The ${q ? 'right' : 'left'} half must already be sorted: ${[...x].sort((p, r) => p - r).join(' ')}`); });
+    const n = L0.length + R0.length;
+    const A = mkArr(s, 'A', 'A', [...L0, ...R0], { idx: false }); const L = mkArr(s, 'L', 'L (temporary)', L0.map(() => ''), { idx: false }), R = mkArr(s, 'R', 'R (temporary)', R0.map(() => ''), { idx: false });
+    mkText(s, 'K', 'Comparisons', '0');
+    s.step(null, `A holds two sorted halves: ${jv(L0)} and ${jv(R0)}.`);
+    L.a = [...L0]; R.a = [...R0]; for (let t = 0; t < n; t++) A.keep[t] = 'out';
+    s.op('set', 'L and R filled'); s.step('copy', 'Copy the halves into the temporary arrays L and R. A\'s old values (faded) will be overwritten.');
+    let i = 0, j = 0, k = 0, cmp = 0;
+    const tags = () => { L.tags = {}; R.tags = {}; A.tags = {}; if (i < L0.length) L.tags[i] = ['i']; if (j < R0.length) R.tags[j] = ['j']; if (k < n) A.tags[k] = ['k']; };
+    s.var('i', 0); s.var('j', 0); s.var('k', 0); tags(); s.step('init', 'i, j and k all start at 0.');
+    while (true) {
+      tags();
+      if (!(i < L0.length && j < R0.length)) { s.step('while', i >= L0.length ? 'L is used up: the loop ends.' : 'R is used up: the loop ends.'); break; }
+      L.mark[i] = 'cmp'; R.mark[j] = 'cmp'; cmp++; s.text('K', String(cmp));
+      s.step('while', `Both have elements left. Compare L[${i}] = ${L0[i]} with R[${j}] = ${R0[j]}.`);
+      if (L0[i] <= R0[j]) { A.a[k] = L0[i]; delete A.keep[k]; A.mark[k] = 'new'; L.keep[i] = 'out'; s.op('set', `A[${k}] = ${L0[i]}`); s.step('takeL', `${L0[i]} ≤ ${R0[j]}: A[${k}] = L[${i}] = ${L0[i]}, then i++.`); i++; s.set('i', i); }
+      else { A.a[k] = R0[j]; delete A.keep[k]; A.mark[k] = 'new'; R.keep[j] = 'out'; s.op('set', `A[${k}] = ${R0[j]}`); s.step('takeR', `${L0[i]} > ${R0[j]}: A[${k}] = R[${j}] = ${R0[j]}, then j++.`); j++; s.set('j', j); }
+      k++; s.set('k', k); tags(); s.step('k', `k++ → k = ${k}.`);
+    }
+    const rest = [];
+    while (i < L0.length) { A.a[k] = L0[i]; delete A.keep[k]; A.mark[k] = 'new'; L.keep[i] = 'out'; rest.push(L0[i]); i++; k++; }
+    while (j < R0.length) { A.a[k] = R0[j]; delete A.keep[k]; A.mark[k] = 'new'; R.keep[j] = 'out'; rest.push(R0[j]); j++; k++; }
+    s.set('i', i); s.set('j', j); s.set('k', k); tags();
+    if (rest.length) s.op('set', `copied the rest: ${jv(rest)}`);
+    s.step('rest', rest.length ? `Copy what is left (${jv(rest)}) straight into A — no comparisons needed, it is already sorted.` : 'Nothing is left over.');
+    for (let t = 0; t < n; t++) A.keep[t] = 'done'; s.text('K', `${cmp} (at most n − 1 = ${n - 1})`, 'good');
+    s.step(null, `Merged: ${jv(A.a)}. ${cmp} comparison${cmp === 1 ? '' : 's'} for ${n} elements.`);
+  } });
+
+/* ---------- 5. merge sort tree ---------- */
+P({ id: 'mergesort', group: 'Divide and conquer: O(n log n)', slides: 'Slides 26–29, 41–54', title: 'Merge sort: the recursion tree',
+  desc: 'Split the sequence in half, sort each half the same way, then merge the two sorted halves. Each box is one call: the top line is its input, the bottom line its sorted output.',
+  notes: ['Slides 43–50 show "3 8 6 1 → 1 3 8 6" for the right half. Sorted, it is 1 3 6 8, which slides 51–52 show correctly.', 'Slide 53: the tree has about log₂ n levels, and the merges on each level handle n elements in total, so merge sort is O(n log n).', 'When n is odd, the first half gets ⌊n/2⌋ elements.'],
+  codeTitle: 'mergeSort (slide 29)',
+  input: { fields: [arrF('7 2 9 4 3 8 6 1')], presets: [['Slides 43–52', { arr: '7 2 9 4 3 8 6 1' }], ['Slide 54 exercise', { arr: '11 6 13 8 7 12 10 5' }], ['Odd size', { arr: '5 2 4 6 1 3 7' }]] },
+  code: `Algorithm mergeSort(S)
+    if S.size() > 1                               @@if
+        (S1, S2) ← partition(S, n/2)              @@part
+        mergeSort(S1)                             @@rec1
+        mergeSort(S2)                             @@rec2
+        S ← merge(S1, S2)                         @@merge
+    (size 0 or 1: already sorted)                 @@base`,
+  run(s, v) {
+    const a = readArr(v, 12), n = a.length;
+    const T = s.mk('T', { type: 'mtree', title: 'Merge-sort tree', n, nodes: [], mark: {} });
+    const build = (lo, hi, d) => { const id = T.nodes.length; T.nodes.push({ lo, hi, d, vals: null, out: null }); if (hi - lo > 1) { const m = lo + Math.floor((hi - lo) / 2); build(lo, m, d + 1); build(m, hi, d + 1); } return id; };
+    build(0, n, 0);
+    const node = (lo, hi) => T.nodes.findIndex(x => x.lo === lo && x.hi === hi);
+    let cmp = 0; mkText(s, 'K', 'Comparisons in merges', '0');
+    T.nodes[0].vals = [...a]; s.step(null, `Sort ${jv(a)}. The dashed boxes are the calls still to come.`);
+    const ms = (lo, hi, seq) => {
+      const id = node(lo, hi); T.nodes[id].vals = seq; T.mark[id] = 'cur';
+      s.fn('mergeSort', `mergeSort(${seq.join(' ')})`);
+      if (seq.length <= 1) { T.nodes[id].out = seq; T.mark[id] = 'done'; s.step('base', `mergeSort(${seq.join(' ')}): size ${seq.length}, the base case. It is already sorted.`); s.ret(); return seq; }
+      s.step('if', `mergeSort(${seq.join(' ')}): size ${seq.length} > 1, so split it.`);
+      const m = Math.floor(seq.length / 2), s1 = seq.slice(0, m), s2 = seq.slice(m);
+      const c1 = node(lo, lo + m), c2 = node(lo + m, hi); T.nodes[c1].vals = s1; T.nodes[c2].vals = s2; T.mark[id] = 'cur'; T.mark[c1] = T.mark[c2] = 'cmp';
+      s.step('part', `Partition into S1 = ${s1.join(' ')} and S2 = ${s2.join(' ')}.`);
+      T.mark[id] = 'cur'; s.step('rec1', `Recursive call on S1 = ${s1.join(' ')}. This call waits.`);
+      const r1 = ms(lo, lo + m, s1); T.mark[id] = 'cur'; s.step('rec2', `Back in mergeSort(${seq.join(' ')}). Now the recursive call on S2 = ${s2.join(' ')}.`);
+      const r2 = ms(lo + m, hi, s2);
+      let i = 0, j = 0; const out = []; while (i < r1.length && j < r2.length) { cmp++; out.push(r1[i] <= r2[j] ? r1[i++] : r2[j++]); } while (i < r1.length) out.push(r1[i++]); while (j < r2.length) out.push(r2[j++]);
+      T.nodes[id].out = out; T.mark[id] = 'new'; s.text('K', String(cmp)); s.op('set', `merged: ${out.join(' ')}`);
+      s.step('merge', `Merge ${r1.join(' ')} and ${r2.join(' ')} → ${out.join(' ')}.`);
+      T.mark[id] = 'done'; s.ret(); return out;
+    };
+    const res = ms(0, n, [...a]);
+    const levels = Math.max(...T.nodes.map(x => x.d)) + 1;
+    s.text('K', `${cmp} comparisons, ${levels} levels`, 'good');
+    s.step(null, `Sorted: ${jv(res)}. The tree has ${levels} levels (about log₂ ${n} + 1), and the merges on each level handle all ${n} elements: O(n log n).`);
+  } });
+
+/* ---------- 6. quick sort ---------- */
+P({ id: 'quick', group: 'Divide and conquer: O(n log n)', slides: 'Slides 55–65', title: 'Quick sort: in-place partition',
+  desc: 'Pick a pivot and move it to the end. i scans from the left for a value ≥ pivot, j from the right for a value ≤ pivot; swap them and continue until they cross. Then the pivot goes to its final place (green), and each side is sorted the same way.',
+  notes: ['Slide 59 picks a middle element (the 6 at index 3) as the pivot and first swaps it to the end; slides 57 and 65 simply use the last element. Choose with "Pivot".', 'Slides 63–64 ("another way", with l and r) follow the same partition idea.', 'With the last element as pivot, an array that is already sorted is the worst case: every partition is lopsided and quick sort becomes O(n²). A middle pivot avoids that.'],
+  codeTitle: 'In-place quick sort (slides 59–62)',
+  input: { fields: [arrF('8 3 1 7 0 10 2'), { k: 'pivot', label: 'Pivot', type: 'select', def: 'last', options: [['last', 'last element'], ['middle', 'middle element (moved to the end)']] }],
+    presets: [['Slide 65', { arr: '8 3 1 7 0 10 2', pivot: 'last' }], ['Slides 59–62', { arr: '5 6 4 6 3 12 19', pivot: 'middle' }], ['Slides 63–64', { arr: '85 24 63 45 17 31 96 50', pivot: 'last' }], ['Slide 57', { arr: '7 6 2 10 4 5 9 8', pivot: 'last' }], ['Sorted, last pivot (worst)', { arr: '1 2 3 4 5 6 7', pivot: 'last' }]] },
+  code: `quickSort(A, left, right):                              @@call
+    if (left >= right) return;   // 0 or 1 element       @@base
+    choose the pivot; swap it with A[right]              @@pivot
+    i = left; j = right - 1;                             @@init
+    loop:
+        while (A[i] < pivot) i++;                        @@iscan
+        while (j > left && A[j] > pivot) j--;            @@jscan
+        if (i < j) { swap A[i], A[j]; i++; j--; }        @@swap
+        else break;   // i and j have crossed            @@cross
+    swap A[i] and A[right]   // pivot to its final place  @@place
+    quickSort(A, left, i - 1);                           @@rec1
+    quickSort(A, i + 1, right);                          @@rec2`,
+  run(s, v) {
+    const a = readArr(v, 10), n = a.length, mid = v.pivot === 'middle', A = mkArr(s, 'A', 'The array A[ ]', a); const c = { cmp: 0, sw: 0 };
+    mkText(s, 'K', 'Count', 'comparisons 0 · swaps 0');
+    const final = new Set();
+    const shade = (l, r) => { A.keep = {}; for (let t = 0; t < n; t++) { if (final.has(t)) A.keep[t] = 'done'; else if (t < l || t > r) A.keep[t] = 'out'; } };
+    const swap = (x, y) => { const t = a[x]; a[x] = a[y]; a[y] = t; };
+    s.step(null, `Sort ${jv(a)} with the ${mid ? 'middle' : 'last'} element as pivot.`);
+    const qs = (l, r) => {
+      s.fn('quickSort', `quickSort(left = ${l}, right = ${r})`); s.var('left', l, 'idx'); s.var('right', r, 'idx'); shade(l, r);
+      if (l >= r) { if (l === r) { final.add(l); shade(l, r); } s.step('base', l === r ? `A[${l}] = ${a[l]} is a single element: already in its final place.` : 'An empty part: nothing to do.'); s.ret(); return; }
+      s.step('call', `Sort A[${l}] … A[${r}]: ${a.slice(l, r + 1).join(' ')}.`);
+      const p = mid ? Math.floor((l + r) / 2) : r;
+      if (p !== r) { A.mark[p] = 'cur'; A.mark[r] = 'cmp'; swap(p, r); c.sw++; counters(s, c); s.op('swap', `pivot ${a[r]} moved to A[${r}]`); s.step('pivot', `The pivot is the middle element A[${p}] = ${a[r]}. Swap it with A[${r}] to get it out of the way.`); }
+      const pv = a[r]; s.var('pivot', pv); A.tags[r] = ['pivot']; A.mark[r] = 'cur'; if (p === r) s.step('pivot', `The pivot is the last element, A[${r}] = ${pv}.`);
+      let i = l, j = r - 1; s.var('i', i, 'idx'); s.var('j', j, 'idx'); A.tags[r] = ['pivot']; s.step('init', `i = ${i} (first), j = ${j} (next-to-last).`);
+      for (;;) {
+        while (true) { c.cmp++; counters(s, c); A.tags[r] = ['pivot']; A.mark[i] = 'cmp';
+          if (a[i] < pv) { s.step('iscan', `A[${i}] = ${a[i]} < ${pv}: skip it, i moves right.`); i++; s.set('i', i); } else { s.step('iscan', `A[${i}] = ${a[i]} is not < ${pv}: i stops at ${i}.`); break; } }
+        while (j > l) { c.cmp++; counters(s, c); A.tags[r] = ['pivot']; A.mark[j] = 'cmp';
+          if (a[j] > pv) { s.step('jscan', `A[${j}] = ${a[j]} > ${pv}: skip it, j moves left.`); j--; s.set('j', j); } else { s.step('jscan', `A[${j}] = ${a[j]} is not > ${pv}: j stops at ${j}.`); break; } }
+        if (j === l) { A.tags[r] = ['pivot']; s.step('jscan', `j = ${j} = left: j stops here and goes no further.`); }
+        A.tags[r] = ['pivot'];
+        if (i < j) { A.mark[i] = A.mark[j] = 'cur'; swap(i, j); c.sw++; counters(s, c); s.op('swap', `A[${i}] ⇄ A[${j}]`); s.step('swap', `i (${i}) < j (${j}): swap A[${i}] and A[${j}] → the small ${a[i]} goes left, the big ${a[j]} goes right. Then i++ and j--.`); i++; j--; s.set('i', i); s.set('j', j); }
+        else { s.step('cross', `i (${i}) ≥ j (${j}): i and j have crossed. Stop.`); break; }
+      }
+      A.mark[i] = A.mark[r] = 'cur'; swap(i, r); if (i !== r) { c.sw++; counters(s, c); } final.add(i); shade(l, r); A.mark[i] = 'done'; s.op('swap', `pivot ${pv} placed at A[${i}]`);
+      s.step('place', `Swap A[${i}] and the pivot: ${pv} is now in its final place, A[${i}]. Everything left of it is ≤ ${pv}, everything right of it is ≥ ${pv}.`);
+      s.step('rec1', `Sort the left part A[${l}] … A[${i - 1}].`); qs(l, i - 1); shade(l, r);
+      s.step('rec2', `Back in quickSort(${l}, ${r}). Now sort the right part A[${i + 1}] … A[${r}].`); qs(i + 1, r);
+      s.ret();
+    };
+    qs(0, n - 1);
+    for (let t = 0; t < n; t++) A.keep[t] = 'done'; A.tags = {}; s.text('K', `comparisons ${c.cmp} · swaps ${c.sw}`, 'good');
+    s.step(null, `Sorted: ${jv(a)}. ${c.cmp} comparisons and ${c.sw} swaps.`);
+  } });
+
+/* ---------- 7. compare all five ---------- */
+function rng(seed) { let x = seed >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
+function makeData(n, kind, seed) {
+  const r = rng(seed); const a = Array.from({ length: n }, (_, i) => i + 1);
+  if (kind === 'sorted') return a; if (kind === 'reversed') return a.reverse();
+  if (kind === 'nearly') { for (let k = 0; k < Math.max(1, n / 20); k++) { const x = Math.floor(r() * n), y = Math.floor(r() * n); [a[x], a[y]] = [a[y], a[x]]; } return a; }
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a;
+}
+const COUNT = {
+  bubble(a) { let c = 0; for (let i = a.length - 1; i > 0; i--) for (let j = 0; j < i; j++) { c++; if (a[j] > a[j + 1]) [a[j], a[j + 1]] = [a[j + 1], a[j]]; } return c; },
+  selection(a) { let c = 0; for (let i = 0; i < a.length - 1; i++) { let m = i; for (let j = i + 1; j < a.length; j++) { c++; if (a[j] < a[m]) m = j; } [a[i], a[m]] = [a[m], a[i]]; } return c; },
+  insertion(a) { let c = 0; for (let i = 1; i < a.length; i++) { const t = a[i]; let j = i - 1; while (j >= 0) { c++; if (a[j] > t) { a[j + 1] = a[j]; j--; } else break; } a[j + 1] = t; } return c; },
+  merge(a) { let c = 0; const ms = x => { if (x.length <= 1) return x; const m = Math.floor(x.length / 2), l = ms(x.slice(0, m)), r = ms(x.slice(m)), o = []; let i = 0, j = 0; while (i < l.length && j < r.length) { c++; o.push(l[i] <= r[j] ? l[i++] : r[j++]); } return o.concat(l.slice(i), r.slice(j)); }; ms(a); return c; },
+  quick(a) { let c = 0; const st = [[0, a.length - 1]]; while (st.length) { const [l, r] = st.pop(); if (l >= r) continue; const p = Math.floor((l + r) / 2); [a[p], a[r]] = [a[r], a[p]]; const pv = a[r]; let i = l, j = r - 1; for (;;) { while (true) { c++; if (a[i] < pv) i++; else break; } while (j > l) { c++; if (a[j] > pv) j--; else break; } if (i < j) { [a[i], a[j]] = [a[j], a[i]]; i++; j--; } else break; } [a[i], a[r]] = [a[r], a[i]]; st.push([l, i - 1], [i + 1, r]); } return c; } };
+const NAMES = { bubble: 'Bubble sort', selection: 'Selection sort', insertion: 'Insertion sort', merge: 'Merge sort', quick: 'Quick sort' };
+P({ id: 'compare', group: 'Comparing the algorithms', slides: 'Slide 66', title: 'All five on the same data: how many comparisons?',
+  desc: 'Run every algorithm on the same array and count the comparisons each one makes. Then see how the counts grow as n grows: the O(n²) sorts pull away from the O(n log n) ones.',
+  notes: ['The same counting rules are used as in the step-by-step programs above. Quick sort uses a middle pivot here, so sorted input is not its worst case.', 'Insertion sort shines on sorted or nearly sorted data (try those inputs); bubble and selection sort do the same number of comparisons whatever the order.'],
+  codeTitle: 'Summary (slide 66)',
+  input: { fields: [{ k: 'n', label: 'n (array size)', def: '1000', w: 's' }, { k: 'kind', label: 'Data', type: 'select', def: 'random', options: [['random', 'random order'], ['sorted', 'already sorted'], ['nearly', 'nearly sorted'], ['reversed', 'reversed']] }],
+    presets: [['1000 random', { n: '1000', kind: 'random' }], ['1000 nearly sorted', { n: '1000', kind: 'nearly' }], ['1000 reversed', { n: '1000', kind: 'reversed' }], ['20 random', { n: '20', kind: 'random' }]] },
+  code: `selection sort   O(n²)        slow · in-place · small data (< 1K)       @@selection
+insertion sort   O(n²)        slow · in-place · small data (< 1K)       @@insertion
+bubble sort      O(n²)        slow · in-place                           @@bubble
+quick sort       O(n log n)   fast · in-place · large data (1K–1M)      @@quick
+merge sort       O(n log n)   fast · sequential access · huge (> 1M)    @@merge
+how the counts grow with n                                              @@grow`,
+  run(s, v) {
+    const n = parseInt1(v.n, 'n', 2, 5000), kind = ['random', 'sorted', 'nearly', 'reversed'].includes(v.kind) ? v.kind : 'random';
+    const data = makeData(n, kind, 12345 + n);
+    s.mk('W', { type: 'bars', title: `Comparisons on ${n.toLocaleString('en-US')} ${{ random: 'random', sorted: 'sorted', nearly: 'nearly sorted', reversed: 'reversed' }[kind]} numbers`, rows: [] });
+    const res = {};
+    s.step(null, `${n.toLocaleString('en-US')} numbers in ${{ random: 'random order', sorted: 'sorted order', nearly: 'nearly sorted order', reversed: 'reversed order' }[kind]}. Run each algorithm on its own copy.`);
+    const order = ['bubble', 'selection', 'insertion', 'merge', 'quick'];
+    order.forEach(k => {
+      res[k] = COUNT[k]([...data]);
+      const mx = Math.max(...Object.values(res));
+      s.st.W.rows = Object.keys(res).map(q => ({ label: NAMES[q], value: res[q].toLocaleString('en-US'), frac: res[q] / mx, cls: q === k ? 'top' : '' }));
+      s.step(k, `${NAMES[k]}: ${res[k].toLocaleString('en-US')} comparisons.`);
+    });
+    const ns = [10, 50, 100, 200, 500, 1000];
+    s.mk('G', { type: 'chart', title: `Comparisons as n grows (${kind === 'random' ? 'random' : kind} data)`, xs: ns.map(String), series: order.map((k, q) => ({ name: NAMES[k], ys: ns.map(m => COUNT[k](makeData(m, kind, 12345 + m))), cls: 's' + (q + 1) })), ylog: false, upto: ns.length - 1 });
+    const best = order.reduce((b, k) => res[k] < res[b] ? k : b, order[0]);
+    s.step('grow', `Fewest comparisons here: ${NAMES[best]}. On the chart (bubble and selection sort make exactly the same count, so their lines overlap), the O(n²) sorts curve upward while merge and quick sort grow almost in a straight line${kind === 'sorted' || kind === 'nearly' ? '; on sorted data insertion sort is the exception, since each element needs only one comparison' : ''}.`);
+  } });
+
+/*ENGINE-END*/
+
+/* ======================= UI ======================= */
+const $ = q => document.querySelector(q);
+const el = { sel: $('#prog'), slides: $('#slides'), title: $('#ptitle'), desc: $('#pdesc'), notesWrap: $('#notesWrap'), notesSum: $('#notesSum'), notes: $('#notes'),
+  inWrap: $('#inWrap'), inFields: $('#inFields'), inRun: $('#inRun'), inPresets: $('#inPresets'), inErr: $('#inErr'),
+  structs: $('#structs'), stepNo: $('#stepNo'), note: $('#note'), diff: $('#diff'), codeH: $('#codeH'), code: $('#code'), codeWrap: $('#codeWrap'),
+  varsCard: $('#varsCard'), vars: $('#vars'), outCard: $('#outCard'), out: $('#out'), range: $('#range'), count: $('#count'),
+  bFirst: $('#bFirst'), bPrev: $('#bPrev'), bPlay: $('#bPlay'), bNext: $('#bNext'), bLast: $('#bLast'), bSpeed: $('#bSpeed') };
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let cur = { prog: null, parsed: null, snaps: [], i: 0, vals: {} };
+let timer = null, speed = 1;
+
+const KW = 'int|float|double|char|void|struct|class|public|return|new|delete|while|if|else|for|do|NULL|using|namespace|string|include|endl|cout|cin|std|const|bool|Object|private|assert|break';
+const TOK = new RegExp(`(\\/\\/.*$)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b(${KW})\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'g');
+function hl(line) {
+  let out = '', last = 0;
+  line.replace(TOK, (m, com, str, kw, num, off) => {
+    out += esc(line.slice(last, off));
+    out += `<span class="${com ? 'c-com' : str ? 'c-str' : kw ? 'c-kw' : 'c-num'}">${esc(m)}</span>`; last = off + m.length; return m;
+  });
+  return out + esc(line.slice(last));
+}
+function buildSelect() {
+  const groups = [];
+  PROGRAMS.forEach(p => { let g = groups.find(x => x.name === p.group); if (!g) { g = { name: p.group, items: [] }; groups.push(g); } g.items.push(p); });
+  el.sel.innerHTML = groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`).join('');
+}
+const sameVals = (a, b) => Object.keys(a).every(k => String(a[k]).trim() === String(b[k] === undefined ? '' : b[k]).trim());
+
+function readFields() { const o = {}; el.inFields.querySelectorAll('[data-k]').forEach(f => { o[f.dataset.k] = f.value; }); return o; }
+function drawFields(p, vals) {
+  el.inFields.innerHTML = p.input.fields.map(f => {
+    const id = 'f_' + f.k;
+    const ctl = f.type === 'select'
+      ? `<select id="${id}" data-k="${f.k}">${f.options.map(([v, l]) => `<option value="${esc(v)}"${String(vals[f.k]) === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`
+      : `<input id="${id}" data-k="${f.k}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(vals[f.k])}">`;
+    return `<label class="fld w-${f.type === 'select' ? 'm' : (f.w || 'm')}" for="${id}"><span>${esc(f.label)}</span>${ctl}</label>`;
+  }).join('');
+  el.inPresets.innerHTML = p.input.presets.map(([l, v], i) => `<button type="button" data-i="${i}" class="${sameVals(v, vals) ? 'on' : ''}">${esc(l)}</button>`).join('');
+}
+
+function load(id, vals) {
+  stop();
+  const p = PROGRAMS.find(x => x.id === id) || PROGRAMS[0];
+  el.sel.value = p.id;
+  let r;
+  try { r = runProgram(p, vals); }
+  catch (e) {
+    if (!(e instanceof InputError)) throw e;
+    if (cur.prog === p) { el.inErr.textContent = e.message; return; }
+    r = runProgram(p, {});
+  }
+  el.inErr.textContent = '';
+  const parsed = parseCode(r.code);
+  cur = { prog: p, parsed, snaps: r.snaps, i: 0, vals: r.vals };
+  el.slides.textContent = p.slides; el.title.textContent = p.title; el.desc.textContent = p.desc;
+  if (p.notes && p.notes.length) { el.notesWrap.hidden = false; el.notes.innerHTML = p.notes.map(n => `<li>${esc(n)}</li>`).join(''); el.notesSum.textContent = p.notes.length === 1 ? '1 note about this' : `${p.notes.length} notes about this`; }
+  else el.notesWrap.hidden = true;
+  if (p.input) { el.inWrap.hidden = false; drawFields(p, r.vals); } else el.inWrap.hidden = true;
+  el.codeH.textContent = p.codeTitle || 'Code';
+  el.code.innerHTML = parsed.lines.map((t, i) => `<div class="cl"><span class="ln">${i + 1}</span><span>${hl(t) || ' '}</span></div>`).join('');
+  el.codeWrap.scrollTop = 0;
+  el.varsCard.hidden = !cur.snaps.some(sn => sn.state.frames.some(f => Object.keys(f.vars).length));
+  el.outCard.hidden = !cur.snaps.some(sn => sn.state.out);
+  el.range.max = cur.snaps.length - 1;
+  try { localStorage.setItem('sort-sim-prog', p.id); } catch (e) {}
+  go(0);
+}
+function go(i) { cur.i = Math.max(0, Math.min(cur.snaps.length - 1, i)); render(); }
+
+const mainTree = st => { for (const k of st.order) if (st.st[k].type === 'tree') return st.st[k]; return null; };
+const mainHeap = st => { for (const k of st.order) if (st.st[k].type === 'heap') return st.st[k]; return null; };
+function fvv(o, st) {
+  if (o.t === 'ptr') { if (o.v === null) return 'NULL'; if (o.v === GARB) return '?'; const T = mainTree(st), n = T && T.nodes[o.v]; return n ? `node ${fv(n.v)}` : 'deleted node'; }
+  if (o.t === 'idx') { const H = mainHeap(st); return H && H.arr[o.v] !== null && H.arr[o.v] !== undefined && o.v >= 1 ? `${o.v}  (Heap[${o.v}] = ${fv(H.arr[o.v])})` : String(o.v); }
+  return o.v === GARB ? '?' : fv(o.v);
+}
+function computeDiff(ps, st, sn) {
+  const fItems = [], oItems = [], vars = new Set();
+  if (!ps) return { items: [], vars };
+  const L = Math.max(st.frames.length, ps.frames.length);
+  for (let fi = 0; fi < L; fi++) {
+    const a = ps.frames[fi], b = st.frames[fi], same = a && b && a.label === b.label;
+    if (a && !same) fItems.push(['ret', `${a.label} finished`]);
+    if (b && !same) { fItems.push(['call', `Entered ${b.label}`]); Object.entries(b.vars).forEach(([k, o]) => { vars.add(fi + ':' + k); fItems.push(['var', `${k} = ${fvv(o, st)}`]); }); continue; }
+    if (same) {
+      Object.entries(b.vars).forEach(([k, o]) => {
+        const ov = a.vars[k];
+        if (!ov) { vars.add(fi + ':' + k); fItems.push(['var', `${k} created = ${fvv(o, st)}`]); }
+        else if (ov.v !== o.v) { vars.add(fi + ':' + k); fItems.push(['var', `${k}: ${fvv(ov, ps)} → ${fvv(o, st)}`]); }
+      });
+      Object.keys(a.vars).forEach(k => { if (!(k in b.vars)) fItems.push(['var', `${k} goes out of scope`]); });
+    }
+  }
+  if (st.out.length > ps.out.length) oItems.push(['out', `Printed ${JSON.stringify(st.out.slice(ps.out.length))}`]);
+  return { items: fItems.concat(sn.ops || [], oItems), vars };
+}
+const BADGE = { count: 'count', var: 'variable', call: 'call', ret: 'return', out: 'output', new: 'new node', set: 'store', link: 'link', del: 'remove', move: 'move', swap: 'swap', push: 'insert', pop: 'remove', read: 'read', err: 'error' };
+
+function render() {
+  const snap = cur.snaps[cur.i], prev = cur.i > 0 ? cur.snaps[cur.i - 1] : null, st = snap.state;
+  const ch = computeDiff(prev && prev.state, st, snap);
+  const n = cur.snaps.length;
+  el.count.textContent = `Step ${cur.i + 1} of ${n}`;
+  el.stepNo.textContent = snap.label && cur.parsed.map[snap.label] ? `line ${cur.parsed.map[snap.label][0] + 1}` : (cur.i === 0 ? 'starting point' : '');
+  el.range.value = cur.i;
+  el.note.textContent = snap.note; el.note.className = 'note' + (snap.crash ? ' crash' : '');
+  el.diff.innerHTML = ch.items.length ? ch.items.map(([k, t]) => `<li><span class="badge b-${k}">${BADGE[k] || k}</span><span>${esc(t)}</span></li>`).join('')
+    : `<li class="nodiff">${cur.i === 0 ? 'This is the starting point. Press Next to run the first step.' : 'Nothing was stored or moved: this step compared values or checked a condition.'}</li>`;
+  el.code.querySelectorAll('.cl.cur').forEach(x => x.classList.remove('cur'));
+  const lines = snap.label ? (cur.parsed.map[snap.label] || []) : [];
+  lines.forEach(li => { const d = el.code.children[li]; if (d) d.classList.add('cur'); });
+  if (lines.length) {
+    const f = el.code.children[lines[0]], lastEl = el.code.children[lines[lines.length - 1]], w = el.codeWrap;
+    const top = f.offsetTop, bot = lastEl.offsetTop + lastEl.offsetHeight;
+    if (top < w.scrollTop + 20 || bot > w.scrollTop + w.clientHeight - 20) w.scrollTo({ top: Math.max(0, (top + bot) / 2 - w.clientHeight / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  renderStructs(st, ch);
+  if (!el.varsCard.hidden) renderVars(st, ch);
+  const prevOut = prev ? prev.state.out : '';
+  if (!st.out) el.out.innerHTML = '<span class="muted">Nothing printed yet.</span>';
+  else if (st.out.length > prevOut.length && st.out.startsWith(prevOut)) el.out.innerHTML = esc(prevOut) + `<span class="new">${esc(st.out.slice(prevOut.length))}</span>`;
+  else el.out.textContent = st.out;
+  el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
+  el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  growSvgs(document.querySelector('main'));
+  if (cur.i === n - 1) stop();
+}
+function renderVars(st, ch) {
+  let h = '';
+  st.frames.forEach((f, fi) => {
+    const ents = Object.entries(f.vars); if (!ents.length) return;
+    const active = fi === st.frames.length - 1 && fi > 0;
+    h += `<div class="frame${active ? ' active' : ''}"><div class="fh"><span>${esc(f.label)}</span>${active ? '<span class="act">running now</span>' : ''}</div>`;
+    ents.forEach(([k, o]) => {
+      const v = o.v === null && o.t === 'ptr' ? '<span class="nul">NULL</span>' : o.v === GARB ? '<span class="garb">? (garbage)</span>' : esc(fvv(o, st));
+      h += `<div class="vr${ch.vars.has(fi + ':' + k) ? ' chg' : ''}"><span class="vn">${esc(k)}</span><span class="vv">${v}</span></div>`;
+    });
+    h += '</div>';
+  });
+  el.vars.innerHTML = h || '<div class="muted">No variables yet.</div>';
+}
+
+/* ---------- tree drawing ---------- */
+const PATHY = { path: 1, done: 1, cur: 1, cmp: 1, new: 1 };
+function drawTree(G, availW) {
+  const R = 17, DX = 46, DY = 64, PX = 26, PY = 22;
+  const pos = {}; let col = 0, maxD = -1;
+  const walk = (id, d) => { if (id === null || id === undefined || !G.nodes[id]) return; const n = G.nodes[id]; walk(n.l, d + 1); pos[id] = { c: col++, d }; maxD = Math.max(maxD, d); walk(n.r, d + 1); };
+  walk(G.root, 0);
+  const fl = (G.floating || []).filter(id => G.nodes[id] && !pos[id]);
+  const flY = maxD + 1 + (maxD >= 0 ? 0.35 : 0);
+  fl.forEach((id, k) => { pos[id] = { c: k, d: flY, fl: 1 }; });
+  const cols = Math.max(col, fl.length, 1), rows = (fl.length ? flY : maxD) + 1;
+  const W = Math.max(220, PX * 2 + (cols - 1) * DX + 40), Hh = PY + Math.max(0, rows - 1) * DY + R + 34 + (fl.length ? 6 : 0);
+  const X = id => PX + 20 + pos[id].c * DX, Y = id => PY + pos[id].d * DY + 4;
+  let g = '';
+  if (fl.length) g += `<text x="${PX}" y="${Y(fl[0]) - R - 9}" class="rowlbl">${esc(G.floatLabel || 'not linked into the tree')}</text>`;
+  if (G.root === null && !fl.length) g += `<text x="${PX}" y="${PY + 10}" class="rowlbl">The tree is empty (root is NULL).</text>`;
+  for (const id in pos) {
+    const n = G.nodes[id];
+    [n.l, n.r].forEach(c => {
+      if (c === null || c === undefined || !pos[c]) return;
+      const x1 = X(id), y1 = Y(id), x2 = X(c), y2 = Y(c), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+      const cls = G.edge[c] || ((PATHY[G.nodes[id].cls] && PATHY[G.nodes[c].cls] && G.nodes[c].cls !== 'done') ? 'path' : '');
+      g += `<line x1="${(x1 + dx / L * R).toFixed(1)}" y1="${(y1 + dy / L * R).toFixed(1)}" x2="${(x2 - dx / L * R).toFixed(1)}" y2="${(y2 - dy / L * R).toFixed(1)}" class="te ${cls}${G.nodes[c].ph ? ' ph' : ''}"/>`;
+    });
+  }
+  for (const id in pos) {
+    const n = G.nodes[id], x = X(id), y = Y(id), txt = n.ph ? '?' : fv(n.v), fs = txt.length > 3 ? 11 : 13.5;
+    g += `<g class="tn ${n.cls || ''}${n.ph ? ' ph' : ''}${n.hole ? ' hole' : ''}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y + fs / 2.8}" style="font-size:${fs}px">${esc(txt)}</text></g>`;
+    if (n.sub !== undefined && n.sub !== '') {
+      const [p] = G.parentOf ? G.parentOf(id) : [null];
+      const right = p === null || p === undefined || !G.nodes[p] || +G.nodes[p].r === +id;
+      g += `<text x="${x + (right ? R + 3 : -R - 3)}" y="${y - R + 6}" class="tsub" text-anchor="${right ? 'start' : 'end'}">${esc(n.sub)}</text>`;
+    }
+    if (n.tag) { const tw = n.tag.length * 6.6 + 10; g += `<g class="ttag"><rect x="${x - tw / 2}" y="${y + R + 4}" width="${tw}" height="16" rx="4"/><text x="${x}" y="${y + R + 15.5}">${esc(n.tag)}</text></g>`; }
+  }
+  return fitSvg(W, Hh, g, availW);
+}
+function fitSvg(W, H, g, availW) {
+  const sc = W > availW ? availW / W : 1, fit = sc >= 0.62;
+  const svg = `<svg width="${fit ? Math.floor(W * sc) : W}" height="${fit ? Math.ceil(H * sc) : H}" viewBox="0 0 ${W} ${H}" style="display:block">${g}</svg>`;
+  return `<div class="scroll">${svg}</div>${fit ? '' : '<div class="hint">Swipe sideways to see the whole tree.</div>'}`;
+}
+function autoTags(st, kind) {
+  const out = {}, top = st.frames.length - 1;
+  const names = {}; [0, top].forEach(fi => { if (fi < 0) return; Object.keys(st.frames[fi].vars).forEach(k => { names[k] = (names[k] || 0) + (fi === 0 || top === 0 ? 1 : 1); }); });
+  const frames = top > 0 ? [0, top] : [0];
+  frames.forEach(fi => {
+    const f = st.frames[fi];
+    Object.entries(f.vars).forEach(([k, o]) => {
+      if (o.t !== kind || typeof o.v !== 'number') return;
+      const label = fi > 0 && k in st.frames[0].vars ? `${k} (${f.name})` : k;
+      (out[o.v] = out[o.v] || []).push(label);
+    });
+  });
+  return out;
+}
+const R = {};
+R.tree = (t, st) => {
+  const auto = t.ptrs ? autoTags(st, 'ptr') : {};
+  const nodes = {};
+  for (const id in t.nodes) {
+    const n = t.nodes[id], tags = [].concat(auto[id] || [], t.tags[id] || []);
+    nodes[id] = { v: n.v, l: n.l, r: n.r, cls: t.mark[id] || t.keep[id] || '', sub: t.info[id] !== undefined ? t.info[id] : t.sub[id], tag: tags.join(', ') };
+  }
+  const reach = new Set(); const w = id => { if (id === null || !t.nodes[id]) return; reach.add(+id); w(t.nodes[id].l); w(t.nodes[id].r); }; w(t.root);
+  const floating = Object.keys(t.nodes).map(Number).filter(id => !reach.has(id));
+  const parentOf = id => { for (const k in t.nodes) { if (t.nodes[k].l === +id || t.nodes[k].r === +id) return [k]; } return [null]; };
+  return drawTree({ nodes, root: t.root, floating, edge: t.edge, parentOf }, availWidth());
+};
+R.heap = (t, st) => {
+  const auto = t.idx ? autoTags(st, 'idx') : {};
+  const last = Math.max(t.size, ...Object.keys(t.ph).map(Number), 0);
+  const exists = i => i >= 1 && i <= last && ((i <= t.size && t.arr[i] !== null && t.arr[i] !== undefined) || t.ph[i] || t.hole === i);
+  const nodes = {};
+  for (let i = 1; i <= last; i++) {
+    if (!exists(i)) continue;
+    const tags = [].concat(auto[i] || [], t.tags[i] || []);
+    if (t.hole === i && !tags.includes('hole')) tags.unshift('hole');
+    nodes[i] = { v: t.arr[i], l: exists(2 * i) ? 2 * i : null, r: exists(2 * i + 1) ? 2 * i + 1 : null, cls: t.mark[i] || t.keep[i] || '', sub: t.info[i] !== undefined ? t.info[i] : (t.showIdx ? String(i) : ''), tag: [...new Set(tags)].join(', '), ph: !!t.ph[i], hole: t.hole === i };
+  }
+  const parentOf = id => [+id > 1 ? (+id) >> 1 : null];
+  let h = drawTree({ nodes, root: exists(1) ? 1 : null, floating: [], edge: {}, parentOf }, availWidth());
+  if (t.noArray) return h;
+  const cap = Math.max(t.cap || 0, t.size, last), cw = 38, ch = 32, px = 4, W = px * 2 + (cap + 1) * cw + 70, H = ch + 44;
+  let g = '';
+  for (let i = 0; i <= cap; i++) {
+    const x = px + i * cw, inside = i >= 1 && i <= t.size, v = t.arr[i];
+    const cls = i === 0 ? 'unused' : t.hole === i ? 'hole' : (t.mark[i] || t.keep[i] || '') + (inside ? ' live' : ' out');
+    g += `<rect x="${x}" y="4" width="${cw}" height="${ch}" class="ac ${cls}"/>`;
+    if (i === 0) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av stale">–</text>`;
+    else if (v !== null && v !== undefined) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av${inside && t.hole !== i ? '' : ' stale'}">${esc(fv(v))}</text>`;
+    g += `<text x="${x + cw / 2}" y="${ch + 18}" class="idx" text-anchor="middle">${i}</text>`;
+  }
+  const sx = px + (t.size + 1) * cw;
+  if (!t.noSize) g += `<line x1="${sx}" y1="0" x2="${sx}" y2="${ch + 8}" class="szl"/><text x="${sx + 4}" y="${ch + 32}" class="szt">size = ${t.size}</text>`;
+  return h + `<div class="arrlbl">${esc(t.arrLabel || 'The same heap as an array (index 0 unused)')}</div><div class="scroll">${svgArr(W, H, g)}</div>`;
+};
+const svgArr = (w, h, g) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">${g}</svg>`;
+R.tape = t => `<div class="tape">${t.tokens.map((x, i) => {
+  const m = t.marks[i]; const c = i === t.pos ? (m === 'err' ? 'err' : 'cur') : m === 'err' ? 'err' : (i < t.pos ? 'done' : '');
+  return `<span class="tk ${c}">${esc(x)}</span>`; }).join('')}</div>`;
+R.table = t => `<div class="tbl"><table><thead><tr>${t.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+  t.rows.length ? t.rows.map((r, i) => `<tr class="${i === t.hlRow ? 'hl' : ''}">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${t.cols.length}" class="none">No rows yet.</td></tr>`
+}</tbody></table></div>`;
+R.text = t => `<div class="tv ${t.cls || ''}${t.chg ? ' chg' : ''}">${esc(t.value)}</div>`;
+const WIDE = { tree: 1, heap: 1, table: 1, tape: 1 };
+let _aw = 600; const availWidth = () => _aw;
+function renderStructs(st, ch) {
+  _aw = Math.max(240, el.structs.clientWidth - 26);
+  let h = '';
+  st.order.forEach(n => { const t = st.st[n]; h += `<div class="sc${WIDE[t.type] ? ' wide' : ''}"><h4>${esc(t.title)}</h4>${R[t.type](t, st, ch)}</div>`; });
+  el.structs.innerHTML = h;
+  el.structs.querySelectorAll('.tbl').forEach(d => { const r = d.querySelector('tr.hl'); d.scrollTop = r ? r.offsetTop - d.clientHeight + r.offsetHeight + 4 : d.scrollHeight; });
+}
+
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.bPlay.textContent = '▶ Play'; }
+function play() {
+  if (timer) { stop(); return; }
+  if (cur.i >= cur.snaps.length - 1) go(0);
+  el.bPlay.textContent = '❚❚ Pause';
+  timer = setInterval(() => { if (cur.i >= cur.snaps.length - 1) stop(); else go(cur.i + 1); }, 1100 / speed);
+}
+el.bFirst.onclick = () => { stop(); go(0); };
+el.bPrev.onclick = () => { stop(); go(cur.i - 1); };
+el.bNext.onclick = () => { stop(); go(cur.i + 1); };
+el.bLast.onclick = () => { stop(); go(cur.snaps.length - 1); };
+el.bPlay.onclick = play;
+el.bSpeed.onclick = () => { const sp = [1, 2, 4, 0.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; el.bSpeed.textContent = (speed === 0.5 ? '½' : speed) + '×'; if (timer) { stop(); play(); } };
+el.range.oninput = () => { stop(); go(+el.range.value); };
+el.sel.onchange = () => load(el.sel.value);
+el.inRun.onclick = () => load(cur.prog.id, readFields());
+el.inFields.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); load(cur.prog.id, readFields()); } });
+el.inFields.addEventListener('change', e => { if (e.target.matches('select')) load(cur.prog.id, readFields()); });
+el.inPresets.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const pr = cur.prog.input.presets[+b.dataset.i][1]; load(cur.prog.id, Object.assign(readFields(), pr)); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('select, input, textarea, button')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(cur.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(cur.i - 1); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => cur.prog && render(), 150); });
+
+
+/* ---------- renderers for hashing and growth ---------- */
+R.htable = t => {
+  const idx = t.show || Array.from({ length: t.size }, (_, i) => i);
+  let h = '<div class="ht">', prev = null;
+  idx.forEach(i => {
+    if (prev !== null && i > prev + 1) h += `<div class="hrow gap"><span class="hi">…</span><span class="hk">${i - prev - 1} empty slot${i - prev - 1 > 1 ? 's' : ''}</span></div>`;
+    const c = t.cells[i], cls = t.mark[i] || '', tag = (t.tags[i] || []).join(', ');
+    const body = !c ? '<span class="emp">empty</span>' : c.del ? `<span class="dk">deleted</span> <span class="was">(was ${esc(c.k)})</span>` : esc(c.k);
+    h += `<div class="hrow ${cls}${c && c.del ? ' isdel' : ''}"><span class="hi">[${i}]</span><span class="hk">${body}</span>${tag ? `<span class="htag">${esc(tag)}</span>` : ''}</div>`;
+    prev = i;
+  });
+  return h + '</div>';
+};
+R.chains = t => {
+  let h = '<div class="chs">';
+  t.lists.forEach((L, i) => {
+    h += `<div class="chr"><span class="chi ${t.mark[i] || ''}">${i}</span><span class="charr">→</span>`;
+    if (!L.length) h += '<span class="chnull">NULL</span>';
+    L.forEach((k, j) => { h += `<span class="chn ${t.mark[i + ':' + j] || ''}">${esc(k)}</span>${j < L.length - 1 ? '<span class="charr">→</span>' : '<span class="charr">→</span><span class="chnull">NULL</span>'}`; });
+    h += '</div>';
+  });
+  return h + '</div>';
+};
+R.bars = t => `<div class="bars">${t.rows.map(r => `<div class="bar ${r.cls || ''}"><span class="bl">${esc(r.label)}</span><span class="bt"><span class="bf" style="width:${Math.max(0.5, r.frac * 100).toFixed(1)}%"></span></span><span class="bv">${esc(r.value)} <em>${Math.round(r.frac * 100)}%</em></span></div>`).join('')}</div>`;
+const supD = k => String(k).replace('-', '⁻').split('').map(d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d] || d).join('');
+const yTick = (v, log) => {
+  if (log) { const k = Math.round(v); return k <= 3 ? String(Math.pow(10, k)) : k <= 5 ? (Math.pow(10, k) / 1000) + 'k' : '10' + supD(k); }
+  const a = Math.abs(v); return a >= 1e6 ? (v / 1e6) + 'M' : a >= 1e4 ? (v / 1e3) + 'k' : String(+v.toFixed(2));
+};
+R.chart = t => {
+  const W = 640, H = 300, L = 58, Rr = 14, T = 12, B = 38, pw = W - L - Rr, ph = H - T - B, n = t.xs.length;
+  const all = t.series.flatMap(s => s.ys).filter(isFinite);
+  let lo, hi, ticks = [];
+  if (t.ylog) { lo = Math.floor(Math.min(0, ...all)); hi = Math.ceil(Math.min(t.cap || 1e9, Math.max(...all))); if (hi <= lo) hi = lo + 1; const st = Math.max(1, Math.ceil((hi - lo) / 8)); for (let k = lo; k <= hi; k += st) ticks.push(k); }
+  else {
+    const mx = Math.max(...all, 0), mn = Math.min(...all, 0), span = mx - mn || 1, raw = span / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))), stp = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= raw);
+    lo = Math.floor(mn / stp) * stp; hi = Math.ceil(mx / stp) * stp; for (let v = lo; v <= hi + 1e-9; v += stp) ticks.push(+v.toFixed(6));
+  }
+  const X = i => L + (n === 1 ? pw / 2 : i * pw / (n - 1)), Y = v => T + ph - (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo) * ph;
+  let g = `<rect x="${L}" y="${T}" width="${pw}" height="${ph}" class="cbg"/>`;
+  ticks.forEach(k => { g += `<line x1="${L}" y1="${Y(k)}" x2="${L + pw}" y2="${Y(k)}" class="cgrid"/><text x="${L - 6}" y="${Y(k) + 4}" class="ctk" text-anchor="end">${yTick(k, t.ylog)}</text>`; });
+  const every = Math.max(1, Math.ceil(n / 12));
+  t.xs.forEach((x, i) => { if (i % every === 0 || i === n - 1) g += `<text x="${X(i)}" y="${T + ph + 16}" class="ctk${i === t.hl ? ' chl' : ''}" text-anchor="middle">${esc(x)}</text>`; });
+  g += `<text x="${L + pw / 2}" y="${H - 4}" class="ctk" text-anchor="middle">n</text>`;
+  if (t.hl >= 0 && t.hl !== undefined) g += `<line x1="${X(t.hl)}" y1="${T}" x2="${X(t.hl)}" y2="${T + ph}" class="chline"/>`;
+  if (t.mline) { const i = t.mline - 1; if (i >= 0 && i < n) g += `<line x1="${X(i)}" y1="${T}" x2="${X(i)}" y2="${T + ph}" class="cmline"/><text x="${X(i) + 4}" y="${T + 14}" class="ctk cmt">m = ${t.mline}</text>`; }
+  t.series.forEach(s => {
+    const pts = []; for (let i = 0; i <= Math.min(t.upto, n - 1); i++) pts.push([X(i), Y(s.ys[i]), s.ys[i] > hi]);
+    if (pts.length > 1) g += `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" class="cl2 ${s.cls}"/>`;
+    pts.forEach((p, i) => { if (n <= 40 || i === pts.length - 1) g += p[2] ? `<text x="${p[0]}" y="${T + 10}" class="coff ${s.cls}" text-anchor="middle">↑</text>` : `<circle cx="${p[0]}" cy="${p[1]}" r="${i === t.hl ? 4.5 : 3}" class="cdot ${s.cls}"/>`; });
+  });
+  const legend = `<div class="clg">${t.series.map(s => `<span><i class="csw ${s.cls}"></i>${esc(s.name)}</span>`).join('')}${t.ylog && t.cap ? '<span class="muted">↑ = off the top of the chart</span>' : ''}</div>`;
+  return `<svg class="fitw" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>${legend}`;
+};
+WIDE.htable = 0; WIDE.chains = 1; WIDE.chart = 1; WIDE.bars = 1;
+
+/* ---------- renderers for search ---------- */
+R.arr = (t, st) => {
+  const auto = t.idx ? autoTags(st, 'idx') : {};
+  const cells = t.a.map((v, i) => {
+    const cls = t.mark[i] || t.keep[i] || '', tags = [].concat(auto[i] || [], t.tags[i] || []);
+    return `<div class="acell ${cls}"><span class="ai">[${i}]</span><span class="av">${esc(v)}</span><span class="at">${esc([...new Set(tags)].join(', '))}</span></div>`;
+  }).join('');
+  return `<div class="arrw"><div class="arr">${cells}</div></div>`;
+};
+R.range = t => {
+  const W = 640, H = 92, L = 16, Rr = 16, bw = W - L - Rr, y = 30, bh = 22, n = t.n;
+  const X = i => L + (i / n) * bw, fmt = x => x.toLocaleString('en-US');
+  let g = `<rect x="${L}" y="${y}" width="${bw}" height="${bh}" class="rg-out"/>`;
+  if (t.hi >= t.lo) g += `<rect x="${X(t.lo)}" y="${y}" width="${Math.max(2, X(t.hi + 1) - X(t.lo))}" height="${bh}" class="rg-in"/>`;
+  if (t.mid !== null && t.mid !== undefined) { const mx = X(t.mid + 0.5); g += `<line x1="${mx}" y1="${y - 8}" x2="${mx}" y2="${y + bh + 8}" class="${t.hit !== null && t.hit !== undefined ? 'rg-hit' : 'rg-mid'}"/><text x="${mx}" y="${y - 12}" class="rg-t" text-anchor="middle">mid ${fmt(t.mid)}</text>`; }
+  g += `<text x="${L}" y="${y + bh + 18}" class="rg-s">0</text><text x="${L + bw}" y="${y + bh + 18}" class="rg-s" text-anchor="end">${fmt(n - 1)}</text>`;
+  const share = t.hi >= t.lo ? (t.hi - t.lo + 1) / n : 0;
+  g += `<text x="${W / 2}" y="${y + bh + 18}" class="rg-s" text-anchor="middle">${t.hi >= t.lo ? `still to search: ${fmt(t.hi - t.lo + 1)} (${share >= 0.01 ? Math.round(share * 100) + '%' : share > 0 ? '< 1%' : '0%'})` : 'nothing left'}</text>`;
+  return `<svg class="fitw" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+};
+WIDE.arr = 1; WIDE.range = 1;
+
+/* ---------- renderer for the merge-sort tree ---------- */
+R.mtree = t => {
+  const kids = nd => t.nodes.map((x, i) => [x, i]).filter(([x]) => x.d === nd.d + 1 && x.lo >= nd.lo && x.hi <= nd.hi).map(([, i]) => i);
+  const show = (v, size) => v ? v.join(' ') : Array(size).fill('·').join(' ');
+  const node = id => {
+    const x = t.nodes[id], k = kids(x), cls = t.mark[id] || (x.out ? 'fin' : x.vals ? 'seen' : 'todo');
+    return `<div class="mt-n"><div class="mt-b ${cls}"><span class="mt-in">${esc(show(x.vals, x.hi - x.lo))}</span><span class="mt-out">${x.out ? esc(x.out.join(' ')) : '&nbsp;'}</span></div>${k.length ? `<div class="mt-k">${k.map(node).join('')}</div>` : ''}</div>`;
+  };
+  return `<div class="mtw">${node(0)}</div>`;
+};
+WIDE.mtree = 1;
+
+buildSelect();
+let saved = null; try { saved = localStorage.getItem('sort-sim-prog'); } catch (e) {}
+load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'bubble');
+
+/* Grow every drawing's frame so labels near the edge are never clipped. */
+function growSvgs(root) {
+  root.querySelectorAll('svg[viewBox]').forEach(svg => {
+    let bb; try { bb = svg.getBBox(); } catch (e) { return; }
+    if (!bb || !bb.width) return;
+    const vb = svg.viewBox.baseVal, pad = 4;
+    const x0 = Math.min(vb.x, Math.floor(bb.x - pad)), y0 = Math.min(vb.y, Math.floor(bb.y - pad));
+    const x1 = Math.max(vb.x + vb.width, Math.ceil(bb.x + bb.width + pad)), y1 = Math.max(vb.y + vb.height, Math.ceil(bb.y + bb.height + pad));
+    if (x0 === vb.x && y0 === vb.y && x1 === vb.x + vb.width && y1 === vb.y + vb.height) return;
+    const w = parseFloat(svg.getAttribute('width')), h = parseFloat(svg.getAttribute('height'));
+    const sx = w / vb.width, sy = h / vb.height;
+    svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+    if (w) svg.setAttribute('width', ((x1 - x0) * sx).toFixed(1));
+    if (h) svg.setAttribute('height', ((y1 - y0) * sy).toFixed(1));
+  });
+}
+
+</script>
+</body>
+</html>

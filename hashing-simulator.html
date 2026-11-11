@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hashing Simulator – Lecture 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F8FC; --grid:#DFE7F2; --panel:#FFFFFF; --ink:#1B2A4A; --muted:#5E6B82; --rule:#C3CEDF;
+  --hl:#FFE45C; --hl-line:#B98300; --hl-ink:#1B2A4A; --live:#E6EEFF;
+  --head:#2D4FD8; --head-bg:#E3E9FF; --ptr:#0F6F6D; --ptr-bg:#DDF3F1;
+  --danger:#C8323A; --danger-bg:#FBE3E4; --node:#FFFFFF;
+  --codebg:#FBFCFE; --kw:#7B3FC4; --str:#0B7A47; --com:#8A94A6; --num:#B4561B;
+  --ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+    --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+    --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+    --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+    --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1622; --grid:#172233; --panel:#141D2B; --ink:#DCE5F4; --muted:#93A1B8; --rule:#2A3950;
+  --hl:#E9CB3E; --hl-line:#F2D24A; --hl-ink:#141D2B; --live:#1C2947;
+  --head:#8DA6FF; --head-bg:#1E2A55; --ptr:#5FD0C8; --ptr-bg:#12332F;
+  --danger:#FF6F72; --danger-bg:#3A1A1E; --node:#18233A;
+  --codebg:#111926; --kw:#C9A2FF; --str:#7ED8A6; --com:#6D7B93; --num:#FFB27A;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.45;background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;padding-bottom:128px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--head);outline-offset:2px}
+[hidden]{display:none!important}
+
+.top{max-width:1320px;margin:0 auto;padding:18px 16px 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--mono);font-weight:700;font-size:clamp(1.25rem,3.6vw,1.8rem);margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+.mark{display:inline-flex;flex-direction:column-reverse;gap:2px;border:2px solid var(--ink);border-top:0;padding:2px 2px 2px;border-radius:0 0 3px 3px}
+.mark i{display:block;width:22px;height:5px;background:var(--ink);border-radius:1px}
+.mark i.on{background:var(--hl);outline:1.5px solid var(--hl-line)}
+.top p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+.pick{display:flex;flex-direction:column;gap:4px;min-width:min(100%,380px);flex:1 1 320px;max-width:540px}
+.pick span{font-size:.85rem;color:var(--muted)}
+.pick select{width:100%;padding:10px 12px;border:2px solid var(--ink);border-radius:6px;background:var(--panel);font-family:var(--mono);font-size:.88rem;cursor:pointer}
+
+.layout{max-width:1320px;margin:0 auto;padding:8px 16px 16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"info" "viz" "change" "code" "vars" "out"}
+.info{grid-area:info}.viz{grid-area:viz}.change{grid-area:change}.code{grid-area:code}.vars{grid-area:vars}.out{grid-area:out}
+@media (min-width:980px){
+  .layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr);grid-template-areas:"info info" "code viz" "code change" "code vars" "code out";align-items:start}
+  .code{position:sticky;top:12px}
+  .codewrap{max-height:max(320px,calc(100vh - 380px))!important}
+}
+.panel{background:var(--panel);border:1.5px solid var(--rule);border-radius:4px;padding:12px 14px;min-width:0}
+.panel h3{margin:0;font-size:1rem;font-weight:700}
+.ph{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.82rem}
+
+.info{border-left:6px solid var(--ink)}
+.info h2{margin:0;font-size:1.2rem;line-height:1.3}
+.slides{display:inline-block;font-family:var(--mono);font-size:.78rem;padding:2px 7px;border:1.5px solid var(--ink);border-radius:3px;margin-bottom:6px}
+.info p{margin:6px 0 0;max-width:78ch}
+.info details{margin-top:8px}
+.info summary{cursor:pointer;font-weight:700;color:var(--head);font-size:.92rem}
+.info ul{margin:6px 0 0;padding-left:1.2em;max-width:78ch}
+.info li{margin:4px 0}
+.inwrap{margin-top:12px;padding-top:10px;border-top:1.5px dashed var(--rule)}
+.inwrap label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.inrow{display:flex;gap:8px}
+.inrow input{flex:1;min-width:0;padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem}
+.inrow button{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{border:1.5px solid var(--rule);background:var(--panel);border-radius:999px;padding:3px 10px;font-size:.8rem;cursor:pointer}
+.presets button.on{border-color:var(--ink);background:var(--ink);color:var(--panel)}
+.inerr{color:var(--danger);font-weight:700;font-size:.88rem;margin:6px 0 0;min-height:0}
+
+.structs{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.sc{border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;background:var(--paper);min-width:0;max-width:100%}
+.sc.wide{flex:1 1 100%}
+.sc h4{margin:0 0 6px;font-size:.82rem;font-weight:700;color:var(--muted)}
+svg.fit{display:block;max-width:100%;height:auto}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:14px;height:12px;border:1.5px solid var(--ink);display:inline-block;border-radius:2px}
+.sw.hl{background:var(--hl);border-color:var(--hl-line)}.sw.lv{background:var(--live)}
+.sw.rd{background:var(--ptr-bg);border-color:var(--ptr)}.sw.dl{background:var(--danger-bg);border-color:var(--danger);border-style:dashed}
+
+/* svg parts */
+.ac{fill:var(--node);stroke:var(--ink);stroke-width:1.4}
+.ac.live{fill:var(--live)}
+.hl-push{fill:var(--hl)!important;stroke:var(--hl-line)!important;stroke-width:2.2!important}
+.hl-read{fill:var(--ptr-bg)!important;stroke:var(--ptr)!important;stroke-width:2.2!important}
+.hl-pop{fill:var(--danger-bg)!important;stroke:var(--danger)!important;stroke-dasharray:4 3}
+.av{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+.av.stale{fill:var(--muted);font-weight:400;opacity:.65}
+.idx{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.tp{stroke:var(--head);stroke-width:2;fill:none}
+.tp2{stroke:var(--ptr);stroke-width:2;fill:none}
+.tpl{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--head)}
+.tpl2{font-family:var(--mono);font-weight:700;font-size:12px;fill:var(--ptr)}
+.tplbg{fill:var(--hl);stroke:var(--hl-line)}
+.bk{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linejoin:round}
+.it{fill:var(--live);stroke:var(--ink);stroke-width:1.4}
+.gh{fill:var(--danger-bg);stroke:var(--danger);stroke-dasharray:4 3;stroke-width:1.5}
+.ght{font-family:var(--ui);font-size:11px;fill:var(--danger);font-style:italic}
+.lbl{font-family:var(--ui);font-size:12px;fill:var(--muted)}
+.lblb{font-family:var(--mono);font-weight:700;font-size:11px;fill:var(--head)}
+.empty{font-family:var(--ui);font-size:13px;fill:var(--muted);font-style:italic}
+.pipe{stroke:var(--ink);stroke-width:2.4}
+.cell{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.cell.chg{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.2}
+.nd.freed{opacity:.5}
+.nd.freed .cell{stroke-dasharray:4 3;fill:var(--danger-bg);stroke:var(--danger)}
+.dt{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.garbq{font-family:var(--mono);font-weight:700;font-size:15px;fill:var(--danger);text-anchor:middle}
+.adr{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.nullslash{stroke:var(--muted);stroke-width:1.5}
+.dot{fill:var(--ink)}
+.xmark{stroke:var(--danger);stroke-width:3;stroke-linecap:round}
+.ar{fill:none;stroke-width:1.8}
+.ar-ink{stroke:var(--ink)}.ar-acc{stroke:var(--hl-line);stroke-width:3}.ar-red{stroke:var(--danger);stroke-dasharray:5 4}.ar-mut{stroke:var(--muted)}.ar-head{stroke:var(--head);stroke-width:3}
+.mk-ink{fill:var(--ink)}.mk-acc{fill:var(--hl-line)}.mk-red{fill:var(--danger)}.mk-mut{fill:var(--muted)}.mk-head{fill:var(--head)}.mk-ptr{fill:var(--ptr)}
+.tag rect{stroke-width:1.5}
+.tag text{font-family:var(--mono);font-weight:600;font-size:12px;text-anchor:middle}
+.tag-ptr rect{fill:var(--ptr-bg);stroke:var(--ptr)}.tag-ptr text{fill:var(--ptr)}
+.tag-head rect{fill:var(--head-bg);stroke:var(--head)}.tag-head text{fill:var(--head)}
+.tag-acc rect{fill:var(--hl);stroke:var(--hl-line)}.tag-acc text{fill:var(--hl-ink)}
+.tag-red rect{fill:var(--danger-bg);stroke:var(--danger)}.tag-red text{fill:var(--danger)}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.gn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.gn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.6}
+.gn.dead circle{fill:var(--paper);stroke:var(--muted);stroke-dasharray:3 3}
+.gn.cur circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.gn text{font-family:var(--mono);font-weight:700;font-size:14px;text-anchor:middle;fill:var(--ink)}
+.gn.dead text{fill:var(--muted)}
+.gring{fill:none;stroke:var(--danger);stroke-width:1.6;stroke-dasharray:3 2}
+.gtag{font-family:var(--ui);font-size:10px;fill:var(--muted);text-anchor:middle}
+.ge{fill:none;stroke:var(--muted);stroke-width:1.5}
+.ge.path{stroke:var(--head);stroke-width:3}.ge.try{stroke:var(--hl-line);stroke-width:3.6}
+.peg{fill:var(--muted)}
+.disk{stroke:var(--ink);stroke-width:1.2}
+.disk.mv{stroke:var(--hl-line);stroke-width:3.5}
+.dkt{font-family:var(--mono);font-weight:700;font-size:11px;fill:#1B2A4A;text-anchor:middle}
+.pegl{font-family:var(--mono);font-weight:700;font-size:14px;fill:var(--ink);text-anchor:middle}
+
+.tape{display:flex;flex-wrap:wrap;gap:4px}
+.tk{font-family:var(--mono);font-size:.88rem;padding:3px 8px;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel);white-space:pre}
+.tk.done{opacity:.45}
+.tk.ok{border-color:var(--ptr)}
+.tk.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink);font-weight:700;opacity:1}
+.tk.err{background:var(--danger-bg);border-color:var(--danger);color:var(--danger);font-weight:700;opacity:1}
+.tbl{max-height:250px;overflow:auto;border:1.5px solid var(--rule);border-radius:3px;background:var(--panel)}
+.tbl table{border-collapse:collapse;font-family:var(--mono);font-size:.78rem;width:100%}
+.tbl th,.tbl td{border-bottom:1px solid var(--grid);padding:4px 8px;text-align:left;vertical-align:top}
+.tbl th{position:sticky;top:0;background:var(--paper);font-family:var(--ui);font-size:.78rem;border-bottom:1.5px solid var(--rule);white-space:nowrap}
+.tbl td{white-space:nowrap}
+.tbl td:last-child{white-space:normal;min-width:12em}
+.tbl tr.hl td{background:var(--hl);color:var(--hl-ink)}
+.tbl .none{color:var(--muted);font-family:var(--ui);font-style:italic}
+.tv{font-family:var(--mono);font-weight:700;font-size:1.02rem;padding:6px 10px;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);word-break:break-word;min-width:8em}
+.tv.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.tv.good{border-color:var(--ptr);color:var(--ptr)}
+.tv.good.chg{color:var(--hl-ink)}
+.tv.bad{border-color:var(--danger);color:var(--danger);background:var(--danger-bg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.chip{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-radius:5px;border:1.5px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr)}
+.chip.head{border-color:var(--head);background:var(--head-bg);color:var(--head)}
+.chip.chg{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+
+.change{border-top:5px solid var(--hl-line)}
+.note{margin:0 0 8px;font-size:1rem;max-width:78ch}
+.note.crash{color:var(--danger);font-weight:700;background:var(--danger-bg);padding:8px 10px;border-radius:4px}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.diff li{display:flex;gap:8px;align-items:baseline;font-family:var(--mono);font-size:.8rem;line-height:1.35;word-break:break-word}
+.badge{flex:0 0 auto;font-family:var(--ui);font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:3px;border:1.5px solid var(--ink);min-width:58px;text-align:center}
+.b-push,.b-enq,.b-set,.b-add,.b-move,.b-new,.b-node{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-pop,.b-deq,.b-del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.b-err{background:var(--danger);border-color:var(--danger);color:#fff}
+.b-read,.b-var{background:var(--ptr-bg);border-color:var(--ptr);color:var(--ptr)}
+.b-call,.b-ret{background:var(--head-bg);border-color:var(--head);color:var(--head)}
+.b-out{background:var(--panel)}
+.nodiff{color:var(--muted);font-family:var(--ui)!important;font-size:.85rem!important}
+
+.codewrap{position:relative;max-height:46vh;overflow:auto;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:6px 0}
+#code{font-family:var(--mono);font-size:12.5px;line-height:1.6;min-width:max-content}
+.cl{display:flex;padding:0 12px 0 0;border-left:4px solid transparent;white-space:pre}
+.cl .ln{width:3.2em;flex:0 0 auto;text-align:right;padding-right:12px;color:var(--muted);user-select:none;opacity:.8}
+.cl.cur{background:var(--hl);border-left-color:var(--hl-line);color:var(--hl-ink)}
+.cl.cur .ln{color:var(--hl-ink);font-weight:700;opacity:1}
+.c-kw{color:var(--kw);font-weight:600}.c-str{color:var(--str)}.c-com{color:var(--com);font-style:italic}.c-num{color:var(--num)}
+.cl.cur .c-kw,.cl.cur .c-str,.cl.cur .c-num,.cl.cur .c-com{color:var(--hl-ink)}
+
+.frame{border:1.5px solid var(--rule);border-radius:4px;margin-bottom:8px;overflow:hidden}
+.fh{font-family:var(--mono);font-size:.8rem;font-weight:700;padding:4px 8px;background:var(--paper);border-bottom:1.5px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.fh .act{font-family:var(--ui);font-weight:400;color:var(--head)}
+.vr{display:flex;gap:10px;padding:4px 8px;font-family:var(--mono);font-size:.82rem;border-top:1px solid var(--grid);align-items:baseline}
+.vr:first-of-type{border-top:0}
+.vr.chg{background:var(--hl);color:var(--hl-ink)}
+.vn{min-width:7.5em;font-weight:600}
+.vv{word-break:break-word}
+.nul{color:var(--muted)}.garb{color:var(--danger);font-weight:700}.dang{color:var(--danger);font-weight:700}
+.muted{color:var(--muted);font-size:.9rem}
+#out{margin:0;font-family:var(--mono);font-size:.85rem;background:var(--codebg);border:1.5px solid var(--rule);border-radius:4px;padding:8px 10px;min-height:2.4em;white-space:pre-wrap;word-break:break-word}
+#out .new{background:var(--hl);color:var(--hl-ink)}
+
+.controls{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--panel);border-top:2px solid var(--ink);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.controls .in{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.r1{display:flex;align-items:center;gap:10px}
+.r1 input{flex:1;accent-color:var(--head);min-width:0;height:28px}
+#count{font-family:var(--mono);font-size:.85rem;white-space:nowrap;min-width:7.5em;text-align:right}
+.r2{display:flex;gap:6px;justify-content:center}
+.r2 button{border:2px solid var(--ink);background:var(--panel);border-radius:6px;padding:8px 10px;cursor:pointer;min-height:42px;font-weight:700;font-size:.92rem;white-space:nowrap}
+.r2 button:disabled{opacity:.35;cursor:default}
+.r2 button.primary{background:var(--ink);color:var(--panel);min-width:92px}
+.r2 .grow{flex:1 1 0;max-width:150px}
+@media (max-width:420px){#bFirst,#bLast{display:none}.r2 button.primary{min-width:84px}}
+@media (min-width:980px){.controls .in{flex-direction:row-reverse;align-items:center;gap:18px}.r1{flex:1}.r2{flex:0 0 auto}body{padding-bottom:84px}}
+@media (hover:hover){.r2 button:not(:disabled):hover,.presets button:not(.on):hover{background:var(--hl);color:var(--hl-ink);border-color:var(--hl-line)}}
+.back{display:inline-block;margin-bottom:6px;font-size:.88rem;color:var(--head);text-decoration:none;font-weight:700}.back:hover{text-decoration:underline}
+.tmark{display:inline-flex;color:var(--ink)}
+:root{--ok:#1E7A45;--ok-bg:#DCF3E4}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ok:#6FD49A;--ok-bg:#12321F}}
+:root[data-theme="dark"]{--ok:#6FD49A;--ok-bg:#12321F}
+.flds{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld span{font-size:.85rem;color:var(--muted)}
+.fld input,.fld select{padding:9px 10px;border:2px solid var(--ink);border-radius:6px;background:var(--codebg);font-family:var(--mono);font-size:.9rem;min-width:0;width:100%}
+.fld.w-l{flex:3 1 280px}.fld.w-m{flex:1 1 190px}.fld.w-s{flex:0 1 110px}
+.inwrap .runbtn{border:2px solid var(--ink);background:var(--ink);color:var(--panel);border-radius:6px;padding:9px 16px;font-weight:700;cursor:pointer;white-space:nowrap;height:42px}
+.tn circle{fill:var(--node);stroke:var(--ink);stroke-width:1.6}
+.tn text{font-family:var(--mono);font-weight:700;fill:var(--ink);text-anchor:middle}
+.tn.cur circle,.tn.new circle{fill:var(--hl);stroke:var(--hl-line);stroke-width:3}
+.tn.cur text,.tn.new text{fill:var(--hl-ink)}
+.tn.cmp circle{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.6}
+.tn.path circle{fill:var(--head-bg);stroke:var(--head);stroke-width:2.4}
+.tn.done circle{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2.4}
+.tn.bad circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.6}
+.tn.bad text{fill:var(--danger)}
+.tn.del circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2.4;stroke-dasharray:4 3}
+.tn.del text{fill:var(--danger)}
+.tn.todo circle{stroke:var(--danger);stroke-width:2.6}
+.tn.hole circle{fill:var(--paper);stroke:var(--muted);stroke-width:2;stroke-dasharray:4 3}
+.tn.hole text{fill:var(--muted);font-weight:400;opacity:.6}
+.tn.ph circle{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2;stroke-dasharray:4 3}
+.tn.ph text{fill:var(--danger)}
+.te{stroke:var(--muted);stroke-width:1.6}
+.te.path{stroke:var(--head);stroke-width:3}
+.te.new{stroke:var(--hl-line);stroke-width:3.6}
+.te.ph{stroke:var(--danger);stroke-dasharray:4 3}
+.tsub{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.ttag rect{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:1.3}
+.ttag text{font-family:var(--mono);font-size:10.5px;font-weight:700;fill:var(--ptr);text-anchor:middle}
+.rowlbl{font-family:var(--ui);font-style:italic;font-size:12px;fill:var(--muted)}
+.ac.cur,.ac.new{fill:var(--hl);stroke:var(--hl-line);stroke-width:2.4}
+.ac.cmp{fill:var(--ptr-bg);stroke:var(--ptr);stroke-width:2.2}
+.ac.done{fill:var(--ok-bg);stroke:var(--ok)}
+.ac.bad,.ac.del{fill:var(--danger-bg);stroke:var(--danger);stroke-width:2}
+.ac.todo{stroke:var(--danger);stroke-width:2.2}
+.ac.hole{fill:var(--paper);stroke:var(--muted);stroke-dasharray:4 3}
+.ac.out{fill:var(--paper)}
+.ac.unused{fill:var(--grid);stroke:var(--rule)}
+.szl{stroke:var(--head);stroke-width:2.5}
+.szt{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--head)}
+.arrlbl{font-size:.78rem;color:var(--muted);margin:8px 0 2px}
+.tk.done{opacity:.45}
+.frame.active{border-color:var(--head)}
+.b-link,.b-move,.b-swap,.b-new,.b-push{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.b-del,.b-pop{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.sw.ok{background:var(--ok-bg);border-color:var(--ok)}
+.sw.pa{background:var(--head-bg);border-color:var(--head)}
+.sw.hole{background:var(--paper);border-style:dashed;border-color:var(--muted)}
+.ht{display:flex;flex-direction:column;border:1.5px solid var(--rule);border-radius:4px;background:var(--panel);min-width:230px;max-width:100%}
+.hrow{display:flex;align-items:center;gap:10px;padding:4px 10px;border-top:1px solid var(--grid);font-family:var(--mono);font-size:.86rem;min-height:30px}
+.hrow:first-child{border-top:0}
+.hrow .hi{min-width:4.2em;color:var(--muted);font-size:.8rem}
+.hrow .hk{font-weight:700;flex:1;word-break:break-all}
+.hrow .emp{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--ui);font-size:.82rem}
+.hrow.gap{background:var(--paper);color:var(--muted);min-height:22px;font-size:.78rem}
+.hrow.gap .hk{font-weight:400;font-style:italic;font-family:var(--ui)}
+.hrow .htag{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:4px;border:1.3px solid var(--ptr);background:var(--ptr-bg);color:var(--ptr);white-space:nowrap}
+.hrow.cur,.hrow.new{background:var(--hl);color:var(--hl-ink)}
+.hrow.cur .hi,.hrow.new .hi{color:var(--hl-ink)}
+.hrow.cmp{background:var(--ptr-bg)}
+.hrow.bad{background:var(--danger-bg);color:var(--danger)}
+.hrow.done{background:var(--ok-bg);color:var(--ok)}
+.hrow.del{background:var(--danger-bg)}
+.hrow.isdel .hk,.hrow.del .hk{color:var(--danger)}
+.hrow .dk{text-decoration:none;border:1.5px dashed var(--danger);border-radius:3px;padding:0 5px}
+.hrow .was{color:var(--muted);font-weight:400}
+.chs{display:flex;flex-direction:column;gap:5px;overflow-x:auto;padding-bottom:2px}
+.chr{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.85rem;white-space:nowrap}
+.chi{display:inline-block;min-width:2.4em;text-align:center;padding:4px 0;border:1.6px solid var(--ink);background:var(--panel);border-radius:3px;font-weight:700}
+.chn{display:inline-block;min-width:2.6em;text-align:center;padding:4px 6px;border:1.6px solid var(--ink);background:var(--live);border-radius:3px;font-weight:700}
+.chi.cur,.chn.new,.chn.cur{background:var(--hl);border-color:var(--hl-line);color:var(--hl-ink)}
+.chi.bad,.chn.del{background:var(--danger-bg);border-color:var(--danger);color:var(--danger)}
+.chn.del{border-style:dashed}
+.chn.cmp{background:var(--ptr-bg);border-color:var(--ptr)}
+.chn.done{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.charr{color:var(--muted)}
+.chnull{color:var(--muted);font-size:.75rem}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:minmax(4.5em,auto) 1fr minmax(7em,auto);gap:10px;align-items:center;font-family:var(--mono);font-size:.84rem}
+.bar .bl{font-weight:700}
+.bar .bt{height:16px;background:var(--grid);border-radius:3px;overflow:hidden}
+.bar .bf{display:block;height:100%;background:var(--head)}
+.bar.top .bf{background:var(--hl-line)}
+.bar.top .bl{background:var(--hl);color:var(--hl-ink);padding:0 4px;border-radius:3px}
+.bar .bv{text-align:right;word-break:break-all}
+.bar .bv em{font-style:normal;color:var(--muted)}
+svg.fitw{display:block;width:100%;max-width:640px;height:auto}
+.cbg{fill:var(--panel);stroke:var(--rule)}
+.cgrid{stroke:var(--grid);stroke-width:1}
+.ctk{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+.ctk.chl{fill:var(--ink);font-weight:700}
+.chline{stroke:var(--hl-line);stroke-width:2;stroke-dasharray:4 3}
+.cmline{stroke:var(--danger);stroke-width:2;stroke-dasharray:6 4}
+.cmt{fill:var(--danger);font-weight:700}
+.cl2{fill:none;stroke-width:2.6;stroke-linejoin:round}
+.coff{font-size:14px;font-weight:700}
+:root{--c1:#2D4FD8;--c2:#0F7A6E;--c3:#7B3FC4;--c4:#B98300;--c5:#C8323A;--c6:#1B2A4A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#8DA6FF;--c2:#5FD0C8;--c3:#C9A2FF;--c4:#F2D24A;--c5:#FF6F72;--c6:#DCE5F4}}
+:root[data-theme="dark"]{--c1:#8DA6FF;--c2:#5FD0C8;--c3:#C9A2FF;--c4:#F2D24A;--c5:#FF6F72;--c6:#DCE5F4}
+.cl2.s1{stroke:var(--c1)}.cl2.s2{stroke:var(--c2)}.cl2.s3{stroke:var(--c3)}.cl2.s4{stroke:var(--c4)}.cl2.s5{stroke:var(--c5)}.cl2.s6{stroke:var(--c6)}
+.cdot.s1,.coff.s1{fill:var(--c1)}.cdot.s2,.coff.s2{fill:var(--c2)}.cdot.s3,.coff.s3{fill:var(--c3)}.cdot.s4,.coff.s4{fill:var(--c4)}.cdot.s5,.coff.s5{fill:var(--c5)}.cdot.s6,.coff.s6{fill:var(--c6)}
+.clg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:.8rem}
+.clg span{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono)}
+.csw{display:inline-block;width:16px;height:4px;border-radius:2px}
+.csw.s1{background:var(--c1)}.csw.s2{background:var(--c2)}.csw.s3{background:var(--c3)}.csw.s4{background:var(--c4)}.csw.s5{background:var(--c5)}.csw.s6{background:var(--c6)}
+.tk.ok{border-color:var(--ok);background:var(--ok-bg)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <a class="back" href="index.html">← All lectures</a>
+    <h1><span class="tmark" aria-hidden="true"><svg width="30" height="26" viewBox="0 0 30 26"><rect x="2" y="2" width="12" height="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="10" width="12" height="6" fill="var(--hl)" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="18" width="12" height="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.6"/><path d="M28 5 C 22 5, 22 13, 16 13" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 13 l4 -2.5 M16 13 l4 2.5" stroke="currentColor" stroke-width="1.6"/></svg></span>Hashing simulator</h1>
+    <p>Every program and diagram from Lecture 7 (Data Structures 501324-3), run one step at a time.</p>
+  </div>
+  <label class="pick"><span>Choose a program or topic from the slides</span><select id="prog"></select></label>
+</header>
+
+<main class="layout">
+  <section class="panel info">
+    <span class="slides" id="slides"></span>
+    <h2 id="ptitle"></h2>
+    <p id="pdesc"></p>
+    <details id="notesWrap"><summary id="notesSum"></summary><ul id="notes"></ul></details>
+    <div class="inwrap" id="inWrap" hidden>
+      <div class="flds"><div class="flds" id="inFields" style="flex:1 1 auto"></div><button id="inRun" class="runbtn">Run it</button></div>
+      <div class="presets" id="inPresets"></div>
+      <p class="inerr" id="inErr" role="alert"></p>
+    </div>
+  </section>
+
+  <section class="panel viz">
+    <div class="ph"><h3>The table right now</h3><span class="hint">yellow = changed or current</span></div>
+    <div class="structs" id="structs"></div>
+    <div class="legend">
+      <span><i class="sw hl"></i>current / just stored</span>
+      <span><i class="sw rd"></i>being compared</span>
+      <span><i class="sw dl"></i>collision / problem</span>
+      <span><i class="sw ok"></i>found</span>
+    </div>
+  </section>
+
+  <section class="panel change">
+    <div class="ph"><h3>What this step did</h3><span class="hint" id="stepNo"></span></div>
+    <p id="note" class="note"></p>
+    <ul id="diff" class="diff"></ul>
+  </section>
+
+  <section class="panel code">
+    <div class="ph"><h3 id="codeH">Code</h3><span class="hint">yellow line = the one that just ran</span></div>
+    <div class="codewrap" id="codeWrap"><div id="code"></div></div>
+  </section>
+
+  <section class="panel vars" id="varsCard">
+    <div class="ph"><h3>Variables</h3><span class="hint">one box per function call that is running</span></div>
+    <div id="vars"></div>
+  </section>
+
+  <section class="panel out" id="outCard">
+    <div class="ph"><h3>Console output</h3></div>
+    <pre id="out"></pre>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Step controls">
+  <div class="in">
+    <div class="r1"><input type="range" id="range" min="0" max="0" value="0" aria-label="Step"><span id="count"></span></div>
+    <div class="r2">
+      <button id="bFirst" aria-label="Go to first step">⏮</button>
+      <button id="bPrev" class="grow">◀ Back</button>
+      <button id="bPlay" class="primary">▶ Play</button>
+      <button id="bNext" class="grow">Next ▶</button>
+      <button id="bLast" aria-label="Go to last step">⏭</button>
+      <button id="bSpeed" aria-label="Playback speed">1×</button>
+    </div>
+  </div>
+</nav>
+
+<script>
+/*ENGINE-START*/
+const GARB = '?';
+class Crash extends Error {}
+class InputError extends Error {}
+const fv = v => v === null || v === undefined ? '' : String(v);
+const T_OBJ = ['mark', 'tags', 'edge', 'info'];
+const T_VAL = ['chg', 'hlRow'];
+class Sim {
+  constructor() { this.frames = [{ name: 'global', label: 'Global variables', vars: {} }]; this.out = ''; this.snaps = []; this.st = {}; this.order = []; this.ops = []; }
+  fn(name, label) { this.frames.push({ name, label: label || name + '()', vars: {} }); }
+  ret() { this.frames.pop(); }
+  var(n, v, t = 'val') { this.frames[this.frames.length - 1].vars[n] = { t, v }; }
+  gvar(n, v, t = 'val') { this.frames[0].vars[n] = { t, v }; }
+  drop(n) { delete this.frames[this.frames.length - 1].vars[n]; }
+  find(n) { for (let i = this.frames.length - 1; i >= 0; i--) if (n in this.frames[i].vars) return this.frames[i].vars[n]; throw new Error('unknown variable ' + n); }
+  get(n) { return this.find(n).v; }
+  set(n, v) { this.find(n).v = v; }
+  print(x) { this.out += x; }
+  mk(name, o) { this.st[name] = o; if (!this.order.includes(name)) this.order.push(name); return o; }
+  op(k, t) { this.ops.push([k, t]); }
+  row(n, cells) { const t = this.st[n]; t.rows.push(cells.map(fv)); t.hlRow = t.rows.length - 1; }
+  text(n, v, cls) { const t = this.st[n]; if (t.value !== v) t.chg = 1; t.value = v; if (cls !== undefined) t.cls = cls; }
+  step(label, note, extra) {
+    if (this.snaps.length > 3000) throw new InputError('This input makes too many steps. Try a smaller one.');
+    this.snaps.push(Object.assign({ label, note, ops: this.ops, state: JSON.parse(JSON.stringify({ frames: this.frames, out: this.out, st: this.st, order: this.order })) }, extra || {}));
+    this.ops = [];
+    for (const k in this.st) { const t = this.st[k]; T_OBJ.forEach(f => { if (f in t) t[f] = {}; }); T_VAL.forEach(f => { delete t[f]; }); }
+  }
+}
+const mkTable = (s, n, title, cols) => s.mk(n, { type: 'table', title, cols, rows: [] });
+const mkText = (s, n, title, value = '', cls = '') => s.mk(n, { type: 'text', title, value, cls });
+const isNum = x => typeof x === 'number';
+const NUM = /^-?\d+(\.\d+)?$/;
+function parseNums(str, what, max = 20, maxLen = 4) {
+  const toks = String(str).trim().split(/[\s,]+/).filter(Boolean);
+  if (!toks.length) throw new InputError(`Type some ${what}, separated by spaces.`);
+  if (toks.length > max) throw new InputError(`Use ${max} ${what} or fewer.`);
+  return toks.map(t => { if (!/^-?\d+$/.test(t)) throw new InputError(`"${t}" is not a whole number.`); if (t.replace('-', '').length > maxLen) throw new InputError(`Keep numbers to ${maxLen} digits: "${t}"`); return +t; });
+}
+function parseInt1(str, what, lo, hi) {
+  const t = String(str).trim(); if (!/^\d+$/.test(t)) throw new InputError(`Type a whole number for ${what}.`);
+  const v = +t; if (v < lo || v > hi) throw new InputError(`${what[0].toUpperCase() + what.slice(1)} must be between ${lo} and ${hi}.`); return v;
+}
+function parseCode(src) {
+  const raw = String(src).replace(/\s+$/, '').split('\n'), lines = [], map = {};
+  raw.forEach((ln, i) => {
+    const m = ln.match(/^(.*?)\s*@@(\w+)\s*$/);
+    let text = ln;
+    if (m) { text = m[1]; (map[m[2]] = map[m[2]] || []).push(i); }
+    lines.push(text.replace(/\s+$/, ''));
+  });
+  return { lines, map };
+}
+const PROGRAMS = [];
+const P = o => PROGRAMS.push(o);
+function defaults(p) { const o = {}; ((p.input && p.input.fields) || []).forEach(f => { o[f.k] = f.def; }); return o; }
+function runProgram(p, vals) {
+  vals = Object.assign(defaults(p), vals || {});
+  const s = new Sim();
+  try { p.run(s, vals); } catch (e) { if (!(e instanceof Crash)) throw e; }
+  if (p.post) p.post(s.snaps, vals);
+  const code = typeof p.code === 'function' ? p.code(vals) : p.code;
+  return { snaps: s.snaps, code, vals };
+}
+const pad = (s, w) => s + ' '.repeat(Math.max(1, w - s.length));
+
+/* ======================= Lecture 7: Hashing ======================= */
+const mkHT = (s, n, title, size, o = {}) => s.mk(n, Object.assign({ type: 'htable', title, size, cells: {}, mark: {}, tags: {}, info: {} }, o));
+function showSet(snaps, name, size, base) {
+  if (size <= 23) return null;
+  const set = new Set(base);
+  snaps.forEach(sn => { const t = sn.state.st[name]; if (!t) return; ['cells', 'mark', 'tags', 'info'].forEach(f => Object.keys(t[f] || {}).forEach(k => set.add(+k))); });
+  return [...set].filter(i => i >= 0 && i < size).sort((a, b) => a - b);
+}
+function postHT(snaps) {
+  const names = new Set(); snaps.forEach(sn => Object.keys(sn.state.st).forEach(k => { if (sn.state.st[k].type === 'htable') names.add(k); }));
+  names.forEach(n => { const t0 = snaps.find(sn => sn.state.st[n]).state.st[n]; const sh = showSet(snaps, n, t0.size, [0, 1, 2, 3, 4, 5, 6, t0.size - 1]); snaps.forEach(sn => { if (sn.state.st[n]) sn.state.st[n].show = sh; }); });
+}
+function parseHashOps(text, maxLen = 4) {
+  const parts = String(text).split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+  if (!parts.length) throw new InputError('Type some operations, for example: insert 89, find 89, delete 89');
+  if (parts.length > 30) throw new InputError('Use 30 operations or fewer.');
+  return parts.map(p => {
+    const m = p.match(/^([A-Za-z]+)\s*\(?\s*(\d+)\s*\)?$/);
+    const w = m && m[1].toLowerCase(), op = { insert: 'insert', add: 'insert', find: 'find', search: 'find', delete: 'delete', remove: 'delete' }[w];
+    if (!op) throw new InputError(`"${p}" is not an operation. Use insert x, find x or delete x with a whole number.`);
+    if (m[2].length > maxLen) throw new InputError(`Keep keys to ${maxLen} digits: "${m[2]}"`);
+    return { op, k: +m[2] };
+  });
+}
+const probe = (method, h, i, x, size, R) => {
+  if (method === 'quadratic') return (h + i * i) % size;
+  if (method === 'double') return (h + i * (R - x % R)) % size;
+  if (method === 'mod9') return (h + i * (x % 9)) % size;
+  return (h + i) % size;
+};
+const fname = (method, R) => ({ linear: 'f(i) = i', quadratic: 'f(i) = i²', double: `f(i) = i · hash2(x), hash2(x) = ${R} − (x mod ${R})`, mod9: 'f(i) = i · hash2(x), hash2(x) = x mod 9' })[method];
+function probeWhy(method, h, i, x, size, R) {
+  if (i === 0) return '';
+  if (method === 'quadratic') return ` (${h} + ${i}² = ${h + i * i}${h + i * i >= size ? `, mod ${size}` : ''})`;
+  if (method === 'double' || method === 'mod9') { const st = method === 'double' ? R - x % R : x % 9; return ` (${h} + ${i}·${st} = ${h + i * st}${h + i * st >= size ? `, mod ${size}` : ''})`; }
+  return ` (${h} + ${i}${h + i >= size ? `, wraps around` : ''})`;
+}
+/* one open-addressing operation, stepping through every probe */
+function oaOp(s, T, o, cfg) {
+  const { size } = T, { method = 'linear', R = 7, lazy = true } = cfg, k = o.k, h = k % size;
+  const C = T.cells, label = { insert: 'insert', find: 'find', delete: 'delete' }[o.op];
+  T.mark[h] = 'cur'; T.tags[h] = ['home'];
+  s.step('hash', `${label}(${k}): hash(${k}) = ${k} mod ${size} = ${h}. Start at [${h}].`);
+  const seen = new Set(); let probes = 0, firstFree = null;
+  for (let i = 0; i <= 2 * size; i++) {
+    const idx = probe(method, h, i, k, size, R);
+    if (i > 0 && seen.has(idx) && (method !== 'linear' || i >= size)) {
+      T.mark[idx] = 'bad';
+      if (o.op === 'insert' && firstFree === null) { s.op('err', `no free cell reachable for ${k}`); s.step('full', method === 'mod9' && k % 9 === 0 ? `hash2(${k}) = ${k} mod 9 = 0, so every "next" probe lands on [${idx}] again. The search can never move: insertion is impossible. That is why hash2 must never be 0.` : `Probe ${i} lands on [${idx}] again — the probe sequence is repeating without reaching an empty cell. ${method === 'quadratic' ? 'Quadratic probing does not visit every cell (slide 53), so it can fail even though the table has empty cells.' : 'The table is full.'}`, { crash: true }); return { probes, ok: false }; }
+      break;
+    }
+    seen.add(idx); probes++;
+    const c = C[idx], why = probeWhy(method, h, i, k, size, R);
+    T.tags[idx] = [i ? 'probe ' + (i + 1) : 'home']; T.mark[idx] = 'cur';
+    if (o.op === 'insert') {
+      if (c && !c.del && c.k === k) { T.mark[idx] = 'cmp'; s.step('dup', `[${idx}] already holds ${k}: it is in the table already, so nothing is inserted.`); return { probes, ok: false }; }
+      if (!c || c.del) {
+        C[idx] = { k }; T.mark[idx] = 'new'; s.op('set', `[${idx}] = ${k}`);
+        s.step('i_put', `Probe ${probes}: [${idx}]${why} is ${c ? 'marked "deleted", which can be reused' : 'empty'}. Put ${k} there. (${probes} probe${probes > 1 ? 's' : ''})`); return { probes, ok: true, idx };
+      }
+      T.mark[idx] = 'bad'; s.step('i_col', `Probe ${probes}: [${idx}]${why} holds ${c.k}. Collision! Try the next cell in the sequence.`);
+    } else {
+      if (!c) {
+        T.mark[idx] = 'cmp';
+        const really = Object.entries(C).find(([, v]) => !v.del && v.k === k);
+        s.step('f_empty', `Probe ${probes}: [${idx}]${why} is empty. A key is never placed past an empty cell, so ${k} is NOT in the table. (${probes} probe${probes > 1 ? 's' : ''})${really ? ` — WRONG! ${k} is really in [${really[0]}]. The empty spot left by removing a key cut the search short. That is why deletion must only MARK the cell.` : ''}`, really ? { crash: true } : undefined);
+        return { probes, ok: false };
+      }
+      if (c.del) { T.mark[idx] = 'cmp'; s.step('f_del', `Probe ${probes}: [${idx}]${why} is marked "deleted". It used to hold something, so the search must NOT stop here. Keep going.`); continue; }
+      if (c.k === k) {
+        T.mark[idx] = 'done'; s.step('f_found', `Probe ${probes}: [${idx}]${why} holds ${k}. Found it! (${probes} probe${probes > 1 ? 's' : ''})`);
+        if (o.op === 'delete') {
+          if (lazy) { C[idx] = { k, del: true }; T.mark[idx] = 'del'; s.op('del', `[${idx}] marked deleted`); s.step('d_mark', `Mark [${idx}] as "deleted" instead of emptying it, so later searches that pass through here keep going.`); }
+          else { delete C[idx]; T.mark[idx] = 'bad'; s.op('del', `[${idx}] emptied`); s.step('d_mark', `This version just empties [${idx}] — the mistake slides 29–30 warn about. Watch what happens to later searches.`); }
+        }
+        return { probes, ok: true, idx };
+      }
+      T.mark[idx] = 'bad'; s.step('f_next', `Probe ${probes}: [${idx}]${why} holds ${c.k}, not ${k}. Move on.`);
+    }
+    if (probes >= size && method === 'linear') break;
+  }
+  T.mark[h] = 'bad'; s.step('full', `Every cell was tried: ${o.op === 'insert' ? 'the table is full' : `${k} is not in the table`}.`, { crash: o.op === 'insert' });
+  return { probes, ok: false };
+}
+
+const SLIDE_RECS = [281942902, 233667136, 506643548, 155778322];
+P({ id: 'basics', group: 'Hash tables', slides: 'Slides 8–30', title: 'Insert, collide, search and delete (the 701-record table)',
+  desc: 'The story from the slides with the real numbers: hash = Number mod 701. Collisions move forward to the next empty spot, searches walk forward until the key or an empty spot, and deleted spots get a special mark.',
+  notes: ['All of the slides\' numbers check out: 580625685 mod 701 = 3, and 701466868 mod 701 = 2, so after three collisions it lands in [5] (slides 17–26).', 'Only the slots that are used are drawn; "…" stands for the empty slots in between.', 'Try deleting 506643548 and then searching for 701466868: the search passes the "deleted" mark and still finds it.'],
+  codeTitle: 'Rules from the slides',
+  input: { fields: [{ k: 'ops', label: 'Operations (comma separated)', def: 'insert 580625685, insert 701466868, find 701466868, delete 506643548, find 701466868', w: 'l' }],
+    presets: [['Slides 12–30', { ops: 'insert 580625685, insert 701466868, find 701466868, delete 506643548, find 701466868' }], ['A key that is not there', { ops: 'find 702' }], ['Reuse a deleted spot', { ops: 'delete 233667136, insert 1404' }]] },
+  code: `hash value = Number mod 701                          @@hash
+insert:
+    go to the hash value
+    spot taken → collision: move forward             @@i_col
+    first empty (or "deleted") spot: put it there     @@i_put
+    key already there: nothing to do                  @@dup
+search:
+    not the key → move forward                        @@f_next
+    found the key → done                              @@f_found
+    a truly empty spot → the key is not there         @@f_empty
+    a "deleted" spot does NOT stop the search         @@f_del
+delete: find the key, then mark the spot
+    "deleted" (never leave it as an ordinary empty)   @@d_mark
+whole table tried                                     @@full`,
+  post: postHT,
+  run(s, v) {
+    const ops = parseHashOps(v.ops, 10);
+    const T = mkHT(s, 'T', 'Hash table: 701 records, [0] … [700]', 701);
+    SLIDE_RECS.forEach(k => { T.cells[k % 701] = { k }; });
+    mkTable(s, 'L', 'Operations', ['Operation', 'hash', 'Probes', 'Result']);
+    s.step(null, 'The table already holds four records (slide 11). The other spots are empty.');
+    ops.forEach(o => {
+      const r = oaOp(s, T, o, { method: 'linear' });
+      s.row('L', [`${o.op}(${o.k})`, o.k % 701, r.probes, o.op === 'insert' ? (r.ok ? `placed in [${r.idx}]` : 'not inserted') : o.op === 'find' ? (r.ok ? `found in [${r.idx}]` : 'not found') : (r.ok ? `[${r.idx}] marked deleted` : 'not found')]);
+    });
+    s.step(null, 'Done. Searching costs one probe when there is no collision, and more when records have piled up after the hash value.');
+  } });
+
+/* ---------- string hash functions ---------- */
+const HF = {
+  h1: { name: 'Hash function 1: add up the ASCII codes (slide 35)', code: `int hash(const string &key, int tableSize)       @@sig
+{
+    int hashVal = 0;   // slide: hasVal (typo)            @@init
+    for (int i = 0; i < key.length(); i++)               @@for
+        hashVal += key[i];                                @@add
+    return hashVal % tableSize;                           @@ret
+}` },
+  h2: { name: 'Hash function 2: first 3 characters (slide 36)', code: `int hash(const string &key, int tableSize)       @@sig
+{
+    return (key[0] + 27*key[1] + 729*key[2])             @@calc
+           % tableSize;                                   @@ret
+}` },
+  h3: { name: 'Hash function 3: hashVal = 37·hashVal + key[i] (slides 37–38)', code: `int hash(const string &key, int tableSize)       @@sig
+{
+    int hashVal = 0;                                      @@init
+    for (int i = 0; i < key.length(); i++)               @@for
+        hashVal = 37 * hashVal + key[i];                  @@add
+    hashVal %= tableSize;                                 @@mod
+    if (hashVal < 0)   /* in case overflow occurs */      @@neg
+        hashVal += tableSize;                             @@fix
+    return hashVal;                                       @@ret
+}` } };
+P({ id: 'strhash', group: 'Hash functions', slides: 'Slides 31–38', title: 'Hash functions for string keys',
+  desc: 'Turn a word into a table index, one character at a time. Compare the three functions from the slides — try the anagram preset to see why simply adding the ASCII codes is a weak hash.',
+  notes: ['Slide 38 uses 98 for \'a\', but the ASCII code of \'a\' is 97. With the real codes, hash3("ali") = 136894 % 10007 = 6803, not 8172.', 'Slide 35 declares hasVal but then uses hashVal, which does not compile. It is fixed here.', 'Function 3 uses int, so long keys overflow and wrap around to negative numbers — exactly what the "if (hashVal < 0)" line is for. Try the long-word preset.', 'If two keys land on the same index, this program moves forward to the next free cell so both can be shown; the collision-resolution programs explain that properly.'],
+  input: { fields: [{ k: 'keys', label: 'Keys (words, separated by spaces)', def: 'ali', w: 'l' }, { k: 'size', label: 'Table size', def: '10007', w: 's' }, { k: 'fn', label: 'Hash function', type: 'select', def: 'h3', options: [['h1', '1: sum of ASCII codes'], ['h2', '2: first 3 characters'], ['h3', '3: 37·hashVal + key[i]']] }],
+    presets: [['"ali" (slide 38)', { keys: 'ali', size: '10007', fn: 'h3' }], ['Slide 31 names', { keys: 'john phil dave mary', size: '10', fn: 'h1' }], ['Anagrams, function 1', { keys: 'stop pots tops spot', size: '10007', fn: 'h1' }], ['Anagrams, function 3', { keys: 'stop pots tops spot', size: '10007', fn: 'h3' }], ['Long word (overflow)', { keys: 'datastructures', size: '10007', fn: 'h3' }]] },
+  code: v => {
+    const f = HF[v.fn] ? v.fn : 'h3';
+    return `${HF[f].code}
+
+int main() {                                          @@main
+    for (string key : {${String(v.keys).trim().split(/\s+/).map(k => '"' + k + '"').join(', ')}})   @@loop
+        table[hash(key, ${String(v.size).trim()})] = key;                @@store
+}`;
+  },
+  post: postHT,
+  run(s, v) {
+    const f = HF[v.fn] ? v.fn : 'h3';
+    const keys = String(v.keys).trim().split(/\s+/).filter(Boolean);
+    if (!keys.length) throw new InputError('Type at least one word.');
+    if (keys.length > 8) throw new InputError('Use 8 words or fewer.');
+    keys.forEach(k => { if (k.length > 16) throw new InputError(`Keep words to 16 characters: "${k}"`); if (/[^\x21-\x7e]/.test(k)) throw new InputError('Use plain English letters, digits or symbols (ASCII).'); });
+    const size = parseInt1(v.size, 'the table size', 2, 100000);
+    const T = mkHT(s, 'T', `Hash table [0] … [${size - 1}]`, size);
+    s.mk('K', { type: 'tape', title: 'Characters of the key and their ASCII codes', tokens: [], pos: -1, marks: {} });
+    mkTable(s, 'R', 'Results', ['Key', 'hash(key)', 'Stored in']);
+    s.fn('main'); s.step('main', `Hash ${keys.length} key${keys.length > 1 ? 's' : ''} into a table of size ${size} using ${HF[f].name.split(':')[0].toLowerCase()}.`);
+    keys.forEach(key => {
+      const K = s.st.K; K.tokens = [...key].map(c => `${c} = ${c.charCodeAt(0)}`); K.pos = -1;
+      s.var('key', `"${key}"`); s.step('loop', `Next key: "${key}".`);
+      s.step('store', `Call hash("${key}", ${size}).`);
+      s.fn('hash', `hash("${key}", ${size})`); s.var('key', `"${key}"`); s.var('tableSize', size);
+      s.step('sig', `hash starts. The key has ${key.length} characters.`);
+      let hv = 0;
+      if (f === 'h2') {
+        const c = i => i < key.length ? key.charCodeAt(i) : 0;
+        K.pos = Math.min(2, key.length - 1);
+        const raw = c(0) + 27 * c(1) + 729 * c(2);
+        s.step('calc', `key[0] + 27·key[1] + 729·key[2] = ${c(0)} + 27·${c(1)} + 729·${c(2)} = ${raw}.${key.length < 3 ? ' (Past the end of a short string the character is 0.)' : ''} Only the first 3 characters matter.`);
+        hv = raw % size; s.var('result', hv); s.step('ret', `${raw} % ${size} = ${hv}.`);
+      } else {
+        s.var('hashVal', 0); s.step('init', 'hashVal = 0.');
+        for (let i = 0; i <= key.length; i++) {
+          if (i === 0) s.var('i', 0); else s.set('i', i);
+          if (i === key.length) { K.pos = key.length; s.step('for', `i = ${i}: i < ${key.length} is false. Every character has been used.`); break; }
+          K.pos = i; s.step('for', `i = ${i}: look at key[${i}] = '${key[i]}' (ASCII ${key.charCodeAt(i)}).`);
+          const before = hv;
+          hv = f === 'h1' ? hv + key.charCodeAt(i) : (Math.imul(37, hv) + key.charCodeAt(i)) | 0;
+          const exact = 37 * before + key.charCodeAt(i);
+          s.set('hashVal', hv);
+          s.step('add', f === 'h1' ? `hashVal = ${before} + ${key.charCodeAt(i)} = ${hv}.` : `hashVal = 37·${before} + ${key.charCodeAt(i)} = ${exact}${exact !== hv ? ` — too big for an int! It overflows and wraps around to ${hv}` : ''}.`);
+        }
+        s.drop('i');
+        if (f === 'h1') { const r = hv % size; s.step('ret', `return ${hv} % ${size} = ${r}.`); hv = r; }
+        else {
+          const r = hv % size; s.set('hashVal', r); s.step('mod', `hashVal %= ${size} → ${r}.`);
+          if (r < 0) { s.step('neg', `${r} < 0: the overflow made it negative.`); s.set('hashVal', r + size); s.step('fix', `Add the table size: ${r} + ${size} = ${r + size}.`); hv = r + size; }
+          else { s.step('neg', `${r} < 0 is false.`); hv = r; }
+          s.step('ret', `return ${hv}.`);
+        }
+      }
+      s.ret(); K.pos = key.length;
+      let idx = hv, n = 0; while (T.cells[idx] && n < size) { T.mark[idx] = 'bad'; idx = (idx + 1) % size; n++; }
+      T.cells[idx] = { k: key }; T.mark[idx] = 'new'; T.tags[hv] = ['hash = ' + hv];
+      s.row('R', [key, hv, idx === hv ? `[${idx}]` : `[${idx}] (collision at [${hv}])`]); s.op('set', `table[${idx}] = "${key}"`);
+      s.step('store', idx === hv ? `table[${hv}] = "${key}".` : `Collision: [${hv}] is already taken${n > 1 ? ', and so are the next cells' : ''}. "${key}" goes to the next free cell, [${idx}].`);
+    });
+    s.drop('key');
+    const hs = s.st.R.rows.map(r => r[1]), dup = hs.length - new Set(hs).size;
+    s.step(null, dup ? `${dup + 1 > 1 ? 'Several keys' : 'Two keys'} got the same hash value. ${f === 'h1' ? 'Adding ASCII codes ignores the order of the letters, so anagrams always collide.' : 'Collisions are unavoidable in general; the next programs show how to handle them.'}` : 'Every key got a different index: no collisions.');
+  } });
+
+/* ---------- separate chaining ---------- */
+P({ id: 'chain', group: 'Collision resolution', slides: 'Slides 39–43', title: 'Separate chaining: a linked list in every cell',
+  desc: 'Each cell points to a linked list of all the keys that hash there. A new key goes to the FRONT of its list. Finding a key means hashing, then walking that one list.',
+  notes: ['Slide 41: inserting 1 and then 81 (both hash to 1) leaves 81 in front of 1, because new keys go to the front.', 'The cost of a search is the hash plus the length of one list, so short lists (a good hash and a big enough table) keep it fast.'],
+  codeTitle: 'Operations (slide 42)',
+  input: { fields: [{ k: 'ops', label: 'Operations (comma separated)', def: 'insert 0, insert 1, insert 4, insert 9, insert 16, insert 25, insert 36, insert 49, insert 64, insert 81, find 49, find 39, delete 16', w: 'l' }, { k: 'size', label: 'Table size', def: '10', w: 's' }],
+    presets: [['Slide 41', { ops: 'insert 0, insert 1, insert 4, insert 9, insert 16, insert 25, insert 36, insert 49, insert 64, insert 81, find 49, find 39, delete 16', size: '10' }], ['Prime table size', { ops: 'insert 0, insert 1, insert 4, insert 9, insert 16, insert 25, insert 36, insert 49, insert 64, insert 81', size: '7' }], ['All in one list', { ops: 'insert 10, insert 20, insert 30, insert 40, find 10', size: '10' }]] },
+  code: `initialization: every cell is NULL (an empty list)   @@init
+hash(key) = key % TableSize                         @@hash
+find:
+    locate the cell with the hash function
+    search that cell's linked list one node at a time   @@walk
+insert:
+    locate the cell; if the key is not in the list,
+    insert it as the FIRST node of the list            @@front
+delete:
+    locate the cell; remove the node from the list     @@unlink`,
+  run(s, v) {
+    const ops = parseHashOps(v.ops), size = parseInt1(v.size, 'the table size', 2, 13);
+    const T = s.mk('T', { type: 'chains', title: `Hash table of linked lists (size ${size})`, size, lists: Array.from({ length: size }, () => []), mark: {} });
+    mkTable(s, 'L', 'Operations', ['Operation', 'Cell', 'Nodes compared', 'Result']);
+    s.step('init', `All ${size} cells start as NULL: empty lists.`);
+    ops.forEach(o => {
+      const h = o.k % size, L = T.lists[h]; T.mark[h] = 'cur';
+      s.step('hash', `${o.op}(${o.k}): ${o.k} % ${size} = ${h}. Go to cell ${h}${L.length ? `, whose list holds ${L.join(' → ')}` : ', which is empty'}.`);
+      let at = -1, cmp = 0;
+      for (let j = 0; j < L.length; j++) {
+        cmp++; T.mark[h] = 'cur'; T.mark[h + ':' + j] = L[j] === o.k ? 'done' : 'cmp';
+        if (L[j] === o.k) { at = j; s.step('walk', `Node ${j + 1}: ${L[j]} = ${o.k}. Found it.`); break; }
+        s.step('walk', `Node ${j + 1}: ${L[j]} is not ${o.k}. Next node.`);
+      }
+      if (o.op === 'insert') {
+        if (at >= 0) { s.row('L', [`insert(${o.k})`, h, cmp, 'already there']); s.step('front', `${o.k} is already in the list, so it is not inserted again.`); return; }
+        L.unshift(o.k); T.mark[h] = 'cur'; T.mark[h + ':0'] = 'new'; s.op('new', `${o.k} added at the front of list ${h}`);
+        s.row('L', [`insert(${o.k})`, h, cmp, 'added at the front']);
+        s.step('front', `${L.length > 1 ? `${o.k} is not in the list. ` : ''}Insert ${o.k} as the first node of list ${h}${L.length > 1 ? `, in front of ${L[1]}` : ''}.`);
+      } else if (o.op === 'find') {
+        s.row('L', [`find(${o.k})`, h, cmp, at >= 0 ? 'found' : 'not found']);
+        if (at < 0) { T.mark[h] = 'bad'; s.step('walk', `${L.length ? 'End of the list' : 'The list is empty'}: ${o.k} is not in the table. (${cmp} node${cmp === 1 ? '' : 's'} compared)`); }
+        else s.step('walk', `Found after comparing ${cmp} node${cmp === 1 ? '' : 's'}. Only list ${h} was searched — the other lists were never touched.`);
+      } else {
+        if (at < 0) { s.row('L', [`delete(${o.k})`, h, cmp, 'not found']); T.mark[h] = 'bad'; s.step('unlink', `${o.k} is not in list ${h}: nothing to delete.`); return; }
+        T.mark[h + ':' + at] = 'del'; s.step('unlink', `Unlink the node holding ${o.k} from list ${h}.`);
+        L.splice(at, 1); T.mark[h] = 'cur'; s.op('del', `${o.k} removed from list ${h}`); s.row('L', [`delete(${o.k})`, h, cmp, 'removed']);
+        s.step('unlink', `Removed. Unlike open addressing, nothing needs to be marked: the list simply gets shorter.`);
+      }
+    });
+    const lens = T.lists.map(l => l.length), n = lens.reduce((a, b) => a + b, 0);
+    s.step(null, `Done. ${n} keys in ${size} lists: the longest list has ${Math.max(...lens)} node${Math.max(...lens) === 1 ? '' : 's'}, and the load factor is ${n}/${size} = ${(n / size).toFixed(2)} keys per list.`);
+  } });
+
+/* ---------- open addressing ---------- */
+P({ id: 'open', group: 'Collision resolution', slides: 'Slides 44–55', title: 'Open addressing: linear, quadratic and double hashing',
+  desc: 'Everything stays inside the array. On a collision, try other cells in a fixed order: one at a time (linear), 1, 4, 9… away (quadratic), or jumps of hash2(x) (double hashing).',
+  notes: ['Slide 48 says a find for 58 takes 3 probes and a find for 19 takes 4. That counts only the extra cells after the first one; counting every cell looked at, it is 4 and 5 (as shown here).', 'Slide 52 points out that a table size of 10 is a poor choice for quadratic probing. The "misses empty cells" preset shows why: with size 10, i² mod 10 only reaches offsets 0, 1, 4, 5, 6 and 9.', 'Slide 54\'s shortcut computes the same quadratic cells without multiplying: H(i) = H(i−1) + 2i − 1.', 'Set Deletion to "just empty the cell" to see the bug that lazy deletion prevents.'],
+  input: { fields: [{ k: 'ops', label: 'Operations (comma separated)', def: 'insert 89, insert 18, insert 49, insert 58, insert 9, find 58, find 19', w: 'l' }, { k: 'size', label: 'Table size', def: '10', w: 's' },
+    { k: 'method', label: 'Probing', type: 'select', def: 'linear', options: [['linear', 'linear: f(i) = i'], ['quadratic', 'quadratic: f(i) = i²'], ['double', 'double: hash2 = R − x mod R'], ['mod9', 'double: hash2 = x mod 9']] },
+    { k: 'R', label: 'R (double hashing)', def: '7', w: 's' }, { k: 'del', label: 'Deletion', type: 'select', def: 'lazy', options: [['lazy', 'mark as deleted (lazy)'], ['remove', 'just empty the cell (wrong)']] }],
+    presets: [['Linear (slides 46–48)', { ops: 'insert 89, insert 18, insert 49, insert 58, insert 9, find 58, find 19', size: '10', method: 'linear', del: 'lazy' }],
+      ['Lazy deletion (slide 48)', { ops: 'insert 89, insert 18, insert 49, insert 58, insert 9, delete 89, find 49', size: '10', method: 'linear', del: 'lazy' }],
+      ['Deleting without a mark', { ops: 'insert 89, insert 18, insert 49, insert 58, insert 9, delete 89, find 49', size: '10', method: 'linear', del: 'remove' }],
+      ['Quadratic (slide 52)', { ops: 'insert 89, insert 18, insert 49, insert 58, insert 9', size: '10', method: 'quadratic', del: 'lazy' }],
+      ['Quadratic misses empty cells (slide 53)', { ops: 'insert 0, insert 10, insert 20, insert 30, insert 40, insert 50, insert 60', size: '10', method: 'quadratic', del: 'lazy' }],
+      ['Double hashing, R = 7 (slide 55)', { ops: 'insert 89, insert 18, insert 49, insert 58, insert 9, insert 99', size: '10', method: 'double', R: '7', del: 'lazy' }],
+      ['hash2 = x mod 9, insert 99 (slide 55)', { ops: 'insert 89, insert 18, insert 49, insert 58, insert 9, insert 99', size: '10', method: 'mod9', del: 'lazy' }]] },
+  code: v => {
+    const m = ['linear', 'quadratic', 'double', 'mod9'].includes(v.method) ? v.method : 'linear', R = String(v.R).trim() || '7';
+    return `h = x mod TableSize                                   @@hash
+try cells (h + f(i)) mod TableSize for i = 0, 1, 2, …
+    ${fname(m, R)}
+insert(x):
+    cell holds another key → collision, next i         @@i_col
+    cell is empty (or "deleted") → put x there         @@i_put
+    cell already holds x → nothing to do               @@dup
+find(x):
+    cell holds another key → next i                    @@f_next
+    cell holds x → found                               @@f_found
+    cell is empty → x is not in the table              @@f_empty
+    cell is "deleted" → keep going                     @@f_del
+delete(x):
+    find x, then ${v.del === 'remove' ? 'empty the cell   (WRONG — see notes)' : 'mark the cell "deleted" (lazy deletion)'}   @@d_mark
+no usable cell reachable                               @@full`;
+  },
+  run(s, v) {
+    const ops = parseHashOps(v.ops), size = parseInt1(v.size, 'the table size', 2, 23);
+    const method = ['linear', 'quadratic', 'double', 'mod9'].includes(v.method) ? v.method : 'linear';
+    const R = method === 'double' ? parseInt1(v.R, 'R', 2, 97) : 7;
+    if (method === 'double' && R >= size) throw new InputError('R should be a prime smaller than the table size (slide 55).');
+    const T = mkHT(s, 'T', `Hash table (size ${size}, ${method === 'mod9' ? 'double hashing' : method} probing)`, size);
+    mkTable(s, 'L', 'Operations', ['Operation', 'h', 'Probes', 'Result']);
+    s.step(null, `An empty table of size ${size}. Collisions are resolved by ${{ linear: 'linear probing: f(i) = i', quadratic: 'quadratic probing: f(i) = i²', double: `double hashing: f(i) = i·hash2(x), hash2(x) = ${R} − (x mod ${R})`, mod9: 'double hashing with hash2(x) = x mod 9' }[method]}.`);
+    ops.forEach(o => {
+      const r = oaOp(s, T, o, { method, R, lazy: v.del !== 'remove' });
+      s.row('L', [`${o.op}(${o.k})`, o.k % size, r.probes, o.op === 'insert' ? (r.ok ? `[${r.idx}]` : 'failed') : o.op === 'find' ? (r.ok ? `found in [${r.idx}]` : 'not found') : (r.ok ? `[${r.idx}] ${v.del === 'remove' ? 'emptied' : 'marked deleted'}` : 'not found')]);
+    });
+    const used = Object.values(T.cells).filter(c => !c.del).length;
+    s.step(null, `Done. ${used} of ${size} cells are in use (load factor ${(used / size).toFixed(2)}).`);
+  } });
+
+/* ---------- linear probing analysis ---------- */
+P({ id: 'analysis', group: 'Collision resolution', slides: 'Slides 49–50', title: 'Linear probing: average probes and clustering',
+  desc: 'How many cells does a search look at? For every key in the table (successful search) and for every possible starting cell (unsuccessful search), count the probes and take the average.',
+  notes: ['Slide 50\'s answers are right: 15/8 ≈ 1.88 probes for a successful search and 31/11 ≈ 2.82 for an unsuccessful one.', 'Long runs of filled cells (primary clusters, slide 49) make unsuccessful searches expensive: a search that starts anywhere inside a cluster has to walk to its end.'],
+  codeTitle: 'How to count',
+  input: { fields: [{ k: 'keys', label: 'Keys, inserted in this order', def: '20 30 2 13 25 24 10 9', w: 'l' }, { k: 'size', label: 'Table size', def: '11', w: 's' }],
+    presets: [['Slide 50', { keys: '20 30 2 13 25 24 10 9', size: '11' }], ['Slide 47 table', { keys: '89 18 49 58 9', size: '10' }], ['No collisions', { keys: '1 3 5 7', size: '11' }]] },
+  code: `build the table with h(x) = x mod TableSize           @@build
+successful search for key x:
+    probes = cells visited from h(x) until x            @@ss
+average for successful search = total / #keys         @@ssavg
+unsuccessful search (assume every start is equally likely):
+    for each start cell s = 0 … TableSize−1:
+        probes = cells visited until an empty cell     @@us
+average for unsuccessful search = total / TableSize   @@usavg`,
+  run(s, v) {
+    const keys = parseNums(v.keys, 'keys', 15), size = parseInt1(v.size, 'the table size', 2, 23);
+    if (keys.length >= size) throw new InputError('Leave at least one empty cell (use fewer keys than the table size).');
+    const T = mkHT(s, 'T', `Hash table (size ${size}, h(x) = x mod ${size})`, size);
+    const pos = {};
+    keys.forEach(k => { let i = k % size; while (T.cells[i]) i = (i + 1) % size; if (pos[k] === undefined) { T.cells[i] = { k }; pos[k] = i; } });
+    Object.values(pos).forEach(i => { T.mark[i] = 'new'; });
+    s.step('build', `Insert ${keys.join(', ')} with linear probing.`);
+    mkTable(s, 'S', 'Successful search', ['Key', 'Cells visited', 'Probes']);
+    let tot = 0;
+    const uniq = [...new Set(keys)];
+    uniq.forEach(k => {
+      const seq = []; let i = k % size; while (true) { seq.push(i); if (T.cells[i].k === k) break; i = (i + 1) % size; }
+      seq.forEach((c, j) => { T.mark[c] = j === seq.length - 1 ? 'done' : 'cmp'; }); tot += seq.length;
+      s.row('S', [k, seq.join(', '), seq.length]); s.step('ss', `find(${k}): h = ${k % size}; visits ${seq.join(', ')} → ${seq.length} probe${seq.length > 1 ? 's' : ''}.`);
+    });
+    mkText(s, 'A', 'Averages', `successful: ${tot}/${uniq.length} = ${(tot / uniq.length).toFixed(2)}`);
+    s.step('ssavg', `Average for a successful search = ${tot} / ${uniq.length} = ${(tot / uniq.length).toFixed(2)} probes.`);
+    mkTable(s, 'U', 'Unsuccessful search', ['Start cell', 'Cells visited', 'Probes']);
+    let ut = 0;
+    for (let st = 0; st < size; st++) {
+      const seq = []; let i = st; while (true) { seq.push(i); if (!T.cells[i]) break; i = (i + 1) % size; }
+      seq.forEach((c, j) => { T.mark[c] = j === seq.length - 1 ? 'cur' : 'cmp'; }); ut += seq.length;
+      s.row('U', [st, seq.join(', '), seq.length]); s.step('us', `Start at ${st}: visit ${seq.join(', ')} → ${seq.length} probe${seq.length > 1 ? 's' : ''} (stops at the empty cell ${seq[seq.length - 1]}).`);
+    }
+    s.text('A', `successful: ${tot}/${uniq.length} = ${(tot / uniq.length).toFixed(2)} · unsuccessful: ${ut}/${size} = ${(ut / size).toFixed(2)}`, 'good');
+    const runs = []; let start = null;
+    for (let i = 0; i < 2 * size; i++) { const f = !!T.cells[i % size]; if (f && start === null) start = i; if (!f && start !== null) { if (i - start > 1 && start < size) runs.push([start % size, (i - 1) % size, i - start]); start = null; } }
+    runs.forEach(([a, b]) => { for (let i = a; ; i = (i + 1) % size) { T.mark[i] = 'bad'; if (i === b) break; } });
+    s.step('usavg', `Average for an unsuccessful search = ${ut} / ${size} = ${(ut / size).toFixed(2)} probes.${runs.length ? ` The red runs are primary clusters (${runs.map(r => `[${r[0]}…${r[1]}]`).join(', ')}): any key that hashes into one has to walk to its end, and then makes it longer.` : ''}`);
+  } });
+
+/*ENGINE-END*/
+
+/* ======================= UI ======================= */
+const $ = q => document.querySelector(q);
+const el = { sel: $('#prog'), slides: $('#slides'), title: $('#ptitle'), desc: $('#pdesc'), notesWrap: $('#notesWrap'), notesSum: $('#notesSum'), notes: $('#notes'),
+  inWrap: $('#inWrap'), inFields: $('#inFields'), inRun: $('#inRun'), inPresets: $('#inPresets'), inErr: $('#inErr'),
+  structs: $('#structs'), stepNo: $('#stepNo'), note: $('#note'), diff: $('#diff'), codeH: $('#codeH'), code: $('#code'), codeWrap: $('#codeWrap'),
+  varsCard: $('#varsCard'), vars: $('#vars'), outCard: $('#outCard'), out: $('#out'), range: $('#range'), count: $('#count'),
+  bFirst: $('#bFirst'), bPrev: $('#bPrev'), bPlay: $('#bPlay'), bNext: $('#bNext'), bLast: $('#bLast'), bSpeed: $('#bSpeed') };
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+let cur = { prog: null, parsed: null, snaps: [], i: 0, vals: {} };
+let timer = null, speed = 1;
+
+const KW = 'int|float|double|char|void|struct|class|public|return|new|delete|while|if|else|for|do|NULL|using|namespace|string|include|endl|cout|cin|std|const|bool|Object|private|assert|break';
+const TOK = new RegExp(`(\\/\\/.*$)|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')|\\b(${KW})\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'g');
+function hl(line) {
+  let out = '', last = 0;
+  line.replace(TOK, (m, com, str, kw, num, off) => {
+    out += esc(line.slice(last, off));
+    out += `<span class="${com ? 'c-com' : str ? 'c-str' : kw ? 'c-kw' : 'c-num'}">${esc(m)}</span>`; last = off + m.length; return m;
+  });
+  return out + esc(line.slice(last));
+}
+function buildSelect() {
+  const groups = [];
+  PROGRAMS.forEach(p => { let g = groups.find(x => x.name === p.group); if (!g) { g = { name: p.group, items: [] }; groups.push(g); } g.items.push(p); });
+  el.sel.innerHTML = groups.map(g => `<optgroup label="${esc(g.name)}">${g.items.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`).join('');
+}
+const sameVals = (a, b) => Object.keys(a).every(k => String(a[k]).trim() === String(b[k] === undefined ? '' : b[k]).trim());
+
+function readFields() { const o = {}; el.inFields.querySelectorAll('[data-k]').forEach(f => { o[f.dataset.k] = f.value; }); return o; }
+function drawFields(p, vals) {
+  el.inFields.innerHTML = p.input.fields.map(f => {
+    const id = 'f_' + f.k;
+    const ctl = f.type === 'select'
+      ? `<select id="${id}" data-k="${f.k}">${f.options.map(([v, l]) => `<option value="${esc(v)}"${String(vals[f.k]) === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`
+      : `<input id="${id}" data-k="${f.k}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(vals[f.k])}">`;
+    return `<label class="fld w-${f.type === 'select' ? 'm' : (f.w || 'm')}" for="${id}"><span>${esc(f.label)}</span>${ctl}</label>`;
+  }).join('');
+  el.inPresets.innerHTML = p.input.presets.map(([l, v], i) => `<button type="button" data-i="${i}" class="${sameVals(v, vals) ? 'on' : ''}">${esc(l)}</button>`).join('');
+}
+
+function load(id, vals) {
+  stop();
+  const p = PROGRAMS.find(x => x.id === id) || PROGRAMS[0];
+  el.sel.value = p.id;
+  let r;
+  try { r = runProgram(p, vals); }
+  catch (e) {
+    if (!(e instanceof InputError)) throw e;
+    if (cur.prog === p) { el.inErr.textContent = e.message; return; }
+    r = runProgram(p, {});
+  }
+  el.inErr.textContent = '';
+  const parsed = parseCode(r.code);
+  cur = { prog: p, parsed, snaps: r.snaps, i: 0, vals: r.vals };
+  el.slides.textContent = p.slides; el.title.textContent = p.title; el.desc.textContent = p.desc;
+  if (p.notes && p.notes.length) { el.notesWrap.hidden = false; el.notes.innerHTML = p.notes.map(n => `<li>${esc(n)}</li>`).join(''); el.notesSum.textContent = p.notes.length === 1 ? '1 note about this' : `${p.notes.length} notes about this`; }
+  else el.notesWrap.hidden = true;
+  if (p.input) { el.inWrap.hidden = false; drawFields(p, r.vals); } else el.inWrap.hidden = true;
+  el.codeH.textContent = p.codeTitle || 'Code';
+  el.code.innerHTML = parsed.lines.map((t, i) => `<div class="cl"><span class="ln">${i + 1}</span><span>${hl(t) || ' '}</span></div>`).join('');
+  el.codeWrap.scrollTop = 0;
+  el.varsCard.hidden = !cur.snaps.some(sn => sn.state.frames.some(f => Object.keys(f.vars).length));
+  el.outCard.hidden = !cur.snaps.some(sn => sn.state.out);
+  el.range.max = cur.snaps.length - 1;
+  try { localStorage.setItem('hash-sim-prog', p.id); } catch (e) {}
+  go(0);
+}
+function go(i) { cur.i = Math.max(0, Math.min(cur.snaps.length - 1, i)); render(); }
+
+const mainTree = st => { for (const k of st.order) if (st.st[k].type === 'tree') return st.st[k]; return null; };
+const mainHeap = st => { for (const k of st.order) if (st.st[k].type === 'heap') return st.st[k]; return null; };
+function fvv(o, st) {
+  if (o.t === 'ptr') { if (o.v === null) return 'NULL'; if (o.v === GARB) return '?'; const T = mainTree(st), n = T && T.nodes[o.v]; return n ? `node ${fv(n.v)}` : 'deleted node'; }
+  if (o.t === 'idx') { const H = mainHeap(st); return H && H.arr[o.v] !== null && H.arr[o.v] !== undefined && o.v >= 1 ? `${o.v}  (Heap[${o.v}] = ${fv(H.arr[o.v])})` : String(o.v); }
+  return o.v === GARB ? '?' : fv(o.v);
+}
+function computeDiff(ps, st, sn) {
+  const fItems = [], oItems = [], vars = new Set();
+  if (!ps) return { items: [], vars };
+  const L = Math.max(st.frames.length, ps.frames.length);
+  for (let fi = 0; fi < L; fi++) {
+    const a = ps.frames[fi], b = st.frames[fi], same = a && b && a.label === b.label;
+    if (a && !same) fItems.push(['ret', `${a.label} finished`]);
+    if (b && !same) { fItems.push(['call', `Entered ${b.label}`]); Object.entries(b.vars).forEach(([k, o]) => { vars.add(fi + ':' + k); fItems.push(['var', `${k} = ${fvv(o, st)}`]); }); continue; }
+    if (same) {
+      Object.entries(b.vars).forEach(([k, o]) => {
+        const ov = a.vars[k];
+        if (!ov) { vars.add(fi + ':' + k); fItems.push(['var', `${k} created = ${fvv(o, st)}`]); }
+        else if (ov.v !== o.v) { vars.add(fi + ':' + k); fItems.push(['var', `${k}: ${fvv(ov, ps)} → ${fvv(o, st)}`]); }
+      });
+      Object.keys(a.vars).forEach(k => { if (!(k in b.vars)) fItems.push(['var', `${k} goes out of scope`]); });
+    }
+  }
+  if (st.out.length > ps.out.length) oItems.push(['out', `Printed ${JSON.stringify(st.out.slice(ps.out.length))}`]);
+  return { items: fItems.concat(sn.ops || [], oItems), vars };
+}
+const BADGE = { count: 'count', var: 'variable', call: 'call', ret: 'return', out: 'output', new: 'new node', set: 'store', link: 'link', del: 'remove', move: 'move', swap: 'swap', push: 'insert', pop: 'remove', read: 'read', err: 'error' };
+
+function render() {
+  const snap = cur.snaps[cur.i], prev = cur.i > 0 ? cur.snaps[cur.i - 1] : null, st = snap.state;
+  const ch = computeDiff(prev && prev.state, st, snap);
+  const n = cur.snaps.length;
+  el.count.textContent = `Step ${cur.i + 1} of ${n}`;
+  el.stepNo.textContent = snap.label && cur.parsed.map[snap.label] ? `line ${cur.parsed.map[snap.label][0] + 1}` : (cur.i === 0 ? 'starting point' : '');
+  el.range.value = cur.i;
+  el.note.textContent = snap.note; el.note.className = 'note' + (snap.crash ? ' crash' : '');
+  el.diff.innerHTML = ch.items.length ? ch.items.map(([k, t]) => `<li><span class="badge b-${k}">${BADGE[k] || k}</span><span>${esc(t)}</span></li>`).join('')
+    : `<li class="nodiff">${cur.i === 0 ? 'This is the starting point. Press Next to run the first step.' : 'Nothing was stored or moved: this step compared values or checked a condition.'}</li>`;
+  el.code.querySelectorAll('.cl.cur').forEach(x => x.classList.remove('cur'));
+  const lines = snap.label ? (cur.parsed.map[snap.label] || []) : [];
+  lines.forEach(li => { const d = el.code.children[li]; if (d) d.classList.add('cur'); });
+  if (lines.length) {
+    const f = el.code.children[lines[0]], lastEl = el.code.children[lines[lines.length - 1]], w = el.codeWrap;
+    const top = f.offsetTop, bot = lastEl.offsetTop + lastEl.offsetHeight;
+    if (top < w.scrollTop + 20 || bot > w.scrollTop + w.clientHeight - 20) w.scrollTo({ top: Math.max(0, (top + bot) / 2 - w.clientHeight / 2), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  renderStructs(st, ch);
+  if (!el.varsCard.hidden) renderVars(st, ch);
+  const prevOut = prev ? prev.state.out : '';
+  if (!st.out) el.out.innerHTML = '<span class="muted">Nothing printed yet.</span>';
+  else if (st.out.length > prevOut.length && st.out.startsWith(prevOut)) el.out.innerHTML = esc(prevOut) + `<span class="new">${esc(st.out.slice(prevOut.length))}</span>`;
+  else el.out.textContent = st.out;
+  el.bFirst.disabled = el.bPrev.disabled = cur.i === 0;
+  el.bNext.disabled = el.bLast.disabled = cur.i === n - 1;
+  growSvgs(document.querySelector('main'));
+  if (cur.i === n - 1) stop();
+}
+function renderVars(st, ch) {
+  let h = '';
+  st.frames.forEach((f, fi) => {
+    const ents = Object.entries(f.vars); if (!ents.length) return;
+    const active = fi === st.frames.length - 1 && fi > 0;
+    h += `<div class="frame${active ? ' active' : ''}"><div class="fh"><span>${esc(f.label)}</span>${active ? '<span class="act">running now</span>' : ''}</div>`;
+    ents.forEach(([k, o]) => {
+      const v = o.v === null && o.t === 'ptr' ? '<span class="nul">NULL</span>' : o.v === GARB ? '<span class="garb">? (garbage)</span>' : esc(fvv(o, st));
+      h += `<div class="vr${ch.vars.has(fi + ':' + k) ? ' chg' : ''}"><span class="vn">${esc(k)}</span><span class="vv">${v}</span></div>`;
+    });
+    h += '</div>';
+  });
+  el.vars.innerHTML = h || '<div class="muted">No variables yet.</div>';
+}
+
+/* ---------- tree drawing ---------- */
+const PATHY = { path: 1, done: 1, cur: 1, cmp: 1, new: 1 };
+function drawTree(G, availW) {
+  const R = 17, DX = 46, DY = 64, PX = 26, PY = 22;
+  const pos = {}; let col = 0, maxD = -1;
+  const walk = (id, d) => { if (id === null || id === undefined || !G.nodes[id]) return; const n = G.nodes[id]; walk(n.l, d + 1); pos[id] = { c: col++, d }; maxD = Math.max(maxD, d); walk(n.r, d + 1); };
+  walk(G.root, 0);
+  const fl = (G.floating || []).filter(id => G.nodes[id] && !pos[id]);
+  const flY = maxD + 1 + (maxD >= 0 ? 0.35 : 0);
+  fl.forEach((id, k) => { pos[id] = { c: k, d: flY, fl: 1 }; });
+  const cols = Math.max(col, fl.length, 1), rows = (fl.length ? flY : maxD) + 1;
+  const W = Math.max(220, PX * 2 + (cols - 1) * DX + 40), Hh = PY + Math.max(0, rows - 1) * DY + R + 34 + (fl.length ? 6 : 0);
+  const X = id => PX + 20 + pos[id].c * DX, Y = id => PY + pos[id].d * DY + 4;
+  let g = '';
+  if (fl.length) g += `<text x="${PX}" y="${Y(fl[0]) - R - 9}" class="rowlbl">${esc(G.floatLabel || 'not linked into the tree')}</text>`;
+  if (G.root === null && !fl.length) g += `<text x="${PX}" y="${PY + 10}" class="rowlbl">The tree is empty (root is NULL).</text>`;
+  for (const id in pos) {
+    const n = G.nodes[id];
+    [n.l, n.r].forEach(c => {
+      if (c === null || c === undefined || !pos[c]) return;
+      const x1 = X(id), y1 = Y(id), x2 = X(c), y2 = Y(c), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+      const cls = G.edge[c] || ((PATHY[G.nodes[id].cls] && PATHY[G.nodes[c].cls] && G.nodes[c].cls !== 'done') ? 'path' : '');
+      g += `<line x1="${(x1 + dx / L * R).toFixed(1)}" y1="${(y1 + dy / L * R).toFixed(1)}" x2="${(x2 - dx / L * R).toFixed(1)}" y2="${(y2 - dy / L * R).toFixed(1)}" class="te ${cls}${G.nodes[c].ph ? ' ph' : ''}"/>`;
+    });
+  }
+  for (const id in pos) {
+    const n = G.nodes[id], x = X(id), y = Y(id), txt = n.ph ? '?' : fv(n.v), fs = txt.length > 3 ? 11 : 13.5;
+    g += `<g class="tn ${n.cls || ''}${n.ph ? ' ph' : ''}${n.hole ? ' hole' : ''}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y + fs / 2.8}" style="font-size:${fs}px">${esc(txt)}</text></g>`;
+    if (n.sub !== undefined && n.sub !== '') {
+      const [p] = G.parentOf ? G.parentOf(id) : [null];
+      const right = p === null || p === undefined || !G.nodes[p] || +G.nodes[p].r === +id;
+      g += `<text x="${x + (right ? R + 3 : -R - 3)}" y="${y - R + 6}" class="tsub" text-anchor="${right ? 'start' : 'end'}">${esc(n.sub)}</text>`;
+    }
+    if (n.tag) { const tw = n.tag.length * 6.6 + 10; g += `<g class="ttag"><rect x="${x - tw / 2}" y="${y + R + 4}" width="${tw}" height="16" rx="4"/><text x="${x}" y="${y + R + 15.5}">${esc(n.tag)}</text></g>`; }
+  }
+  return fitSvg(W, Hh, g, availW);
+}
+function fitSvg(W, H, g, availW) {
+  const sc = W > availW ? availW / W : 1, fit = sc >= 0.62;
+  const svg = `<svg width="${fit ? Math.floor(W * sc) : W}" height="${fit ? Math.ceil(H * sc) : H}" viewBox="0 0 ${W} ${H}" style="display:block">${g}</svg>`;
+  return `<div class="scroll">${svg}</div>${fit ? '' : '<div class="hint">Swipe sideways to see the whole tree.</div>'}`;
+}
+function autoTags(st, kind) {
+  const out = {}, top = st.frames.length - 1;
+  const names = {}; [0, top].forEach(fi => { if (fi < 0) return; Object.keys(st.frames[fi].vars).forEach(k => { names[k] = (names[k] || 0) + (fi === 0 || top === 0 ? 1 : 1); }); });
+  const frames = top > 0 ? [0, top] : [0];
+  frames.forEach(fi => {
+    const f = st.frames[fi];
+    Object.entries(f.vars).forEach(([k, o]) => {
+      if (o.t !== kind || typeof o.v !== 'number') return;
+      const label = fi > 0 && k in st.frames[0].vars ? `${k} (${f.name})` : k;
+      (out[o.v] = out[o.v] || []).push(label);
+    });
+  });
+  return out;
+}
+const R = {};
+R.tree = (t, st) => {
+  const auto = t.ptrs ? autoTags(st, 'ptr') : {};
+  const nodes = {};
+  for (const id in t.nodes) {
+    const n = t.nodes[id], tags = [].concat(auto[id] || [], t.tags[id] || []);
+    nodes[id] = { v: n.v, l: n.l, r: n.r, cls: t.mark[id] || t.keep[id] || '', sub: t.info[id] !== undefined ? t.info[id] : t.sub[id], tag: tags.join(', ') };
+  }
+  const reach = new Set(); const w = id => { if (id === null || !t.nodes[id]) return; reach.add(+id); w(t.nodes[id].l); w(t.nodes[id].r); }; w(t.root);
+  const floating = Object.keys(t.nodes).map(Number).filter(id => !reach.has(id));
+  const parentOf = id => { for (const k in t.nodes) { if (t.nodes[k].l === +id || t.nodes[k].r === +id) return [k]; } return [null]; };
+  return drawTree({ nodes, root: t.root, floating, edge: t.edge, parentOf }, availWidth());
+};
+R.heap = (t, st) => {
+  const auto = t.idx ? autoTags(st, 'idx') : {};
+  const last = Math.max(t.size, ...Object.keys(t.ph).map(Number), 0);
+  const exists = i => i >= 1 && i <= last && ((i <= t.size && t.arr[i] !== null && t.arr[i] !== undefined) || t.ph[i] || t.hole === i);
+  const nodes = {};
+  for (let i = 1; i <= last; i++) {
+    if (!exists(i)) continue;
+    const tags = [].concat(auto[i] || [], t.tags[i] || []);
+    if (t.hole === i && !tags.includes('hole')) tags.unshift('hole');
+    nodes[i] = { v: t.arr[i], l: exists(2 * i) ? 2 * i : null, r: exists(2 * i + 1) ? 2 * i + 1 : null, cls: t.mark[i] || t.keep[i] || '', sub: t.info[i] !== undefined ? t.info[i] : (t.showIdx ? String(i) : ''), tag: [...new Set(tags)].join(', '), ph: !!t.ph[i], hole: t.hole === i };
+  }
+  const parentOf = id => [+id > 1 ? (+id) >> 1 : null];
+  let h = drawTree({ nodes, root: exists(1) ? 1 : null, floating: [], edge: {}, parentOf }, availWidth());
+  if (t.noArray) return h;
+  const cap = Math.max(t.cap || 0, t.size, last), cw = 38, ch = 32, px = 4, W = px * 2 + (cap + 1) * cw + 70, H = ch + 44;
+  let g = '';
+  for (let i = 0; i <= cap; i++) {
+    const x = px + i * cw, inside = i >= 1 && i <= t.size, v = t.arr[i];
+    const cls = i === 0 ? 'unused' : t.hole === i ? 'hole' : (t.mark[i] || t.keep[i] || '') + (inside ? ' live' : ' out');
+    g += `<rect x="${x}" y="4" width="${cw}" height="${ch}" class="ac ${cls}"/>`;
+    if (i === 0) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av stale">–</text>`;
+    else if (v !== null && v !== undefined) g += `<text x="${x + cw / 2}" y="${4 + ch / 2 + 5}" class="av${inside && t.hole !== i ? '' : ' stale'}">${esc(fv(v))}</text>`;
+    g += `<text x="${x + cw / 2}" y="${ch + 18}" class="idx" text-anchor="middle">${i}</text>`;
+  }
+  const sx = px + (t.size + 1) * cw;
+  if (!t.noSize) g += `<line x1="${sx}" y1="0" x2="${sx}" y2="${ch + 8}" class="szl"/><text x="${sx + 4}" y="${ch + 32}" class="szt">size = ${t.size}</text>`;
+  return h + `<div class="arrlbl">${esc(t.arrLabel || 'The same heap as an array (index 0 unused)')}</div><div class="scroll">${svgArr(W, H, g)}</div>`;
+};
+const svgArr = (w, h, g) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">${g}</svg>`;
+R.tape = t => `<div class="tape">${t.tokens.map((x, i) => {
+  const m = t.marks[i]; const c = i === t.pos ? (m === 'err' ? 'err' : 'cur') : m === 'err' ? 'err' : (i < t.pos ? 'done' : '');
+  return `<span class="tk ${c}">${esc(x)}</span>`; }).join('')}</div>`;
+R.table = t => `<div class="tbl"><table><thead><tr>${t.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+  t.rows.length ? t.rows.map((r, i) => `<tr class="${i === t.hlRow ? 'hl' : ''}">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${t.cols.length}" class="none">No rows yet.</td></tr>`
+}</tbody></table></div>`;
+R.text = t => `<div class="tv ${t.cls || ''}${t.chg ? ' chg' : ''}">${esc(t.value)}</div>`;
+const WIDE = { tree: 1, heap: 1, table: 1, tape: 1 };
+let _aw = 600; const availWidth = () => _aw;
+function renderStructs(st, ch) {
+  _aw = Math.max(240, el.structs.clientWidth - 26);
+  let h = '';
+  st.order.forEach(n => { const t = st.st[n]; h += `<div class="sc${WIDE[t.type] ? ' wide' : ''}"><h4>${esc(t.title)}</h4>${R[t.type](t, st, ch)}</div>`; });
+  el.structs.innerHTML = h;
+  el.structs.querySelectorAll('.tbl').forEach(d => { const r = d.querySelector('tr.hl'); d.scrollTop = r ? r.offsetTop - d.clientHeight + r.offsetHeight + 4 : d.scrollHeight; });
+}
+
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.bPlay.textContent = '▶ Play'; }
+function play() {
+  if (timer) { stop(); return; }
+  if (cur.i >= cur.snaps.length - 1) go(0);
+  el.bPlay.textContent = '❚❚ Pause';
+  timer = setInterval(() => { if (cur.i >= cur.snaps.length - 1) stop(); else go(cur.i + 1); }, 1100 / speed);
+}
+el.bFirst.onclick = () => { stop(); go(0); };
+el.bPrev.onclick = () => { stop(); go(cur.i - 1); };
+el.bNext.onclick = () => { stop(); go(cur.i + 1); };
+el.bLast.onclick = () => { stop(); go(cur.snaps.length - 1); };
+el.bPlay.onclick = play;
+el.bSpeed.onclick = () => { const sp = [1, 2, 4, 0.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; el.bSpeed.textContent = (speed === 0.5 ? '½' : speed) + '×'; if (timer) { stop(); play(); } };
+el.range.oninput = () => { stop(); go(+el.range.value); };
+el.sel.onchange = () => load(el.sel.value);
+el.inRun.onclick = () => load(cur.prog.id, readFields());
+el.inFields.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); load(cur.prog.id, readFields()); } });
+el.inFields.addEventListener('change', e => { if (e.target.matches('select')) load(cur.prog.id, readFields()); });
+el.inPresets.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const pr = cur.prog.input.presets[+b.dataset.i][1]; load(cur.prog.id, Object.assign(readFields(), pr)); });
+document.addEventListener('keydown', e => {
+  if (e.target.matches('select, input, textarea, button')) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stop(); go(cur.i + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stop(); go(cur.i - 1); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+});
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => cur.prog && render(), 150); });
+
+
+/* ---------- renderers for hashing and growth ---------- */
+R.htable = t => {
+  const idx = t.show || Array.from({ length: t.size }, (_, i) => i);
+  let h = '<div class="ht">', prev = null;
+  idx.forEach(i => {
+    if (prev !== null && i > prev + 1) h += `<div class="hrow gap"><span class="hi">…</span><span class="hk">${i - prev - 1} empty slot${i - prev - 1 > 1 ? 's' : ''}</span></div>`;
+    const c = t.cells[i], cls = t.mark[i] || '', tag = (t.tags[i] || []).join(', ');
+    const body = !c ? '<span class="emp">empty</span>' : c.del ? `<span class="dk">deleted</span> <span class="was">(was ${esc(c.k)})</span>` : esc(c.k);
+    h += `<div class="hrow ${cls}${c && c.del ? ' isdel' : ''}"><span class="hi">[${i}]</span><span class="hk">${body}</span>${tag ? `<span class="htag">${esc(tag)}</span>` : ''}</div>`;
+    prev = i;
+  });
+  return h + '</div>';
+};
+R.chains = t => {
+  let h = '<div class="chs">';
+  t.lists.forEach((L, i) => {
+    h += `<div class="chr"><span class="chi ${t.mark[i] || ''}">${i}</span><span class="charr">→</span>`;
+    if (!L.length) h += '<span class="chnull">NULL</span>';
+    L.forEach((k, j) => { h += `<span class="chn ${t.mark[i + ':' + j] || ''}">${esc(k)}</span>${j < L.length - 1 ? '<span class="charr">→</span>' : '<span class="charr">→</span><span class="chnull">NULL</span>'}`; });
+    h += '</div>';
+  });
+  return h + '</div>';
+};
+R.bars = t => `<div class="bars">${t.rows.map(r => `<div class="bar ${r.cls || ''}"><span class="bl">${esc(r.label)}</span><span class="bt"><span class="bf" style="width:${Math.max(0.5, r.frac * 100).toFixed(1)}%"></span></span><span class="bv">${esc(r.value)} <em>${Math.round(r.frac * 100)}%</em></span></div>`).join('')}</div>`;
+const supD = k => String(k).replace('-', '⁻').split('').map(d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d] || d).join('');
+const yTick = (v, log) => {
+  if (log) { const k = Math.round(v); return k <= 3 ? String(Math.pow(10, k)) : k <= 5 ? (Math.pow(10, k) / 1000) + 'k' : '10' + supD(k); }
+  const a = Math.abs(v); return a >= 1e6 ? (v / 1e6) + 'M' : a >= 1e4 ? (v / 1e3) + 'k' : String(+v.toFixed(2));
+};
+R.chart = t => {
+  const W = 640, H = 300, L = 58, Rr = 14, T = 12, B = 38, pw = W - L - Rr, ph = H - T - B, n = t.xs.length;
+  const all = t.series.flatMap(s => s.ys).filter(isFinite);
+  let lo, hi, ticks = [];
+  if (t.ylog) { lo = Math.floor(Math.min(0, ...all)); hi = Math.ceil(Math.min(t.cap || 1e9, Math.max(...all))); if (hi <= lo) hi = lo + 1; const st = Math.max(1, Math.ceil((hi - lo) / 8)); for (let k = lo; k <= hi; k += st) ticks.push(k); }
+  else {
+    const mx = Math.max(...all, 0), mn = Math.min(...all, 0), span = mx - mn || 1, raw = span / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))), stp = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= raw);
+    lo = Math.floor(mn / stp) * stp; hi = Math.ceil(mx / stp) * stp; for (let v = lo; v <= hi + 1e-9; v += stp) ticks.push(+v.toFixed(6));
+  }
+  const X = i => L + (n === 1 ? pw / 2 : i * pw / (n - 1)), Y = v => T + ph - (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo) * ph;
+  let g = `<rect x="${L}" y="${T}" width="${pw}" height="${ph}" class="cbg"/>`;
+  ticks.forEach(k => { g += `<line x1="${L}" y1="${Y(k)}" x2="${L + pw}" y2="${Y(k)}" class="cgrid"/><text x="${L - 6}" y="${Y(k) + 4}" class="ctk" text-anchor="end">${yTick(k, t.ylog)}</text>`; });
+  const every = Math.max(1, Math.ceil(n / 12));
+  t.xs.forEach((x, i) => { if (i % every === 0 || i === n - 1) g += `<text x="${X(i)}" y="${T + ph + 16}" class="ctk${i === t.hl ? ' chl' : ''}" text-anchor="middle">${esc(x)}</text>`; });
+  g += `<text x="${L + pw / 2}" y="${H - 4}" class="ctk" text-anchor="middle">n</text>`;
+  if (t.hl >= 0 && t.hl !== undefined) g += `<line x1="${X(t.hl)}" y1="${T}" x2="${X(t.hl)}" y2="${T + ph}" class="chline"/>`;
+  if (t.mline) { const i = t.mline - 1; if (i >= 0 && i < n) g += `<line x1="${X(i)}" y1="${T}" x2="${X(i)}" y2="${T + ph}" class="cmline"/><text x="${X(i) + 4}" y="${T + 14}" class="ctk cmt">m = ${t.mline}</text>`; }
+  t.series.forEach(s => {
+    const pts = []; for (let i = 0; i <= Math.min(t.upto, n - 1); i++) pts.push([X(i), Y(s.ys[i]), s.ys[i] > hi]);
+    if (pts.length > 1) g += `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" class="cl2 ${s.cls}"/>`;
+    pts.forEach((p, i) => { if (n <= 40 || i === pts.length - 1) g += p[2] ? `<text x="${p[0]}" y="${T + 10}" class="coff ${s.cls}" text-anchor="middle">↑</text>` : `<circle cx="${p[0]}" cy="${p[1]}" r="${i === t.hl ? 4.5 : 3}" class="cdot ${s.cls}"/>`; });
+  });
+  const legend = `<div class="clg">${t.series.map(s => `<span><i class="csw ${s.cls}"></i>${esc(s.name)}</span>`).join('')}${t.ylog && t.cap ? '<span class="muted">↑ = off the top of the chart</span>' : ''}</div>`;
+  return `<svg class="fitw" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>${legend}`;
+};
+WIDE.htable = 0; WIDE.chains = 1; WIDE.chart = 1; WIDE.bars = 1;
+
+buildSelect();
+let saved = null; try { saved = localStorage.getItem('hash-sim-prog'); } catch (e) {}
+load(saved && PROGRAMS.some(p => p.id === saved) ? saved : 'basics');
+
+/* Grow every drawing's frame so labels near the edge are never clipped. */
+function growSvgs(root) {
+  root.querySelectorAll('svg[viewBox]').forEach(svg => {
+    let bb; try { bb = svg.getBBox(); } catch (e) { return; }
+    if (!bb || !bb.width) return;
+    const vb = svg.viewBox.baseVal, pad = 4;
+    const x0 = Math.min(vb.x, Math.floor(bb.x - pad)), y0 = Math.min(vb.y, Math.floor(bb.y - pad));
+    const x1 = Math.max(vb.x + vb.width, Math.ceil(bb.x + bb.width + pad)), y1 = Math.max(vb.y + vb.height, Math.ceil(bb.y + bb.height + pad));
+    if (x0 === vb.x && y0 === vb.y && x1 === vb.x + vb.width && y1 === vb.y + vb.height) return;
+    const w = parseFloat(svg.getAttribute('width')), h = parseFloat(svg.getAttribute('height'));
+    const sx = w / vb.width, sy = h / vb.height;
+    svg.setAttribute('viewBox', `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+    if (w) svg.setAttribute('width', ((x1 - x0) * sx).toFixed(1));
+    if (h) svg.setAttribute('height', ((y1 - y0) * sy).toFixed(1));
+  });
+}
+
+</script>
+</body>
+</html>
